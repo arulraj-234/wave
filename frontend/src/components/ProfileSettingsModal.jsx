@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { resolveUrl } from '../api';
 import { X, Camera, User, Check, Loader2, LogOut } from 'lucide-react';
 import api from '../api';
 
@@ -9,11 +10,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
     avatar_url: user?.avatar_url || ''
   });
   const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(
-    user?.avatar_url 
-      ? (user.avatar_url.startsWith('http') || user.avatar_url.startsWith('blob:') ? user.avatar_url : `http://localhost:5000${user.avatar_url}`) 
-      : ''
-  );
+  const [previewUrl, setPreviewUrl] = useState(resolveUrl(user?.avatar_url) || '');
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState(null); // 'success' | 'error' | null
   const fileInputRef = React.useRef(null);

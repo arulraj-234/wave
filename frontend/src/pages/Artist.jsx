@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, BarChart2, ListMusic, Users } from 'lucide-react';
-import api from '../api';
+import api, { resolveUrl } from '../api';
 import WaveLogo from '../components/Logo';
 import ArtistOverview from '../components/artist/ArtistOverview';
 import ArtistMusic from '../components/artist/ArtistMusic';
@@ -90,7 +90,7 @@ const Artist = () => {
                onClick={() => setIsProfileModalOpen(true)}
              >
                 {currentUser?.avatar_url ? (
-                  <img src={currentUser.avatar_url.startsWith('http') || currentUser.avatar_url.startsWith('blob:') ? currentUser.avatar_url : `http://localhost:5000${currentUser.avatar_url}`} alt="" className="w-full h-full object-cover" />
+                  <img src={resolveUrl(currentUser.avatar_url)} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-sm font-black text-brand-primary uppercase">
                     {currentUser?.username ? currentUser.username.charAt(0) : 'A'}

@@ -544,7 +544,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
               >
                 <div className="w-9 h-9 rounded-full bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center overflow-hidden group-hover:border-brand-primary/40 transition-all bg-gradient-to-tr from-brand-primary/20 to-brand-accent/20 shadow-lg">
                   {currentUser.avatar_url ? (
-                    <img src={currentUser.avatar_url.startsWith('http') || currentUser.avatar_url.startsWith('blob:') ? currentUser.avatar_url : `http://localhost:5000${currentUser.avatar_url}`} alt="" className="w-full h-full object-cover" />
+                    <img src={resolveUrl(currentUser.avatar_url)} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-sm font-black text-brand-primary uppercase">
                       {currentUser.username?.[0] || 'U'}
