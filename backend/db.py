@@ -2,15 +2,26 @@ import mysql.connector
 from mysql.connector import pooling
 from config import Config
 
+# Create a dynamic connection args dictionary
+db_args = {
+    "host": Config.DB_HOST,
+    "user": Config.DB_USER,
+    "password": Config.DB_PASSWORD,
+    "database": Config.DB_NAME,
+    "port": Config.DB_PORT
+}
+
+# TiDB and cloud providers strictly enforce SSL
+if Config.DB_SSL_MODE:
+    db_args["ssl_verify_cert"] = True
+    db_args["ssl_verify_identity"] = True
+
 # Create a connection pool using Config class values
 pool = pooling.MySQLConnectionPool(
     pool_name="wave_pool",
     pool_size=10,
     pool_reset_session=True,
-    host=Config.DB_HOST,
-    user=Config.DB_USER,
-    password=Config.DB_PASSWORD,
-    database=Config.DB_NAME
+    **db_args
 )
 
 def get_connection():
