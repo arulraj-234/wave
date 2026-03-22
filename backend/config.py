@@ -13,3 +13,6 @@ class Config:
     
     # TiDB Serverless requires SSL/TLS. We explicitly enable it if told to.
     DB_SSL_MODE = os.getenv('DB_SSL_MODE', 'false').lower() == 'true'
+    
+    # Internal Microservice URL for JioSaavn API
+    SAAVN_API_URL = os.getenv('SAAVN_API_URL', 'http://localhost:3001/api')

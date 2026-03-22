@@ -529,8 +529,8 @@ def get_recommendations(user_id):
     Personalized recommendations based on listening history and preferences.
     Uses Pure SQL Collaborative Filtering. Falls back to JioSaavn API for new users.
     """
-    import requests as ext_requests
-    SAAVN_API_BASE = 'http://localhost:3001/api'
+    from config import Config
+    SAAVN_API_BASE = Config.SAAVN_API_URL
     
     # 1. Try Pure SQL Collaborative Recommendation Engine
     try:

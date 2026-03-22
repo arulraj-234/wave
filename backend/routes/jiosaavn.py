@@ -4,9 +4,11 @@ import requests
 import uuid
 import html
 
+from config import Config
+
 jiosaavn_bp = Blueprint('jiosaavn', __name__)
 
-SAAVN_API_BASE = 'http://localhost:3001/api'
+SAAVN_API_BASE = Config.SAAVN_API_URL
 
 
 def log_error(msg):
@@ -107,7 +109,7 @@ def search_global():
         })
         
     except requests.exceptions.ConnectionError:
-        return jsonify({'error': 'JioSaavn microservice is not running on port 3001'}), 503
+        return jsonify({'error': 'JioSaavn microservice is not responding'}), 503
     except Exception as e:
         log_error(str(e))
         return jsonify({'error': f'Search proxy error: {str(e)}'}), 500
