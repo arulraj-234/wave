@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def init_db(force=False):
-    db_name = os.getenv('DB_NAME', 'wave_db')
+    db_name = os.getenv('DB_NAME', 'test')
     
     conn = mysql.connector.connect(
         host=os.getenv('DB_HOST', 'localhost'),
