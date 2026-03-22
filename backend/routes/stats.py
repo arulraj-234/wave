@@ -1,0 +1,270 @@
+from flask import Blueprint, jsonify, request
+from db import fetch_all, fetch_one, execute_query, get_connection
+from routes.songs import enrich_song_metadata
+
+stats_bp = Blueprint('stats', __name__)
+
+@stats_bp.route('/listener/<int:user_id>', methods=['GET'])
+def get_listener_stats(user_id):
+    """Spotify Wrapped-style analytics for a listener"""
+    # Main stats from the view
+    stats = fetch_one("SELECT * FROM listener_stats_view WHERE user_id = %s", (user_id,))
+    if not stats:
+        return jsonify({"error": "User not found"}), 404
+        
+    # Get unique languages count manually since view doesn't have it
+    language_stats = fetch_one("SELECT COUNT(DISTINCT s.language) as unique_languages FROM streams st JOIN songs s ON st.song_id = s.song_id WHERE st.user_id = %s AND s.language IS NOT NULL", (user_id,))
+    unique_languages = language_stats['unique_languages'] if language_stats else 0
+
+    # Top 5 most played songs
+    top_songs = fetch_all("""
+        SELECT s.song_id, s.title, s.cover_image_url, s.genre, s.duration,
+               u.username AS artist_name, COUNT(st.stream_id) AS play_count
+        FROM streams st
+        JOIN songs s ON st.song_id = s.song_id
+        JOIN artist_profiles ap ON s.artist_id = ap.artist_id
+        JOIN users u ON ap.user_id = u.user_id
+        WHERE st.user_id = %s
+        GROUP BY s.song_id
+        ORDER BY play_count DESC
+        LIMIT 5
+    """, (user_id,))
+
+    # Top genres (real genres)
+    top_genres = fetch_all("""
+        SELECT s.genre, COUNT(*) AS listen_count
+        FROM streams st
+        JOIN songs s ON st.song_id = s.song_id
+        WHERE st.user_id = %s AND s.genre IS NOT NULL AND s.genre != '' AND s.genre != 'Unknown'
+        GROUP BY s.genre
+        ORDER BY listen_count DESC
+        LIMIT 5
+    """, (user_id,))
+    
+    # Top languages
+    top_languages = fetch_all("""
+        SELECT s.language, COUNT(*) AS listen_count
+        FROM streams st
+        JOIN songs s ON st.song_id = s.song_id
+        WHERE st.user_id = %s AND s.language IS NOT NULL AND s.language != '' AND s.language != 'Unknown'
+        GROUP BY s.language
+        ORDER BY listen_count DESC
+        LIMIT 5
+    """, (user_id,))
+
+    # Listening activity by hour
+    hourly_activity = fetch_all("""
+        SELECT HOUR(st.streamed_at) AS listen_hour, COUNT(*) AS stream_count
+        FROM streams st
+        WHERE st.user_id = %s
+        GROUP BY listen_hour
+        ORDER BY listen_hour
+    """, (user_id,))
+
+    # Format listen time
+    total_seconds = stats.get('total_listen_seconds', 0) or 0
+    hours = int(total_seconds // 3600)
+    minutes = int((total_seconds % 3600) // 60)
+
+    return jsonify({
+        "stats": {
+            "total_streams": stats.get('total_streams', 0),
+            "total_listen_time": f"{hours}h {minutes}m",
+            "total_listen_seconds": total_seconds,
+            "unique_songs": stats.get('unique_songs', 0),
+            "unique_artists": stats.get('unique_artists', 0),
+            "unique_genres": stats.get('unique_genres', 0),
+            "unique_languages": unique_languages,
+            "top_genre": top_genres[0]['genre'] if top_genres else '--',
+            "top_language": top_languages[0]['language'] if top_languages else '--',
+            "top_artist": stats.get('top_artist'),
+            "top_song": stats.get('top_song'),
+            "liked_count": stats.get('liked_count', 0),
+            "liked_playlists_count": stats.get('liked_playlists_count', 0)
+        },
+        "top_songs": enrich_song_metadata(top_songs),
+        "top_genres": top_genres,
+        "top_languages": top_languages,
+        "hourly_activity": hourly_activity
+    }), 200
+
+
+@stats_bp.route('/artist/<int:artist_id>', methods=['GET'])
+def get_artist_stats(artist_id):
+    """Comprehensive artist analytics dashboard"""
+    # Main stats from the view
+    stats = fetch_one("SELECT * FROM artist_stats_view WHERE artist_id = %s", (artist_id,))
+    if not stats:
+        return jsonify({"error": "Artist not found"}), 404
+
+    # Streams over last 7 days
+    daily_streams = fetch_all("""
+        SELECT DATE(st.streamed_at) AS stream_date, COUNT(*) AS daily_streams
+        FROM streams st
+        JOIN songs s ON st.song_id = s.song_id
+        JOIN song_artists sa ON s.song_id = sa.song_id
+        WHERE sa.artist_id = %s
+          AND st.streamed_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        GROUP BY stream_date
+        ORDER BY stream_date ASC
+    """, (artist_id,))
+
+    # Recent followers
+    recent_followers = fetch_all("""
+        SELECT u.username, u.avatar_url, f.followed_at
+        FROM follows f
+        JOIN users u ON f.follower_id = u.user_id
+        WHERE f.followed_artist_id = %s
+        ORDER BY f.followed_at DESC
+        LIMIT 10
+    """, (artist_id,))
+
+    # Serialize dates
+    for row in daily_streams:
+        if row.get('stream_date'):
+            row['stream_date'] = str(row['stream_date'])
+    for row in recent_followers:
+        if row.get('followed_at'):
+            row['followed_at'] = str(row['followed_at'])
+
+    return jsonify({
+        "stats": {
+            "artist_name": stats.get('artist_name'),
+            "total_songs": stats.get('total_songs', 0),
+            "total_plays": stats.get('total_plays', 0),
+            "unique_listeners": stats.get('unique_listeners', 0),
+            "avg_plays_per_song": float(stats.get('avg_plays_per_song', 0)),
+            "top_song_title": stats.get('top_song_title'),
+            "top_song_plays": stats.get('top_song_plays', 0),
+            "follower_count": stats.get('follower_count', 0),
+            "verified": bool(stats.get('verified'))
+        },
+        "daily_streams": daily_streams,
+        "recent_followers": recent_followers
+    }), 200
+
+
+@stats_bp.route('/trending', methods=['GET'])
+def get_trending():
+    """Trending songs based on recent play activity"""
+    trending = fetch_all("""
+        SELECT song_id, title, audio_url, cover_image_url, duration, genre,
+               total_plays, artist_name, artist_id, recent_plays, trend_rank
+        FROM trending_songs_view
+        ORDER BY trend_rank ASC
+        LIMIT 20
+    """)
+    return jsonify({"songs": enrich_song_metadata(trending)}), 200
+
+
+@stats_bp.route('/platform', methods=['GET'])
+def get_platform_stats():
+    """Admin-level platform overview"""
+    stats = fetch_one("SELECT * FROM platform_stats_view")
+
+    # Daily streams for last 30 days
+    daily_streams = fetch_all("""
+        SELECT DATE(streamed_at) AS stream_date, COUNT(*) AS daily_streams
+        FROM streams
+        WHERE streamed_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        GROUP BY stream_date
+        ORDER BY stream_date ASC
+    """)
+
+    # Top 5 artists
+    top_artists = fetch_all("""
+        SELECT u.username AS artist_name, ap.artist_id, ap.verified,
+               SUM(s.play_count) AS total_plays,
+               COUNT(DISTINCT sa.song_id) AS song_count
+        FROM artist_profiles ap
+        JOIN users u ON ap.user_id = u.user_id
+        JOIN song_artists sa ON ap.artist_id = sa.artist_id
+        JOIN songs s ON sa.song_id = s.song_id
+        GROUP BY ap.artist_id
+        ORDER BY total_plays DESC
+        LIMIT 5
+    """)
+
+    # User role distribution
+    role_distribution = fetch_all("SELECT role, COUNT(*) AS count FROM users GROUP BY role")
+
+    # Serialize dates
+    for row in daily_streams:
+        if row.get('stream_date'):
+            row['stream_date'] = str(row['stream_date'])
+
+    return jsonify({
+        "stats": {
+            "total_users": stats.get('total_users', 0) if stats else 0,
+            "total_artists": stats.get('total_artists', 0) if stats else 0,
+            "total_listeners": stats.get('total_listeners', 0) if stats else 0,
+            "total_songs": stats.get('total_songs', 0) if stats else 0,
+            "total_streams": stats.get('total_streams', 0) if stats else 0,
+            "total_playlists": stats.get('total_playlists', 0) if stats else 0,
+            "streams_today": stats.get('streams_today', 0) if stats else 0,
+            "streams_this_week": stats.get('streams_this_week', 0) if stats else 0,
+            "streams_this_month": stats.get('streams_this_month', 0) if stats else 0,
+            "new_users_this_week": stats.get('new_users_this_week', 0) if stats else 0,
+            "most_popular_song": stats.get('most_popular_song') if stats else None,
+            "most_popular_song_plays": stats.get('most_popular_song_plays', 0) if stats else 0,
+            "most_active_user": stats.get('most_active_user') if stats else None
+        },
+        "daily_streams": daily_streams,
+        "top_artists": top_artists,
+        "role_distribution": role_distribution
+    }), 200
+
+
+# ============================================
+# Follow / Unfollow Endpoints
+# ============================================
+
+@stats_bp.route('/follow/<int:artist_id>', methods=['POST'])
+def toggle_follow(artist_id):
+    """Toggle follow/unfollow an artist"""
+    data = request.json
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    existing = fetch_one(
+        "SELECT * FROM follows WHERE follower_id = %s AND followed_artist_id = %s",
+        (user_id, artist_id)
+    )
+
+    if existing:
+        execute_query(
+            "DELETE FROM follows WHERE follower_id = %s AND followed_artist_id = %s",
+            (user_id, artist_id)
+        )
+        return jsonify({"following": False, "message": "Unfollowed artist"}), 200
+    else:
+        execute_query(
+            "INSERT INTO follows (follower_id, followed_artist_id) VALUES (%s, %s)",
+            (user_id, artist_id)
+        )
+        return jsonify({"following": True, "message": "Following artist"}), 201
+
+
+@stats_bp.route('/following/<int:user_id>', methods=['GET'])
+def get_following(user_id):
+    """Get list of artists a user follows"""
+    following = fetch_all("""
+        SELECT ap.artist_id, u.username AS artist_name, u.avatar_url, ap.verified
+        FROM follows f
+        JOIN artist_profiles ap ON f.followed_artist_id = ap.artist_id
+        JOIN users u ON ap.user_id = u.user_id
+        WHERE f.follower_id = %s
+        ORDER BY f.followed_at DESC
+    """, (user_id,))
+    return jsonify({"following": following}), 200
+
+
+@stats_bp.route('/is_following/<int:artist_id>/<int:user_id>', methods=['GET'])
+def check_following(artist_id, user_id):
+    """Check if a user follows a specific artist"""
+    result = fetch_one(
+        "SELECT * FROM follows WHERE follower_id = %s AND followed_artist_id = %s",
+        (user_id, artist_id)
+    )
+    return jsonify({"following": result is not None}), 200
