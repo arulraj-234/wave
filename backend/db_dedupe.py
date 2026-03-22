@@ -1,7 +1,7 @@
 import mysql.connector
 
 try:
-    db = mysql.connector.connect(host='localhost', user='root', password='020304', database='wave_db')
+    db = mysql.connector.connect(host='localhost', user='root', password='020304', database='test')
     cursor = db.cursor(dictionary=True)
     
     # Find duplicate songs by title (which indicates the same JioSaavn track was imported multiple times due to CDN url rotation)

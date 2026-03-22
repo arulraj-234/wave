@@ -1,7 +1,7 @@
 import mysql.connector
 
 try:
-    db = mysql.connector.connect(host='localhost', user='root', password='020304', database='wave_db')
+    db = mysql.connector.connect(host='localhost', user='root', password='020304', database='test')
     cursor = db.cursor(dictionary=True)
     
     cursor.execute("SELECT playlist_id, title, cover_image_url FROM playlists;")
