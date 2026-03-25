@@ -7,8 +7,40 @@ stats_bp = Blueprint('stats', __name__)
 @stats_bp.route('/listener/<int:user_id>', methods=['GET'])
 def get_listener_stats(user_id):
     """Spotify Wrapped-style analytics for a listener"""
-    # Main stats from the view
-    stats = fetch_one("SELECT * FROM listener_stats_view WHERE user_id = %s", (user_id,))
+    # Main stats (inline query — replaces listener_stats_view for TiDB compatibility)
+    stats = fetch_one("""
+        SELECT
+            u.user_id,
+            u.username,
+            COUNT(st.stream_id) AS total_streams,
+            COALESCE(SUM(s.duration), 0) AS total_listen_seconds,
+            COUNT(DISTINCT st.song_id) AS unique_songs,
+            COUNT(DISTINCT s.artist_id) AS unique_artists,
+            COUNT(DISTINCT s.genre) AS unique_genres,
+            (SELECT COUNT(*) FROM user_liked_songs ls WHERE ls.user_id = u.user_id) AS liked_count,
+            (SELECT COUNT(*) FROM liked_playlists lp WHERE lp.user_id = u.user_id) AS liked_playlists_count
+        FROM users u
+        LEFT JOIN streams st ON u.user_id = st.user_id
+        LEFT JOIN songs s ON st.song_id = s.song_id
+        WHERE u.user_id = %s
+        GROUP BY u.user_id
+    """, (user_id,))
+
+    # Fetch top_artist and top_song separately (avoids correlated subqueries)
+    top_artist_row = fetch_one("""
+        SELECT u2.username AS top_artist FROM streams st2
+        JOIN songs s2 ON st2.song_id = s2.song_id
+        JOIN artist_profiles ap2 ON s2.artist_id = ap2.artist_id
+        JOIN users u2 ON ap2.user_id = u2.user_id
+        WHERE st2.user_id = %s
+        GROUP BY u2.user_id ORDER BY COUNT(*) DESC LIMIT 1
+    """, (user_id,))
+    top_song_row = fetch_one("""
+        SELECT s2.title AS top_song FROM streams st2
+        JOIN songs s2 ON st2.song_id = s2.song_id
+        WHERE st2.user_id = %s
+        GROUP BY s2.song_id ORDER BY COUNT(*) DESC LIMIT 1
+    """, (user_id,))
     if not stats:
         return jsonify({"error": "User not found"}), 404
         
@@ -77,8 +109,8 @@ def get_listener_stats(user_id):
             "unique_languages": unique_languages,
             "top_genre": top_genres[0]['genre'] if top_genres else '--',
             "top_language": top_languages[0]['language'] if top_languages else '--',
-            "top_artist": stats.get('top_artist'),
-            "top_song": stats.get('top_song'),
+            "top_artist": top_artist_row.get('top_artist') if top_artist_row else None,
+            "top_song": top_song_row.get('top_song') if top_song_row else None,
             "liked_count": stats.get('liked_count', 0),
             "liked_playlists_count": stats.get('liked_playlists_count', 0)
         },
@@ -92,8 +124,33 @@ def get_listener_stats(user_id):
 @stats_bp.route('/artist/<int:artist_id>', methods=['GET'])
 def get_artist_stats(artist_id):
     """Comprehensive artist analytics dashboard"""
-    # Main stats from the view
-    stats = fetch_one("SELECT * FROM artist_stats_view WHERE artist_id = %s", (artist_id,))
+    # Main stats (inline query — replaces artist_stats_view for TiDB compatibility)
+    stats = fetch_one("""
+        SELECT
+            ap.artist_id,
+            u.username AS artist_name,
+            ap.bio,
+            ap.verified,
+            COUNT(DISTINCT sa.song_id) AS total_songs,
+            COALESCE(SUM(s.play_count), 0) AS total_plays,
+            COUNT(DISTINCT st.user_id) AS unique_listeners,
+            ROUND(COALESCE(AVG(s.play_count), 0), 1) AS avg_plays_per_song,
+            (SELECT s2.title FROM songs s2
+             JOIN song_artists sa2 ON s2.song_id = sa2.song_id
+             WHERE sa2.artist_id = ap.artist_id
+             ORDER BY s2.play_count DESC LIMIT 1) AS top_song_title,
+            (SELECT MAX(s2.play_count) FROM songs s2
+             JOIN song_artists sa2 ON s2.song_id = sa2.song_id
+             WHERE sa2.artist_id = ap.artist_id) AS top_song_plays,
+            (SELECT COUNT(*) FROM follows f WHERE f.followed_artist_id = ap.artist_id) AS follower_count
+        FROM artist_profiles ap
+        JOIN users u ON ap.user_id = u.user_id
+        LEFT JOIN song_artists sa ON ap.artist_id = sa.artist_id
+        LEFT JOIN songs s ON sa.song_id = s.song_id
+        LEFT JOIN streams st ON st.song_id = s.song_id
+        WHERE ap.artist_id = %s
+        GROUP BY ap.artist_id
+    """, (artist_id,))
     if not stats:
         return jsonify({"error": "Artist not found"}), 404
 
@@ -147,11 +204,18 @@ def get_artist_stats(artist_id):
 @stats_bp.route('/trending', methods=['GET'])
 def get_trending():
     """Trending songs based on recent play activity"""
+    # Inline trending query (replaces trending_songs_view for TiDB compatibility)
     trending = fetch_all("""
-        SELECT song_id, title, audio_url, cover_image_url, duration, genre,
-               total_plays, artist_name, artist_id, recent_plays, trend_rank
-        FROM trending_songs_view
-        ORDER BY trend_rank ASC
+        SELECT
+            s.song_id, s.title, s.audio_url, s.cover_image_url, s.duration, s.genre,
+            s.play_count AS total_plays, s.artist_id,
+            COUNT(st.stream_id) AS recent_plays
+        FROM songs s
+        LEFT JOIN streams st ON s.song_id = st.song_id
+            AND st.streamed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY s.song_id
+        HAVING recent_plays > 0
+        ORDER BY recent_plays DESC
         LIMIT 20
     """)
     return jsonify({"songs": enrich_song_metadata(trending)}), 200

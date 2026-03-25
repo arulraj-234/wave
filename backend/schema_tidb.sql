@@ -174,66 +174,13 @@ CREATE INDEX idx_liked_songs_user ON user_liked_songs(user_id);
 
 -- =====================================================
 -- ANALYTICAL VIEWS
+-- NOTE: listener_stats_view, artist_stats_view, and trending_songs_view
+-- are NOT created as views because TiDB does not support correlated
+-- subqueries inside VIEW definitions. Their logic is handled
+-- directly in the Python backend (routes/stats.py).
 -- =====================================================
 
--- Listener Stats: per-user streaming analytics
-CREATE OR REPLACE VIEW listener_stats_view AS
-SELECT
-    u.user_id,
-    u.username,
-    COUNT(st.stream_id) AS total_streams,
-    COALESCE(SUM(s.duration), 0) AS total_listen_seconds,
-    COUNT(DISTINCT st.song_id) AS unique_songs,
-    COUNT(DISTINCT s.artist_id) AS unique_artists,
-    COUNT(DISTINCT s.genre) AS unique_genres,
-    (SELECT s2.genre FROM streams st2
-     JOIN songs s2 ON st2.song_id = s2.song_id
-     WHERE st2.user_id = u.user_id AND s2.genre IS NOT NULL
-     GROUP BY s2.genre ORDER BY COUNT(*) DESC LIMIT 1) AS top_genre,
-    (SELECT u2.username FROM streams st2
-     JOIN songs s2 ON st2.song_id = s2.song_id
-     JOIN artist_profiles ap2 ON s2.artist_id = ap2.artist_id
-     JOIN users u2 ON ap2.user_id = u2.user_id
-     WHERE st2.user_id = u.user_id
-     GROUP BY u2.user_id ORDER BY COUNT(*) DESC LIMIT 1) AS top_artist,
-    (SELECT s2.title FROM streams st2
-     JOIN songs s2 ON st2.song_id = s2.song_id
-     WHERE st2.user_id = u.user_id
-     GROUP BY s2.song_id ORDER BY COUNT(*) DESC LIMIT 1) AS top_song,
-    (SELECT COUNT(*) FROM user_liked_songs ls WHERE ls.user_id = u.user_id) AS liked_count,
-    (SELECT COUNT(*) FROM liked_playlists lp WHERE lp.user_id = u.user_id) AS liked_playlists_count
-FROM users u
-LEFT JOIN streams st ON u.user_id = st.user_id
-LEFT JOIN songs s ON st.song_id = s.song_id
-GROUP BY u.user_id;
-
--- Artist Stats: per-artist performance analytics
-CREATE OR REPLACE VIEW artist_stats_view AS
-SELECT
-    ap.artist_id,
-    u.username AS artist_name,
-    ap.bio,
-    ap.verified,
-    COUNT(DISTINCT sa.song_id) AS total_songs,
-    COALESCE(SUM(s.play_count), 0) AS total_plays,
-    COUNT(DISTINCT st.user_id) AS unique_listeners,
-    ROUND(COALESCE(AVG(s.play_count), 0), 1) AS avg_plays_per_song,
-    (SELECT s2.title FROM songs s2
-     JOIN song_artists sa2 ON s2.song_id = sa2.song_id
-     WHERE sa2.artist_id = ap.artist_id
-     ORDER BY s2.play_count DESC LIMIT 1) AS top_song_title,
-    (SELECT MAX(s2.play_count) FROM songs s2
-     JOIN song_artists sa2 ON s2.song_id = sa2.song_id
-     WHERE sa2.artist_id = ap.artist_id) AS top_song_plays,
-    (SELECT COUNT(*) FROM follows f WHERE f.followed_artist_id = ap.artist_id) AS follower_count
-FROM artist_profiles ap
-JOIN users u ON ap.user_id = u.user_id
-LEFT JOIN song_artists sa ON ap.artist_id = sa.artist_id
-LEFT JOIN songs s ON sa.song_id = s.song_id
-LEFT JOIN streams st ON st.song_id = s.song_id
-GROUP BY ap.artist_id;
-
--- Platform Stats: admin overview
+-- Platform Stats: admin overview (uses only independent scalar subqueries — TiDB-safe)
 CREATE OR REPLACE VIEW platform_stats_view AS
 SELECT
     (SELECT COUNT(*) FROM users) AS total_users,
@@ -251,28 +198,3 @@ SELECT
     (SELECT u.username FROM users u
      JOIN streams st ON u.user_id = st.user_id
      GROUP BY u.user_id ORDER BY COUNT(*) DESC LIMIT 1) AS most_active_user;
-
--- Trending Songs: ranked by plays in last 7 days
-CREATE OR REPLACE VIEW trending_songs_view AS
-SELECT
-    s.song_id,
-    s.title,
-    s.audio_url,
-    s.cover_image_url,
-    s.duration,
-    s.genre,
-    s.play_count AS total_plays,
-    (SELECT GROUP_CONCAT(u2.username SEPARATOR ', ')
-     FROM song_artists sa2
-     JOIN artist_profiles ap2 ON sa2.artist_id = ap2.artist_id
-     JOIN users u2 ON ap2.user_id = u2.user_id
-     WHERE sa2.song_id = s.song_id) AS artist_name,
-    s.artist_id,
-    COUNT(st.stream_id) AS recent_plays,
-    DENSE_RANK() OVER (ORDER BY COUNT(st.stream_id) DESC) AS trend_rank
-FROM songs s
-LEFT JOIN streams st ON s.song_id = st.song_id
-    AND st.streamed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-GROUP BY s.song_id
-HAVING recent_plays > 0
-ORDER BY trend_rank ASC;
