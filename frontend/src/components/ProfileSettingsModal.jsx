@@ -80,7 +80,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-4 pb-safe">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -93,36 +93,36 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-sm bg-brand-surface border border-white/10 rounded-3xl shadow-2xl overflow-hidden p-8"
+            className="relative w-full max-w-md bg-brand-surface border border-white/10 rounded-3xl shadow-2xl p-6 md:p-8 flex flex-col max-h-[90vh] overflow-y-auto custom-scrollbar"
           >
             <button 
               onClick={onClose}
-              className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/5 text-brand-muted transition-colors"
+              className="absolute top-4 md:top-6 right-4 md:right-6 p-1.5 md:p-2 rounded-full hover:bg-white/10 text-brand-muted hover:text-white transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="mb-8 pr-12">
-              <h2 className="text-2xl font-black text-brand-primary tracking-tight">Profile</h2>
-              <p className="text-sm text-brand-muted mt-1 font-medium">Manage your account settings</p>
+            <div className="mb-6 md:mb-8 pr-10">
+              <h2 className="text-xl md:text-2xl font-black text-brand-primary tracking-tight">Profile</h2>
+              <p className="text-xs md:text-sm text-brand-muted mt-1 font-medium">Manage your account settings</p>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-6">
+            <form onSubmit={handleSave} className="space-y-5 md:space-y-6">
               {/* Avatar Click-to-Upload */}
               <div className="flex flex-col items-center gap-4 mb-4">
                 <div 
                   className="relative group cursor-pointer"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <div className="w-24 h-24 rounded-full bg-brand-dark border-4 border-white/5 overflow-hidden flex items-center justify-center shadow-2xl transition-all group-hover:border-brand-primary/40 group-hover:scale-[1.02]">
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-brand-dark border-[3px] md:border-4 border-white/5 overflow-hidden flex items-center justify-center shadow-2xl transition-all group-hover:border-brand-primary/40 group-hover:scale-[1.02]">
                     {previewUrl ? (
                       <img src={previewUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <User className="w-10 h-10 text-brand-muted opacity-40" />
+                      <User className="w-8 h-8 md:w-10 md:h-10 text-brand-muted opacity-40" />
                     )}
                   </div>
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                    <Camera className="w-6 h-6 text-white" />
+                    <Camera className="w-5 h-5 md:w-6 md:h-6 text-white" />
                   </div>
                   <input 
                     type="file" 
@@ -132,29 +132,29 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
                     className="hidden" 
                   />
                 </div>
-                <div className="text-center">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary/60">Click to change photo</span>
+                <div className="text-center mt-2">
+                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-brand-primary/60">Click to change photo</span>
                 </div>
               </div>
 
               {/* Username */}
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-brand-muted mb-2 ml-1">Username</label>
+                <label className="block text-[9px] md:text-[10px] font-black uppercase tracking-widest text-brand-muted mb-1.5 md:mb-2 ml-1">Username</label>
                 <input
                   type="text"
                   required
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm text-brand-primary focus:outline-none focus:border-brand-primary/40 transition-all font-bold placeholder:text-white/10"
+                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 md:py-3 text-sm text-brand-primary focus:outline-none focus:border-brand-primary/40 transition-all font-bold placeholder:text-white/10"
                   placeholder="Your username"
                 />
               </div>
 
-              <div className="pt-4 space-y-3">
+              <div className="pt-2 md:pt-4 space-y-3">
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className={`w-full py-3.5 rounded-xl font-black text-sm tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 ${
+                  className={`w-full py-3 md:py-3.5 rounded-xl font-black text-xs md:text-sm tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 ${
                     status === 'success' ? 'bg-green-500 text-white' : 
                     status === 'error' ? 'bg-red-500 text-white' : 
                     'bg-brand-primary text-brand-dark hover:scale-[1.02] active:scale-[0.98]'

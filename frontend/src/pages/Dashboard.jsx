@@ -515,20 +515,29 @@ const Dashboard = ({ defaultView = 'home' }) => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-brand-dark relative">
         {/* Top Navigation Bar */}
-        <div className="h-14 md:h-16 px-4 md:px-8 flex items-center justify-between sticky top-0 z-40 bg-brand-dark/80 backdrop-blur-2xl border-b border-white/[0.03] transition-all duration-500">
-           {/* Left Spacer */}
-           <div className="flex-1 hidden md:block"></div>
+        <div className="h-14 md:h-16 px-4 md:px-8 flex items-center justify-between sticky top-0 z-40 bg-brand-dark/90 backdrop-blur-2xl border-b border-white/[0.03] transition-all duration-500 shadow-sm">
+           {/* Left Logo (Visible mainly on Mobile since Sidebar is hidden) */}
+           <div className="flex-1 flex items-center justify-start gap-2.5">
+              <div className="flex items-center gap-2 cursor-pointer group md:hidden" onClick={() => navigate('/dashboard')}>
+                 <WaveLogo size={24} className="shrink-0 group-hover:scale-105 transition-transform" />
+              </div>
+           </div>
            
-           {/* Center Search Bar */}
-           <div className="flex-[2] flex justify-center items-center">
+           {/* Center Spacer */}
+           <div className="flex-[2] hidden md:block"></div>
+
+           {/* Right Section: Search & Profile */}
+           <div className="flex-[3] md:flex-[2] flex justify-end items-center gap-3 md:gap-6">
+
+              {/* Search Bar (Moved Next to Profile) */}
               {currentView !== 'search' && (
-                <div className="relative w-full max-w-md hidden md:block group">
-                  <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted w-3.5 h-3.5 opacity-50 group-focus-within:text-brand-primary transition-colors" />
+                <div className="relative w-full max-w-[200px] md:max-w-xs group transition-all duration-300">
+                  <SearchIcon className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-brand-muted w-3.5 h-3.5 opacity-50 group-focus-within:text-brand-primary transition-colors" />
                   <input 
                     id="global-search-input"
                     name="global-search-input"
                     type="text" 
-                    placeholder="Search for songs, artists..." 
+                    placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -537,14 +546,12 @@ const Dashboard = ({ defaultView = 'home' }) => {
                         setSearchQuery('');
                       }
                     }}
-                    className="w-full bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.05] rounded-full py-2 pl-11 pr-4 text-xs font-semibold text-brand-primary focus:outline-none focus:bg-white/[0.08] focus:border-brand-primary/20 placeholder-brand-muted/70 transition-all duration-300"
+                    className="w-full bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.05] rounded-full py-1.5 md:py-2 pl-9 md:pl-11 pr-3 md:pr-4 text-xs font-semibold text-brand-primary focus:outline-none focus:bg-white/[0.08] focus:border-brand-primary/20 placeholder-brand-muted/70 transition-all duration-300"
                   />
                 </div>
               )}
-           </div>
-           
-           {/* Right Profile */}
-           <div className="flex-1 flex justify-end items-center gap-6">
+
+              {/* Profile Icon */}
               <div 
                 className="flex items-center gap-3 cursor-pointer group"
                 onClick={() => setIsProfileModalOpen(true)}

@@ -288,30 +288,37 @@ const BottomPlayer = () => {
             
             {/* Controls (Desktop) & Mobile Play/Pause */}
             <div className="flex-none md:flex-1 flex items-center justify-end md:justify-center md:flex-col gap-2.5 ml-auto pl-2 shrink-0">
-              <div className="flex items-center gap-2 md:gap-4">
+              <div className="flex items-center gap-3 md:gap-4">
                 <button onClick={toggleShuffle} title={shuffleMode ? "Disable Shuffle" : "Enable Shuffle"} className={`hidden md:block transition-colors ${shuffleMode ? 'text-brand-primary' : 'text-brand-muted hover:text-brand-primary'}`}>
                   <Shuffle className="w-4 h-4" />
                 </button>
-                <button onClick={playPrevious} title="Previous" className="hidden md:block text-brand-muted hover:text-brand-primary transition-colors">
-                  <SkipBack className="w-5 h-5 fill-current" />
+                <button onClick={(e) => { e.stopPropagation(); playPrevious(); }} title="Previous" className="text-brand-muted hover:text-brand-primary transition-colors">
+                  <SkipBack className="w-5 h-5 md:w-5 md:h-5 fill-current" />
                 </button>
                 
                 <button 
                   onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                   title={isPlaying ? "Pause" : "Play"}
-                  className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-brand-primary text-brand-dark flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-sm"
+                  className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-brand-primary text-brand-dark flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-sm"
                 >
                   {isPlaying ? <Pause className="w-4 h-4 md:w-5 md:h-5 fill-current" /> : <Play className="w-4 h-4 md:w-5 md:h-5 fill-current ml-1" />}
                 </button>
 
-                <button onClick={playNext} title="Next" className="hidden md:block text-brand-muted hover:text-brand-primary transition-colors">
-                  <SkipForward className="w-5 h-5 fill-current" />
+                <button onClick={(e) => { e.stopPropagation(); playNext(); }} title="Next" className="text-brand-muted hover:text-brand-primary transition-colors">
+                  <SkipForward className="w-5 h-5 md:w-5 md:h-5 fill-current" />
                 </button>
                 <button onClick={toggleRepeat} title={repeatMode === 'one' ? "Repeat One" : repeatMode === 'all' ? "Disable Repeat" : "Enable Repeat"} className={`hidden md:block transition-colors ${repeatMode !== 'off' ? 'text-brand-primary' : 'text-brand-muted hover:text-brand-primary'}`}>
                   {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
                 </button>
               </div>
               
+              {/* Progress Text (Mobile) */}
+              <div className="flex md:hidden items-center gap-1 text-[9px] text-brand-muted font-semibold tracking-wider mt-0.5 opacity-80">
+                 <span>{formatTime((progress / 100) * duration)}</span>
+                 <span className="opacity-50">/</span>
+                 <span>{formatTime(duration || currentSong.duration)}</span>
+              </div>
+
               {/* Progress Bar (Desktop only) */}
               <div className="hidden md:flex w-full max-w-md items-center gap-3 text-xs text-brand-muted font-medium">
                 <span>{formatTime((progress / 100) * duration)}</span>
@@ -406,8 +413,8 @@ const BottomPlayer = () => {
             </div>
 
             {/* Mobile Progress Bar absolute bottom edge */}
-            <div className="absolute bottom-0 left-0 h-[2px] bg-brand-primary/20 md:hidden w-full rounded-b-xl overflow-hidden">
-               <div className="h-full bg-brand-primary transition-all duration-200" style={{ width: `${(progress / 100) * 100}%` }} />
+            <div className="absolute bottom-0 left-0 h-[2.5px] bg-white/10 md:hidden w-full rounded-b-xl overflow-hidden shadow-inner">
+               <div className="h-full bg-brand-primary shadow-[0_0_10px_rgba(255,255,255,0.8)] transition-all duration-300 ease-linear" style={{ width: `${(progress / 100) * 100}%` }} />
             </div>
           </motion.div>
         )}
