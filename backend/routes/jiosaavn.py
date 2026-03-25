@@ -12,9 +12,14 @@ SAAVN_API_BASE = Config.SAAVN_API_URL.rstrip('/') # Handle trailing slashes grac
 print(f"[JioSaavn Config] Active API Base: {SAAVN_API_BASE}")
 
 
-def log_error(msg):
-    """Simple error logger."""
-    print(f"[JioSaavn Route Error] {msg}")
+def log_error(msg, url=None, resp_text=None):
+    """Deep logger for debugging API errors."""
+    error_msg = f"[JioSaavn Route Error] {msg}"
+    if url:
+        error_msg += f" | URL: {url}"
+    if resp_text:
+        error_msg += f" | Response (first 500): {str(resp_text)[:500]}"
+    print(error_msg)
 
 
 @jiosaavn_bp.route('/search', methods=['GET'])
@@ -47,12 +52,18 @@ def search_global():
             params={'query': query, 'limit': limit},
             timeout=10
         )
-        data = resp.json()
-        
+        try:
+            data = resp.json()
+        except:
+            log_error(f"Upstream returned non-JSON response (Status: {resp.status_code})", url, resp.text)
+            return jsonify({'error': f'Upstream error: expected JSON object but got non-JSON (Status: {resp.status_code})'}), 502
+            
         if not isinstance(data, dict):
-            return jsonify({'error': f'Upstream error: expected JSON object but got {type(data)}', 'raw': str(data)[:100]}), 502
+            log_error(f"Upstream returned unexpected type {type(data)}", url, str(data))
+            return jsonify({'error': f'Upstream error: expected JSON object but got {type(data)}'}), 502
             
         if not data.get('success'):
+            log_error(f"Search failed upstream: {data.get('message', 'No details')}", url, str(data))
             return jsonify({'error': 'Search failed upstream', 'details': data.get('message', 'No details')}), 502
         
         if search_type == 'all':
@@ -302,7 +313,12 @@ def import_song():
         # Fetch full details if metadata is incomplete (e.g. from 'All' tab)
         try:
             detail_resp = requests.get(f"{SAAVN_API_BASE}/songs/{saavn_id}", timeout=5)
-            detail_data = detail_resp.json()
+            try:
+                detail_data = detail_resp.json()
+            except:
+                log_error(f"Non-JSON response for song backfill ({saavn_id})", f"{SAAVN_API_BASE}/songs/{saavn_id}", detail_resp.text)
+                detail_data = {}
+
             if detail_data.get('success') and detail_data.get('data') and len(detail_data['data']) > 0:
                 full_song = detail_data['data'][0]
                 norm = _normalize_song(full_song)
@@ -314,9 +330,9 @@ def import_song():
                 title = norm.get('title', title)
                 log_error(f"Backfill successful for {saavn_id}. Resolved audio_url: {audio_url}")
             else:
-                log_error(f"Backfill failed for {saavn_id}: success={detail_data.get('success')}, data_len={len(detail_data.get('data', []))}")
+                log_error(f"Backfill failed for {saavn_id}: success={detail_data.get('success')}", f"{SAAVN_API_BASE}/songs/{saavn_id}", str(detail_data))
         except Exception as e:
-            log_error(f"Failed to fetch song details for import-backfill ({saavn_id}): {str(e)}")
+            log_error(f"Failed to fetch song details for import-backfill ({saavn_id}): {str(e)}", f"{SAAVN_API_BASE}/songs/{saavn_id}")
 
     if not audio_url:
         return jsonify({
@@ -451,8 +467,14 @@ def get_artist_detail(artist_id):
             params={'songCount': 20, 'albumCount': 10, 'sortBy': 'popularity'},
             timeout=10
         )
-        data = resp.json()
+        try:
+            data = resp.json()
+        except:
+            log_error(f"Non-JSON response for artist {artist_id}", f"{SAAVN_API_BASE}/artists/{artist_id}", resp.text)
+            return jsonify({'error': 'Upstream error: expected JSON object but got non-JSON'}), 502
+
         if not data.get('success'):
+            log_error(f"Artist {artist_id} not found upstream", f"{SAAVN_API_BASE}/artists/{artist_id}", str(data))
             return jsonify({'error': 'Artist not found upstream'}), 404
 
         raw = data.get('data', {})
@@ -515,8 +537,14 @@ def get_album_detail(album_id):
             params={'id': album_id},
             timeout=10
         )
-        data = resp.json()
+        try:
+            data = resp.json()
+        except:
+            log_error(f"Non-JSON response for album {album_id}", f"{SAAVN_API_BASE}/albums", resp.text)
+            return jsonify({'error': 'Upstream error: expected JSON object but got non-JSON'}), 502
+
         if not data.get('success'):
+            log_error(f"Album {album_id} not found upstream", f"{SAAVN_API_BASE}/albums", str(data))
             return jsonify({'error': 'Album not found upstream'}), 404
 
         raw = data.get('data', {})
@@ -578,8 +606,14 @@ def get_playlist_detail(playlist_id):
             params={'id': playlist_id, 'limit': 50},
             timeout=10
         )
-        data = resp.json()
+        try:
+            data = resp.json()
+        except:
+            log_error(f"Non-JSON response for playlist {playlist_id}", f"{SAAVN_API_BASE}/playlists", resp.text)
+            return jsonify({'error': 'Upstream error: expected JSON object but got non-JSON'}), 502
+
         if not data.get('success'):
+            log_error(f"Playlist {playlist_id} not found upstream", f"{SAAVN_API_BASE}/playlists", str(data))
             return jsonify({'error': 'Playlist not found upstream'}), 404
 
         raw = data.get('data', {})
@@ -727,7 +761,12 @@ def get_home_content():
                     params={'query': query, 'limit': 2},
                     timeout=5
                 )
-                data = resp.json()
+                try:
+                    data = resp.json()
+                except:
+                    log_error(f"Non-JSON response for featured playlist query '{query}' (Status: {resp.status_code})", f"{SAAVN_API_BASE}/search/playlists", resp.text)
+                    continue
+
                 if data.get('success'):
                     raw_data = data.get('data', {})
                     results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
@@ -737,9 +776,9 @@ def get_home_content():
                         if isinstance(p, dict):
                             content['featured_playlists'].append(_normalize_playlist(p))
                 else:
-                    log_error(f"Upstream failure for playlist query '{query}': {data.get('message', 'No details')}")
+                    log_error(f"Upstream failure for playlist query '{query}': {data.get('message', 'No details')}", f"{SAAVN_API_BASE}/search/playlists", str(data))
             except Exception as e:
-                log_error(f"Network error for playlist query '{query}': {str(e)}")
+                log_error(f"Network error for playlist query '{query}': {str(e)}", f"{SAAVN_API_BASE}/search/playlists")
                 continue
 
         # Deduplicate
