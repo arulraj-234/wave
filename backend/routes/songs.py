@@ -258,10 +258,10 @@ def search_local():
             LEFT JOIN song_artists sa ON s.song_id = sa.song_id
             LEFT JOIN artist_profiles ap ON sa.artist_id = ap.artist_id
             LEFT JOIN users u ON ap.user_id = u.user_id
-            WHERE MATCH(s.title, s.genre) AGAINST(%s IN BOOLEAN MODE) OR u.username LIKE %s
+            WHERE s.title LIKE %s OR s.genre LIKE %s OR u.username LIKE %s
             LIMIT 10
         """
-        matched_songs = fetch_all(songs_query, (boolean_pattern, like_pattern))
+        matched_songs = fetch_all(songs_query, (like_pattern, like_pattern, like_pattern))
         
         # 2. Artists
         artists_query = """
@@ -301,10 +301,10 @@ def search_local():
             LEFT JOIN song_artists sa ON s.song_id = sa.song_id
             LEFT JOIN artist_profiles ap ON sa.artist_id = ap.artist_id
             LEFT JOIN users u ON ap.user_id = u.user_id
-            WHERE MATCH(s.title, s.genre) AGAINST(%s IN BOOLEAN MODE) 
+            WHERE s.title LIKE %s OR s.genre LIKE %s
                OR u.username LIKE %s
         """
-        matched_songs = fetch_all(search_query, (boolean_pattern, like_pattern))
+        matched_songs = fetch_all(search_query, (like_pattern, like_pattern, like_pattern))
         return jsonify({"results": enrich_song_metadata(matched_songs), "type": "song"})
 
     elif search_type == 'artist':
@@ -358,9 +358,13 @@ def record_stream(song_id):
     user_id = data.get('user_id') # Can be null for anonymous streams
     listen_duration = data.get('listen_duration', 0)
     
-    # Record stream history (trigger auto-increments play_count)
+    # Record stream history
     history_query = "INSERT INTO streams (user_id, song_id, listen_duration) VALUES (%s, %s, %s)"
     execute_query(history_query, (user_id, song_id, listen_duration))
+
+    # Increment play_count in application code (replaces MySQL trigger for TiDB compatibility)
+    if listen_duration >= 20:
+        execute_query("UPDATE songs SET play_count = play_count + 1 WHERE song_id = %s", (song_id,))
     
     return jsonify({"message": "Stream recorded successfully"}), 200
 
