@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Search as SearchIcon, Music, Play, Pause, Heart, Plus, Database, Loader2, Disc3, Headphones } from 'lucide-react';
 import api from '../api';
 
@@ -7,6 +7,7 @@ import { PlayerContext } from '../context/PlayerContext';
 import Skeleton, { SongSkeleton } from '../components/Skeleton';
 
 const Search = () => {
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [localResults, setLocalResults] = useState([]);
   const [globalResults, setGlobalResults] = useState([]);
@@ -14,6 +15,15 @@ const Search = () => {
   const [importingId, setImportingId] = useState(null); 
   const { currentSong, isPlaying, likedSongs, toggleLike, playlists, addSongToPlaylist, playSong, resolveUrl } = useContext(PlayerContext);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'song', 'artist', 'album', 'playlist'
+
+  // Read query parameter from URL (from global search bar)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q');
+    if (q) {
+      setSearchTerm(q);
+    }
+  }, [location.search]);
 
   const genres = [
     { name: 'Bollywood', color: 'bg-gradient-to-br from-orange-400 to-orange-600', icon: Music },

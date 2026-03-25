@@ -288,6 +288,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
   const [saavnArtist, setSaavnArtist] = useState(null);
   const [saavnAlbum, setSaavnAlbum] = useState(null);
   const [saavnPlaylist, setSaavnPlaylist] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { 
     currentSong, isPlaying, progress, duration, volume,
@@ -528,8 +529,14 @@ const Dashboard = ({ defaultView = 'home' }) => {
                     name="global-search-input"
                     type="text" 
                     placeholder="Search for songs, artists..." 
+                    value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && searchQuery.trim() && handleSearch()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && searchQuery.trim()) {
+                        navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                        setSearchQuery('');
+                      }
+                    }}
                     className="w-full bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.05] rounded-full py-2 pl-11 pr-4 text-xs font-semibold text-brand-primary focus:outline-none focus:bg-white/[0.08] focus:border-brand-primary/20 placeholder-brand-muted/70 transition-all duration-300"
                   />
                 </div>

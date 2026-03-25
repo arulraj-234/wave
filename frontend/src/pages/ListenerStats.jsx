@@ -47,71 +47,71 @@ const ListenerStats = () => {
   }
 
   const statCards = [
-    { 
-      label: 'Total Streams', 
-      value: stats?.stats?.total_streams || 0, 
+    {
+      label: 'Total Streams',
+      value: stats?.stats?.total_streams || 0,
       icon: Play,
       gradient: 'from-sky-500/20 to-sky-500/5',
       iconColor: 'text-sky-400',
       borderColor: 'border-sky-500/10',
       countUp: true
     },
-    { 
-      label: 'Listen Time', 
-      value: stats?.stats?.total_listen_time || '0h 0m', 
+    {
+      label: 'Listen Time',
+      value: stats?.stats?.total_listen_time || '0h 0m',
       icon: Clock,
       gradient: 'from-violet-500/20 to-violet-500/5',
       iconColor: 'text-violet-400',
       borderColor: 'border-violet-500/10'
     },
-    { 
-      label: 'Top Artist', 
-      value: stats?.stats?.top_artist || '--', 
+    {
+      label: 'Top Artist',
+      value: stats?.stats?.top_artist || '--',
       icon: Mic2,
       gradient: 'from-rose-500/20 to-rose-500/5',
       iconColor: 'text-rose-400',
       borderColor: 'border-rose-500/10',
       isText: true
     },
-    { 
-      label: 'Top Language', 
-      value: stats?.stats?.top_language || '--', 
+    {
+      label: 'Top Language',
+      value: stats?.stats?.top_language || '--',
       icon: Globe,
       gradient: 'from-amber-500/20 to-amber-500/5',
       iconColor: 'text-amber-400',
       borderColor: 'border-amber-500/10',
       isText: true
     },
-    { 
-      label: 'Top Genre', 
-      value: stats?.stats?.top_genre || '--', 
+    {
+      label: 'Top Genre',
+      value: stats?.stats?.top_genre || '--',
       icon: Disc3,
       gradient: 'from-fuchsia-500/20 to-fuchsia-500/5',
       iconColor: 'text-fuchsia-400',
       borderColor: 'border-fuchsia-500/10',
       isText: true
     },
-    { 
-      label: 'Unique Languages', 
-      value: stats?.stats?.unique_languages || 0, 
+    {
+      label: 'Unique Languages',
+      value: stats?.stats?.unique_languages || 0,
       icon: Globe,
       gradient: 'from-blue-500/20 to-blue-500/5',
       iconColor: 'text-blue-400',
       borderColor: 'border-blue-500/10',
       countUp: true
     },
-    { 
-      label: 'Unique Genres', 
-      value: stats?.stats?.unique_genres || 0, 
+    {
+      label: 'Unique Genres',
+      value: stats?.stats?.unique_genres || 0,
       icon: Music,
       gradient: 'from-emerald-500/20 to-emerald-500/5',
       iconColor: 'text-emerald-400',
       borderColor: 'border-emerald-500/10',
       countUp: true
     },
-    { 
-      label: 'Liked Songs', 
-      value: stats?.stats?.liked_count || 0, 
+    {
+      label: 'Liked Songs',
+      value: stats?.stats?.liked_count || 0,
       icon: Heart,
       gradient: 'from-pink-500/20 to-pink-500/5',
       iconColor: 'text-pink-400',
@@ -150,7 +150,7 @@ const ListenerStats = () => {
             </div>
             <div>
               <h1 className="text-3xl font-black tracking-tight text-brand-primary">Your Stats</h1>
-              <p className="text-brand-muted text-sm font-medium mt-0.5">Your personal Spotify Wrapped — updated live.</p>
+              {/* <p className="text-brand-muted text-sm font-medium mt-0.5">Your personal Spotify Wrapped — updated live.</p> */}
             </div>
           </div>
         </div>
@@ -160,7 +160,7 @@ const ListenerStats = () => {
           {statCards.map((card, i) => {
             const Icon = card.icon;
             return (
-              <div 
+              <div
                 key={card.label}
                 className={`relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br ${card.gradient} border ${card.borderColor} hover:scale-[1.02] transition-all duration-300 animate-slide-up group`}
                 style={{ animationDelay: `${i * 0.05}s` }}
@@ -197,8 +197,8 @@ const ListenerStats = () => {
               {stats?.top_songs?.length > 0 ? (
                 <div className="space-y-1">
                   {stats.top_songs.slice(0, 8).map((song, i) => (
-                    <div 
-                      key={song.song_id} 
+                    <div
+                      key={song.song_id}
                       className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-colors cursor-pointer group"
                       onClick={() => playSong(song)}
                     >
@@ -228,9 +228,9 @@ const ListenerStats = () => {
                       {/* Play count bar */}
                       <div className="flex items-center gap-3 shrink-0">
                         <div className="w-20 h-1.5 bg-white/5 rounded-full overflow-hidden hidden sm:block">
-                          <div 
-                            className="h-full bg-sky-400/60 rounded-full transition-all duration-700" 
-                            style={{ width: `${(song.play_count / maxPlayCount) * 100}%` }} 
+                          <div
+                            className="h-full bg-sky-400/60 rounded-full transition-all duration-700"
+                            style={{ width: `${(song.play_count / maxPlayCount) * 100}%` }}
                           />
                         </div>
                         <span className="text-xs font-bold text-brand-muted tabular-nums w-8 text-right">{song.play_count}×</span>
@@ -275,7 +275,7 @@ const ListenerStats = () => {
                             <span className="text-xs font-bold text-brand-muted tabular-nums">{lang.listen_count} plays</span>
                           </div>
                           <div className="h-2 bg-white/5 rounded-full overflow-hidden ml-7">
-                            <div 
+                            <div
                               className={`h-full ${barColor} rounded-full transition-all duration-1000 ease-out`}
                               style={{ width: `${pct}%`, opacity: 0.7 }}
                             />
@@ -319,7 +319,7 @@ const ListenerStats = () => {
                             <span className="text-xs font-bold text-brand-muted tabular-nums">{genre.listen_count} plays</span>
                           </div>
                           <div className="h-2 bg-white/5 rounded-full overflow-hidden ml-7">
-                            <div 
+                            <div
                               className={`h-full ${barColor} rounded-full transition-all duration-1000 ease-out`}
                               style={{ width: `${pct}%`, opacity: 0.7 }}
                             />

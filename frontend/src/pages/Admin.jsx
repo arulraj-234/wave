@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, Music as MusicIcon, Activity, Trash2, Upload, Plus, 
   TrendingUp, BarChart2, CheckCircle, XCircle, LayoutDashboard, 
-  Settings, Image as ImageIcon, Edit, X, Save, FileAudio
+  Settings, Image as ImageIcon, Edit, X, Save, FileAudio, LogOut
 } from 'lucide-react';
 import api, { resolveUrl } from '../api';
 import WaveLogo from '../components/Logo';
@@ -35,6 +36,7 @@ class ErrorBoundary extends React.Component {
 }
 
 const Admin = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({ users: 0, songs: 0, activeStreams: 0, health: 'Degraded', db_status: 'Disconnected' });
   const [platformStats, setPlatformStats] = useState(null);
@@ -101,8 +103,19 @@ const Admin = () => {
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t border-white/5 text-xs text-white/30 text-center">
-          Wave Admin Protocol v2.0
+        <div className="p-4 border-t border-white/5 space-y-3">
+          <button
+            onClick={() => {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              navigate('/login');
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:bg-rose-500/10 hover:text-rose-400 transition-all"
+          >
+            <LogOut className="w-5 h-5 text-white/40" />
+            Logout
+          </button>
+          <p className="text-xs text-white/30 text-center">Wave Admin Protocol v2.0</p>
         </div>
       </div>
 
