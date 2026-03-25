@@ -61,16 +61,16 @@ const HorizontalCarousel = ({ children, className = '' }) => {
 
 /* ============ Section Header ============ */
 const SectionHeader = ({ title, icon: Icon, subtitle, onShowAll }) => (
-  <div className="flex items-end justify-between mb-5">
+  <div className="flex items-end justify-between mb-4 md:mb-5">
     <div>
-      <h2 className="text-xl font-bold text-brand-primary flex items-center gap-2.5">
-        {Icon && <Icon className="w-5 h-5 text-brand-muted" />}
+      <h2 className="text-lg md:text-xl font-bold text-brand-primary flex items-center gap-2 md:gap-2.5">
+        {Icon && <Icon className="w-4 h-4 md:w-5 md:h-5 text-brand-muted" />}
         {title}
       </h2>
-      {subtitle && <p className="text-xs text-brand-muted mt-1 font-medium">{subtitle}</p>}
+      {subtitle && <p className="text-[10px] md:text-xs text-brand-muted mt-0.5 md:mt-1 font-medium">{subtitle}</p>}
     </div>
     {onShowAll && (
-      <button onClick={onShowAll} className="text-xs font-bold text-brand-muted hover:text-brand-primary transition-colors uppercase tracking-wider">
+      <button onClick={onShowAll} className="text-[10px] md:text-xs font-bold text-brand-muted hover:text-brand-primary transition-colors uppercase tracking-wider">
         Show all
       </button>
     )}
@@ -79,11 +79,11 @@ const SectionHeader = ({ title, icon: Icon, subtitle, onShowAll }) => (
 
 /* ============ Playable Card (for songs/playlists/albums) ============ */
 const ContentCard = ({ image, title, subtitle, onClick, isRound = false, size = 'normal' }) => {
-  const w = size === 'large' ? 'w-52 shrink-0' : 'w-44 shrink-0';
+  const w = size === 'large' ? 'w-40 md:w-52 shrink-0' : 'w-36 md:w-44 shrink-0';
   const [imgError, setImgError] = useState(false);
   return (
-    <div onClick={onClick} className={`${w} p-3 rounded-2xl bg-brand-surface hover:bg-white/[0.04] transition-all duration-300 group cursor-pointer border border-transparent hover:border-white/[0.05]`}>
-      <div className={`aspect-square bg-brand-dark ${isRound ? 'rounded-full' : 'rounded-xl'} mb-3 overflow-hidden relative shadow-md flex items-center justify-center`}>
+    <div onClick={onClick} className={`${w} p-2 md:p-3 rounded-2xl bg-brand-surface hover:bg-white/[0.04] transition-all duration-300 group cursor-pointer border border-transparent hover:border-white/[0.05]`}>
+      <div className={`aspect-square bg-brand-dark ${isRound ? 'rounded-full' : 'rounded-xl'} mb-2 md:mb-3 overflow-hidden relative shadow-md flex items-center justify-center`}>
         {image && !imgError ? (
           <img 
             src={image} 
@@ -101,8 +101,8 @@ const ContentCard = ({ image, title, subtitle, onClick, isRound = false, size = 
           </div>
         </div>
       </div>
-      <div className="font-semibold truncate text-sm text-brand-primary">{title}</div>
-      {subtitle && <div className="text-xs text-brand-muted truncate mt-0.5">{subtitle}</div>}
+      <div className="font-semibold truncate text-xs md:text-sm text-brand-primary">{title}</div>
+      {subtitle && <div className="text-[10px] md:text-xs text-brand-muted truncate mt-0.5">{subtitle}</div>}
     </div>
   );
 };
@@ -140,7 +140,7 @@ const VinylExpansionHeader = ({ currentSong, isPlaying, resolveUrl }) => {
   if (!currentSong) return null;
 
   return (
-    <div className={`relative w-full max-w-[1400px] mx-auto transition-all duration-[1200ms] ease-[cubic-bezier(0.25,1,0.5,1)] ${currentSong ? 'h-[320px] opacity-100 mt-6 mb-10' : 'h-0 opacity-0 my-0 overflow-hidden'}`}>
+    <div className={`hidden md:block relative w-full max-w-[1400px] mx-auto transition-all duration-[1200ms] ease-[cubic-bezier(0.25,1,0.5,1)] ${currentSong ? 'h-[320px] opacity-100 mt-6 mb-10' : 'h-0 opacity-0 my-0 overflow-hidden'}`}>
       <div className="absolute inset-0 mx-8 rounded-3xl overflow-hidden bg-white/[0.02] border border-white/[0.05] shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex items-center p-10 group">
         
         {/* Dynamic Background Blur */}
@@ -211,7 +211,7 @@ const VinylExpansionHeader = ({ currentSong, isPlaying, resolveUrl }) => {
 const TopThreeHeader = ({ trendingSongs, resolveUrl, onPlay }) => {
   if (!trendingSongs || trendingSongs.length === 0) {
     return (
-      <div className="pt-6 pb-10 px-8 max-w-[1400px] mx-auto">
+      <div className="hidden md:block pt-6 pb-10 px-8 max-w-[1400px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[280px]">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/5 bg-white/5 animate-pulse" />
@@ -223,7 +223,7 @@ const TopThreeHeader = ({ trendingSongs, resolveUrl, onPlay }) => {
   const topThree = trendingSongs.slice(0, 3);
 
   return (
-    <div className="animate-fade-in pt-6 pb-10 px-8 max-w-[1400px] mx-auto">
+    <div className="hidden md:block animate-fade-in pt-6 pb-10 px-8 max-w-[1400px] mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[280px]">
         {topThree.map((song, i) => (
           <div 
@@ -515,7 +515,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-brand-dark relative">
         {/* Top Navigation Bar */}
-        <div className="h-16 px-8 flex items-center justify-between sticky top-0 z-40 bg-brand-dark/80 backdrop-blur-2xl border-b border-white/[0.03] transition-all duration-500">
+        <div className="h-14 md:h-16 px-4 md:px-8 flex items-center justify-between sticky top-0 z-40 bg-brand-dark/80 backdrop-blur-2xl border-b border-white/[0.03] transition-all duration-500">
            {/* Left Spacer */}
            <div className="flex-1 hidden md:block"></div>
            
@@ -566,12 +566,12 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {/*              HOME VIEW                     */}
         {/* ============================================ */}
         {currentView === 'home' && (
-          <div className="flex-1 overflow-y-auto relative pb-32 custom-scrollbar animate-fade-in">
+          <div className="flex-1 overflow-y-auto relative pb-32 md:pb-32 custom-scrollbar animate-fade-in">
 
 
 
             {/* ── Dynamic Layout: Top 3 Trending vs Vinyl expansion (with Animaton) ── */}
-            <div className="relative min-h-[300px]">
+            <div className="relative md:min-h-[300px] hidden md:block">
               <AnimatePresence mode="wait">
                 {currentSong ? (
                   <motion.div
@@ -601,7 +601,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
               </AnimatePresence>
             </div>
 
-            <div className="p-8 max-w-[1400px] mx-auto space-y-10">
+            <div className="p-4 md:p-8 max-w-[1400px] mx-auto space-y-8 md:space-y-10 mt-4 md:mt-0">
 
               {/* ── Apple Music Style Listen Now Header (Removed per user request) ── */}
 
@@ -610,8 +610,8 @@ const Dashboard = ({ defaultView = 'home' }) => {
                 {recentSongs.length > 0 && (
                   <>
                     <SectionHeader title="Quick Picks" icon={Clock} subtitle="Jump back in" />
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {recentSongs.slice(0, 8).map(song => (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
+                      {recentSongs.slice(0, window.innerWidth < 768 ? 6 : 8).map(song => (
                         <QuickPickCard key={`qp-${song.song_id}`} song={song} onClick={() => playSong(song, recentSongs)} resolveUrl={resolveUrl} />
                       ))}
                     </div>
@@ -808,46 +808,46 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {/* ============================================ */}
         {currentView === 'library' && (
           <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
-            <div className="p-8 max-w-7xl mx-auto">
-              <h1 className="text-5xl font-black mb-12 tracking-tight flex items-center gap-5 pt-4 text-white drop-shadow-lg">
+            <div className="p-4 md:p-8 max-w-7xl mx-auto">
+              <h1 className="text-3xl md:text-5xl font-black mb-8 md:mb-12 tracking-tight flex items-center gap-5 pt-4 text-white drop-shadow-lg">
                 Your Library
               </h1>
               
               {/* My Playlists Grid */}
               {(playlists?.length > 0 || likedPlaylists?.length > 0) && (
                  <div className="mb-14 animate-slide-up">
-                    <h2 className="text-2xl font-bold mb-6 tracking-tight text-brand-primary">Playlists</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    <h2 className="text-xl md:text-2xl font-bold mb-6 tracking-tight text-brand-primary">Playlists</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
                       
                       {/* Create New Playlist Card */}
                       <div onClick={handleCreatePlaylist} className="cursor-pointer group flex flex-col">
-                        <div className="aspect-square bg-white/[0.02] border border-white/5 border-dashed rounded-2xl shadow-xl flex items-center justify-center mb-4 group-hover:bg-white/[0.05] group-hover:border-white/20 transition-all">
-                           <Plus className="w-12 h-12 text-white/30 group-hover:scale-110 transition-transform" />
+                        <div className="aspect-square bg-white/[0.02] border border-white/5 border-dashed rounded-2xl shadow-xl flex items-center justify-center mb-3 md:mb-4 group-hover:bg-white/[0.05] group-hover:border-white/20 transition-all">
+                           <Plus className="w-8 h-8 md:w-12 md:h-12 text-white/30 group-hover:scale-110 transition-transform" />
                         </div>
-                        <h3 className="font-bold text-lg truncate mb-1 text-white">Create New</h3>
-                        <p className="text-sm font-medium text-brand-muted shrink-0">Local Playlist</p>
+                        <h3 className="font-bold text-sm md:text-lg truncate mb-0.5 md:mb-1 text-white">Create New</h3>
+                        <p className="text-xs md:text-sm font-medium text-brand-muted shrink-0">Local Playlist</p>
                       </div>
 
                       {/* User's Created Playlists */}
                       {playlists?.map((pl) => (
                         <div key={`local-${pl.playlist_id}`} onClick={() => navigate(`/dashboard/playlist/${pl.playlist_id}`)} className="cursor-pointer group flex flex-col">
-                          <div className="aspect-square bg-gradient-to-tr from-brand-accent/20 to-brand-primary/10 rounded-2xl shadow-xl flex items-center justify-center mb-4 border border-white/5 group-hover:border-white/20 group-hover:scale-105 transition-all">
-                             <Music className="w-16 h-16 text-white/20 drop-shadow-md" />
+                          <div className="aspect-square bg-gradient-to-tr from-brand-accent/20 to-brand-primary/10 rounded-2xl shadow-xl flex items-center justify-center mb-3 md:mb-4 border border-white/5 group-hover:border-white/20 group-hover:scale-105 transition-all">
+                             <Music className="w-10 h-10 md:w-16 md:h-16 text-white/20 drop-shadow-md" />
                           </div>
-                          <h3 className="font-bold text-lg truncate mb-1 text-white">{pl.title}</h3>
-                          <p className="text-sm font-medium text-brand-muted shrink-0">By {user.username || 'You'}</p>
+                          <h3 className="font-bold text-sm md:text-lg truncate mb-0.5 md:mb-1 text-white">{pl.title}</h3>
+                          <p className="text-xs md:text-sm font-medium text-brand-muted shrink-0">By {user.username || 'You'}</p>
                         </div>
                       ))}
 
                       {/* Saved JioSaavn Playlists */}
                       {likedPlaylists?.map((pl) => (
                         <div key={`saavn-${pl.saavn_playlist_id}`} onClick={() => navigate(`/dashboard/saavn-playlist/${pl.saavn_playlist_id}`)} className="cursor-pointer group flex flex-col">
-                          <div className="aspect-square bg-gradient-to-br from-indigo-500/20 to-purple-500/10 rounded-2xl shadow-xl flex items-center justify-center mb-4 border border-white/5 group-hover:border-white/20 group-hover:scale-105 transition-all relative overflow-hidden">
+                          <div className="aspect-square bg-gradient-to-br from-indigo-500/20 to-purple-500/10 rounded-2xl shadow-xl flex items-center justify-center mb-3 md:mb-4 border border-white/5 group-hover:border-white/20 group-hover:scale-105 transition-all relative overflow-hidden">
                              {/* If we had images stored we'd put it here, falling back to icon */}
-                             <Library className="w-16 h-16 text-indigo-400/40 drop-shadow-md" />
+                             <Library className="w-10 h-10 md:w-16 md:h-16 text-indigo-400/40 drop-shadow-md" />
                           </div>
-                          <h3 className="font-bold text-lg truncate mb-1 text-white">{pl.title}</h3>
-                          <p className="text-sm font-medium text-brand-muted shrink-0">Saved Playlist</p>
+                          <h3 className="font-bold text-sm md:text-lg truncate mb-0.5 md:mb-1 text-white">{pl.title}</h3>
+                          <p className="text-xs md:text-sm font-medium text-brand-muted shrink-0">Saved Playlist</p>
                         </div>
                       ))}
                     </div>
@@ -856,7 +856,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
 
               {/* Liked Songs List */}
               <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-                <h2 className="text-2xl font-bold mb-6 tracking-tight text-brand-primary flex items-center gap-3">
+                <h2 className="text-xl md:text-2xl font-bold mb-6 tracking-tight text-brand-primary flex items-center gap-3">
                    <Heart className="w-6 h-6 text-brand-accent-hot fill-current" />
                    Liked Tracks
                 </h2>
@@ -893,33 +893,33 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {currentView === 'playlist' && (
           <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
              {isLoading ? (
-               <div className="p-8 pt-20">
-                  <div className="flex items-end gap-6 mb-12">
-                     <Skeleton className="w-48 h-48 rounded-2xl" />
-                     <div className="space-y-4">
+               <div className="p-4 md:p-8 pt-10 md:pt-20">
+                  <div className="flex flex-col md:flex-row items-center md:items-end gap-6 mb-12">
+                     <Skeleton className="w-40 h-40 md:w-48 md:h-48 rounded-2xl" />
+                     <div className="space-y-4 w-full flex flex-col items-center md:items-start">
                         <Skeleton className="w-20 h-4" />
-                        <Skeleton className="w-64 h-12" />
-                        <Skeleton className="w-96 h-6" />
+                        <Skeleton className="w-64 h-8 md:h-12" />
+                        <Skeleton className="w-full max-w-[20rem] md:w-96 h-4 md:h-6" />
                      </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
                     {[...Array(6)].map((_, i) => <SongSkeleton key={i} />)}
                   </div>
                </div>
              ) : playlistInfo && (
                <>
-                <div className="absolute top-0 w-full h-[32rem] bg-gradient-to-b from-brand-accent/20 to-transparent pointer-events-none" />
-                <div className="p-8 relative z-10">
-                  <div className="flex items-end gap-8 mb-12 animate-slide-up">
-                    <div className="w-56 h-56 glass-surface rounded-2xl shadow-2xl flex items-center justify-center group overflow-hidden">
-                       <Music className="w-24 h-24 text-white/10 group-hover:scale-110 transition-transform duration-700" />
+                <div className="absolute top-0 w-full h-[24rem] md:h-[32rem] bg-gradient-to-b from-brand-accent/20 to-transparent pointer-events-none" />
+                <div className="p-4 md:p-8 relative z-10">
+                  <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-8 md:mb-12 animate-slide-up text-center md:text-left">
+                    <div className="w-48 h-48 md:w-56 md:h-56 glass-surface rounded-2xl shadow-2xl flex items-center justify-center group overflow-hidden shrink-0 mt-4 md:mt-0">
+                       <Music className="w-20 h-20 md:w-24 md:h-24 text-white/10 group-hover:scale-110 transition-transform duration-700" />
                     </div>
                     <div className="pb-2">
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-accent mb-3 block">Playlist</span>
-                      <h1 className="text-7xl font-black tracking-tighter mb-4">{playlistInfo.title}</h1>
-                      <p className="text-white/50 text-lg font-medium max-w-2xl leading-relaxed">{playlistInfo.description || "A curated collection of your favorite tracks on Wave."}</p>
-                      <div className="flex items-center gap-3 mt-6 text-sm font-bold">
-                        <div className="w-6 h-6 rounded-full bg-brand-primary flex items-center justify-center text-[10px]">{user.username?.charAt(0)}</div>
+                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-accent mb-2 md:mb-3 block">Playlist</span>
+                      <h1 className="text-4xl md:text-7xl font-black tracking-tighter mb-2 md:mb-4">{playlistInfo.title}</h1>
+                      <p className="text-white/50 text-sm md:text-lg font-medium max-w-2xl leading-relaxed px-4 md:px-0">{playlistInfo.description || "A curated collection of your favorite tracks on Wave."}</p>
+                      <div className="flex items-center justify-center md:justify-start gap-3 mt-4 md:mt-6 text-xs md:text-sm font-bold">
+                        <div className="w-6 h-6 rounded-full bg-brand-primary flex items-center justify-center text-[10px] text-brand-dark">{user.username?.charAt(0)}</div>
                         <span className="text-white/90">{user.username}</span>
                         <span className="text-white/20">•</span>
                         <span className="text-white/40">{playlistInfo.songs?.length || 0} songs</span>
@@ -927,7 +927,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 animate-slide-up" style={{ animationDelay: '0.1s' }}>
                     {playlistInfo.songs?.map((song) => (
                       <SongCard key={song.song_id} song={song} />
                     ))}
@@ -953,14 +953,14 @@ const Dashboard = ({ defaultView = 'home' }) => {
           <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
             {isLoading ? (
                <div className="animate-pulse">
-                  <div className="h-80 bg-white/5 w-full" />
-                  <div className="p-8">
-                     <div className="flex gap-4 mb-10">
+                  <div className="h-64 md:h-80 bg-white/5 w-full" />
+                  <div className="p-4 md:p-8">
+                     <div className="flex justify-center md:justify-start gap-4 mb-8 md:mb-10 mt-[-2rem] md:mt-0 relative z-10">
                         <Skeleton variant="circle" className="h-14 w-14" />
                         <Skeleton className="w-32 h-14 rounded-full" />
                      </div>
-                     <Skeleton className="w-48 h-8 mb-8" />
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                     <Skeleton className="w-48 h-8 mb-6 md:mb-8 mx-auto md:mx-0" />
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5">
                         {[...Array(6)].map((_, i) => <SongSkeleton key={i} />)}
                      </div>
                   </div>
@@ -968,7 +968,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
             ) : artistProfileData && (
               <>
                 {/* Artist Banner */}
-                <div className="relative h-[28rem] w-full">
+                <div className="relative h-[20rem] md:h-[28rem] w-full">
                    <div className="absolute inset-0 bg-gradient-to-b from-brand-accent/30 to-brand-dark z-0" />
                    {artistProfileData.banner_url ? (
                       <img src={artistProfileData.banner_url} alt="banner" className="w-full h-full object-cover relative z-[-1]" />
@@ -978,21 +978,21 @@ const Dashboard = ({ defaultView = 'home' }) => {
                       <div className="w-full h-full bg-gradient-to-tr from-brand-accent/20 to-brand-primary/10 relative z-[-1]" />
                    )}
                    
-                   <div className="absolute bottom-0 left-0 p-12 w-full bg-gradient-to-t from-brand-dark via-brand-dark/40 to-transparent z-10 transition-all duration-700">
-                      <div className="flex items-end gap-8">
+                   <div className="absolute bottom-0 left-0 p-4 md:p-12 w-full bg-gradient-to-t from-brand-dark via-brand-dark/40 to-transparent z-10 transition-all duration-700">
+                      <div className="flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-8 text-center md:text-left translate-y-8 md:translate-y-0">
                          {artistProfileData.avatar_url || artistProfileData.songs?.[0]?.cover_image_url ? (
-                            <img src={artistProfileData.avatar_url || resolveUrl(artistProfileData.songs[0].cover_image_url)} alt="avatar" className="w-48 h-48 rounded-full shadow-2xl ring-4 ring-white/10 object-cover shrink-0 animate-slide-up" />
+                            <img src={artistProfileData.avatar_url || resolveUrl(artistProfileData.songs[0].cover_image_url)} alt="avatar" className="w-32 h-32 md:w-48 md:h-48 rounded-full shadow-2xl ring-4 ring-white/10 object-cover shrink-0 animate-slide-up" />
                          ) : null}
                          <div>
-                            <h1 className="text-8xl font-black tracking-tighter mb-4 drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] animate-slide-up" style={{ animationDelay: '0.05s' }}>{artistProfileData.username}</h1>
-                            <p className="text-lg text-white/70 max-w-3xl font-medium leading-relaxed drop-shadow-md animate-slide-up" style={{ animationDelay: '0.1s' }}>{artistProfileData.bio || "Artist"}</p>
+                            <h1 className="text-4xl md:text-8xl font-black tracking-tighter mb-2 md:mb-4 drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] animate-slide-up" style={{ animationDelay: '0.05s' }}>{artistProfileData.username}</h1>
+                            <p className="text-sm md:text-lg text-white/70 max-w-3xl font-medium leading-relaxed drop-shadow-md animate-slide-up px-4 md:px-0" style={{ animationDelay: '0.1s' }}>{artistProfileData.bio || "Artist"}</p>
                          </div>
                       </div>
                    </div>
                 </div>
 
-                <div className="p-8 relative z-10">
-                  <div className="flex items-center gap-8 mb-14 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+                <div className="p-4 md:p-8 relative z-10 mt-10 md:mt-0">
+                  <div className="flex items-center justify-center md:justify-start gap-6 md:gap-8 mb-10 md:mb-14 animate-slide-up" style={{ animationDelay: '0.2s' }}>
                      <button className="w-14 h-14 bg-brand-primary rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all text-brand-dark">
                         <Play className="w-7 h-7 fill-current ml-1" />
                      </button>
@@ -1004,14 +1004,14 @@ const Dashboard = ({ defaultView = 'home' }) => {
                      </button>
                   </div>
 
-                  <div className="space-y-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-                    <h2 className="text-xl font-bold flex items-center gap-3 tracking-tight">
+                  <div className="space-y-4 md:space-y-6 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+                    <h2 className="text-lg md:text-xl font-bold flex items-center gap-3 tracking-tight">
                        Discography
                        <div className="h-px flex-1 bg-white/5" />
-                       <span className="text-white/20 font-bold text-xs tracking-widest uppercase">{artistProfileData.songs?.length || 0} tracks</span>
+                       <span className="text-white/20 font-bold text-[10px] md:text-xs tracking-widest uppercase">{artistProfileData.songs?.length || 0} tracks</span>
                     </h2>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                       {artistProfileData.songs?.map((song) => (
                         <SongCard key={song.song_id} song={{...song, artist_name: artistProfileData.username, artist_id: artistProfileData.artist_id}} />
                       ))}
@@ -1038,10 +1038,10 @@ const Dashboard = ({ defaultView = 'home' }) => {
           <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
             {isLoading ? (
               <div className="animate-pulse">
-                <div className="h-80 bg-white/5 w-full" />
-                <div className="p-8">
-                  <Skeleton className="w-64 h-10 mb-6" />
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="h-64 md:h-80 bg-white/5 w-full" />
+                <div className="p-4 md:p-8">
+                  <Skeleton className="w-48 md:w-64 h-8 md:h-10 mb-4 md:mb-6" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5">
                     {[...Array(6)].map((_, i) => <SongSkeleton key={i} />)}
                   </div>
                 </div>
@@ -1049,30 +1049,30 @@ const Dashboard = ({ defaultView = 'home' }) => {
             ) : saavnArtist && (
               <>
                 {/* Artist Hero */}
-                <div className="relative h-[24rem] w-full">
+                <div className="relative h-[20rem] md:h-[24rem] w-full">
                   <div className="absolute inset-0 bg-gradient-to-b from-white/[0.06] to-brand-dark z-0" />
                   {saavnArtist.image && (
                     <img src={saavnArtist.image} alt="" className="w-full h-full object-cover relative z-[-1] opacity-40 blur-sm scale-110" />
                   )}
-                  <div className="absolute bottom-0 left-0 p-12 w-full bg-gradient-to-t from-brand-dark via-brand-dark/60 to-transparent z-10 flex items-end gap-8">
+                  <div className="absolute bottom-0 left-0 p-4 md:p-12 w-full bg-gradient-to-t from-brand-dark via-brand-dark/60 to-transparent z-10 flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-8 text-center md:text-left translate-y-6 md:translate-y-0">
                     {saavnArtist.image && (
-                      <img src={saavnArtist.image} alt={saavnArtist.name} className="w-48 h-48 rounded-full shadow-2xl ring-4 ring-white/10 object-cover shrink-0" />
+                      <img src={saavnArtist.image} alt={saavnArtist.name} className="w-32 h-32 md:w-48 md:h-48 rounded-full shadow-2xl ring-4 ring-white/10 object-cover shrink-0" />
                     )}
                     <div>
                       {saavnArtist.is_verified && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-500/20 text-sky-400 rounded-full text-[10px] font-bold uppercase tracking-widest mb-3">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-500/20 text-sky-400 rounded-full text-[10px] font-bold uppercase tracking-widest mb-2 md:mb-3">
                           ✓ Verified Artist
                         </span>
                       )}
-                      <h1 className="text-6xl font-black tracking-tighter mb-2">{saavnArtist.name}</h1>
+                      <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-1 md:mb-2">{saavnArtist.name}</h1>
                       {saavnArtist.fan_count > 0 && (
-                        <p className="text-sm text-brand-muted font-medium">{Number(saavnArtist.fan_count).toLocaleString()} followers</p>
+                        <p className="text-xs md:text-sm text-brand-muted font-medium">{Number(saavnArtist.fan_count).toLocaleString()} followers</p>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="p-8">
+                <div className="p-4 md:p-8 mt-8 md:mt-0">
                   {/* Top Songs */}
                   {saavnArtist.top_songs?.length > 0 && (
                     <div className="mb-12 animate-slide-up">
@@ -1131,33 +1131,33 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {currentView === 'saavn-album' && (
           <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
             {isLoading ? (
-              <div className="p-8 pt-20 animate-pulse">
-                <div className="flex items-end gap-8 mb-12">
-                  <Skeleton className="w-52 h-52 rounded-2xl" />
-                  <div className="space-y-4">
+              <div className="p-4 md:p-8 pt-10 md:pt-20 animate-pulse">
+                <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-8 md:mb-12">
+                  <Skeleton className="w-48 h-48 md:w-52 md:h-52 rounded-2xl" />
+                  <div className="space-y-4 w-full flex flex-col items-center md:items-start">
                     <Skeleton className="w-20 h-4" />
-                    <Skeleton className="w-64 h-10" />
-                    <Skeleton className="w-40 h-5" />
+                    <Skeleton className="w-64 h-8 md:h-10" />
+                    <Skeleton className="w-40 h-4 md:h-5" />
                   </div>
                 </div>
               </div>
             ) : saavnAlbum && (
               <>
-                <div className="absolute top-0 w-full h-[30rem] bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none" />
-                <div className="p-8 relative z-10">
-                  <div className="flex items-end gap-8 mb-10 animate-slide-up">
-                    <div className="w-56 h-56 rounded-2xl shadow-2xl overflow-hidden shrink-0">
+                <div className="absolute top-0 w-full h-[24rem] md:h-[30rem] bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none" />
+                <div className="p-4 md:p-8 relative z-10">
+                  <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-8 md:mb-10 animate-slide-up text-center md:text-left">
+                    <div className="w-48 h-48 md:w-56 md:h-56 rounded-2xl shadow-2xl overflow-hidden shrink-0 mt-4 md:mt-0">
                       {saavnAlbum.cover_image_url ? (
                         <img src={saavnAlbum.cover_image_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-brand-surface flex items-center justify-center"><Disc3 className="w-20 h-20 text-white/10" /></div>
+                        <div className="w-full h-full bg-brand-surface flex items-center justify-center"><Disc3 className="w-16 h-16 md:w-20 md:h-20 text-white/10" /></div>
                       )}
                     </div>
                     <div className="pb-2">
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-muted mb-3 block">Album</span>
-                      <h1 className="text-5xl font-black tracking-tighter mb-3">{saavnAlbum.name}</h1>
-                      <p className="text-lg text-brand-muted font-medium">{saavnAlbum.artist_name}</p>
-                      <div className="flex items-center gap-3 mt-4 text-xs font-bold text-brand-muted">
+                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-muted mb-2 md:mb-3 block">Album</span>
+                      <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-2 md:mb-3">{saavnAlbum.name}</h1>
+                      <p className="text-sm md:text-lg text-brand-muted font-medium">{saavnAlbum.artist_name}</p>
+                      <div className="flex items-center justify-center md:justify-start gap-3 mt-3 md:mt-4 text-[10px] md:text-xs font-bold text-brand-muted">
                         {saavnAlbum.year && <span>{saavnAlbum.year}</span>}
                         <span>•</span>
                         <span>{saavnAlbum.song_count || saavnAlbum.songs?.length || 0} songs</span>
@@ -1200,33 +1200,33 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {currentView === 'saavn-playlist' && (
           <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
             {isLoading ? (
-              <div className="p-8 pt-20 animate-pulse">
-                <div className="flex items-end gap-8 mb-12">
-                  <Skeleton className="w-52 h-52 rounded-2xl" />
-                  <div className="space-y-4">
+              <div className="p-4 md:p-8 pt-10 md:pt-20 animate-pulse">
+                <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-8 md:mb-12">
+                  <Skeleton className="w-48 h-48 md:w-52 md:h-52 rounded-2xl" />
+                  <div className="space-y-4 w-full flex flex-col items-center md:items-start">
                     <Skeleton className="w-20 h-4" />
-                    <Skeleton className="w-64 h-10" />
-                    <Skeleton className="w-96 h-5" />
+                    <Skeleton className="w-64 h-8 md:h-10" />
+                    <Skeleton className="w-full max-w-[20rem] md:w-96 h-4 md:h-5" />
                   </div>
                 </div>
               </div>
             ) : saavnPlaylist && (
               <>
-                <div className="absolute top-0 w-full h-[30rem] bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none" />
-                <div className="p-8 relative z-10">
-                  <div className="flex items-end gap-8 mb-10 animate-slide-up">
-                    <div className="w-56 h-56 rounded-2xl shadow-2xl overflow-hidden shrink-0">
+                <div className="absolute top-0 w-full h-[24rem] md:h-[30rem] bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none" />
+                <div className="p-4 md:p-8 relative z-10">
+                  <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-8 md:mb-10 animate-slide-up text-center md:text-left">
+                    <div className="w-48 h-48 md:w-56 md:h-56 rounded-2xl shadow-2xl overflow-hidden shrink-0 mt-4 md:mt-0">
                       {saavnPlaylist.cover_image_url ? (
                         <img src={saavnPlaylist.cover_image_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-brand-surface flex items-center justify-center"><Music className="w-20 h-20 text-white/10" /></div>
+                        <div className="w-full h-full bg-brand-surface flex items-center justify-center"><Music className="w-16 h-16 md:w-20 md:h-20 text-white/10" /></div>
                       )}
                     </div>
                     <div className="pb-2">
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-muted mb-3 block">Playlist</span>
-                      <h1 className="text-5xl font-black tracking-tighter mb-3">{saavnPlaylist.name}</h1>
-                      {saavnPlaylist.description && <p className="text-base text-brand-muted font-medium max-w-2xl">{saavnPlaylist.description}</p>}
-                      <div className="flex items-center gap-3 mt-4 text-xs font-bold text-brand-muted">
+                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-muted mb-2 md:mb-3 block">Playlist</span>
+                      <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-2 md:mb-3">{saavnPlaylist.name}</h1>
+                      {saavnPlaylist.description && <p className="text-xs md:text-base text-brand-muted font-medium max-w-2xl px-4 md:px-0">{saavnPlaylist.description}</p>}
+                      <div className="flex items-center justify-center md:justify-start gap-3 mt-3 md:mt-4 text-[10px] md:text-xs font-bold text-brand-muted">
                         <span>{saavnPlaylist.song_count || saavnPlaylist.songs?.length || 0} songs</span>
                         {saavnPlaylist.fan_count > 0 && (
                           <>
@@ -1239,13 +1239,13 @@ const Dashboard = ({ defaultView = 'home' }) => {
                   </div>
 
                   {/* Play All button */}
-                  <div className="mb-8 flex items-center gap-4 animate-slide-up" style={{ animationDelay: '0.05s' }}>
+                  <div className="mb-6 md:mb-8 flex items-center justify-center md:justify-start gap-4 animate-slide-up" style={{ animationDelay: '0.05s' }}>
                     <button 
                       onClick={() => saavnPlaylist.songs?.[0] && handleGlobalPlay(saavnPlaylist.songs[0], saavnPlaylist.songs)}
-                      className="w-14 h-14 bg-brand-primary rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all text-brand-dark"
+                      className="w-12 h-12 md:w-14 md:h-14 bg-brand-primary rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all text-brand-dark"
                       title="Play All"
                     >
-                      <Play className="w-7 h-7 fill-current ml-1" />
+                      <Play className="w-6 h-6 md:w-7 md:h-7 fill-current ml-1" />
                     </button>
 
                     <button

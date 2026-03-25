@@ -30,6 +30,8 @@ const Sidebar = () => {
   if (isFullScreenPlayer) return null;
 
   return (
+    <>
+    {/* Desktop Sidebar (hidden on mobile) */}
     <div className={`${isSidebarCollapsed ? 'w-20' : 'w-64'} hidden md:flex flex-col bg-brand-dark pt-6 pb-2 shrink-0 z-50 border-r border-white/[0.04] transition-all duration-300`}>
       <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center mx-0' : 'justify-between px-8'} mb-10 relative h-8`}>
         {!isSidebarCollapsed && (
@@ -157,6 +159,39 @@ const Sidebar = () => {
         )}
       </nav>
     </div>
+
+    {/* Mobile Bottom Navigation Bar (hidden on desktop) */}
+    <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-brand-dark/95 backdrop-blur-xl border-t border-white/[0.04] z-[60] flex items-center justify-around px-2 pb-safe">
+      <Link
+        to="/dashboard"
+        className={`flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors ${currentView === 'home' ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`}
+      >
+        <Home className={`w-5 h-5 ${currentView === 'home' ? 'fill-current' : ''}`} />
+        <span className="text-[10px] font-medium tracking-wide">Home</span>
+      </Link>
+      <Link
+        to="/search"
+        className={`flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors ${currentView === 'search' ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`}
+      >
+        <SearchIcon className={`w-5 h-5 ${currentView === 'search' ? 'font-black' : ''}`} />
+        <span className="text-[10px] font-medium tracking-wide">Search</span>
+      </Link>
+      <Link
+        to="/dashboard/library"
+        className={`flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors ${currentView === 'library' ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`}
+      >
+        <Library className={`w-5 h-5 ${currentView === 'library' ? 'fill-current' : ''}`} />
+        <span className="text-[10px] font-medium tracking-wide">Library</span>
+      </Link>
+      <Link
+        to="/dashboard/stats"
+        className={`flex flex-col items-center justify-center gap-1 w-16 h-full transition-colors ${currentView === 'stats' ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`}
+      >
+        <BarChart3 className={`w-5 h-5 ${currentView === 'stats' ? 'fill-current' : ''}`} />
+        <span className="text-[10px] font-medium tracking-wide">Stats</span>
+      </Link>
+    </div>
+    </>
   );
 };
 

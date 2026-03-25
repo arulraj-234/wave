@@ -231,15 +231,21 @@ const BottomPlayer = () => {
             animate={{ y: 0 }}
             exit={{ y: 100 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
-            className={`fixed bottom-0 ${sidebarOffset} right-0 h-24 bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] z-50 flex items-center px-8 min-w-[700px] transition-all duration-300`}
+            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-[3.5rem] md:h-24 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] z-50 flex items-center px-3 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300`}
             style={{ 
               opacity: (isFullScreenPlayer && isIdle) ? 0 : 1, 
               pointerEvents: (isFullScreenPlayer && isIdle) ? 'none' : 'auto' 
             }}
+            onClick={(e) => {
+              // On mobile, tapping the bottom player (except controls) expands to fullscreen
+              if (window.innerWidth < 768 && !e.target.closest('button')) {
+                setIsFullScreenPlayer(true);
+              }
+            }}
           >
             {/* Song Info */}
-            <div className="flex items-center gap-4 w-1/3">
-              <div className="w-14 h-14 bg-brand-dark rounded-md shadow-sm overflow-hidden flex items-center justify-center shrink-0">
+            <div className="flex items-center gap-3 md:gap-4 w-full md:w-1/3 overflow-hidden cursor-pointer md:cursor-default">
+              <div className="w-10 h-10 md:w-14 md:h-14 bg-brand-dark rounded-md shadow-sm overflow-hidden flex items-center justify-center shrink-0">
                 {currentSong.cover_image_url ? 
                   <img src={resolveUrl(currentSong.cover_image_url)} className="w-full h-full object-cover"/> : 
                   <Music className="w-6 h-6 text-brand-muted" />
@@ -274,40 +280,40 @@ const BottomPlayer = () => {
               <button 
                 onClick={() => toggleLike(currentSong.song_id)}
                 title={likedSongs.has(currentSong.song_id) ? "Remove from Liked Songs" : "Add to Liked Songs"}
-                className={`ml-2 p-2 rounded-full transition-colors ${likedSongs.has(currentSong.song_id) ? 'text-brand-primary' : 'text-brand-muted hover:text-brand-primary'}`}
+                className={`ml-1 md:ml-2 p-1.5 md:p-2 rounded-full transition-colors ${likedSongs.has(currentSong.song_id) ? 'text-brand-primary' : 'text-brand-muted hover:text-brand-primary'}`}
               >
-                <Heart className={`w-5 h-5 ${likedSongs.has(currentSong.song_id) ? 'fill-current' : ''}`} />
+                <Heart className={`w-4 h-4 md:w-5 md:h-5 ${likedSongs.has(currentSong.song_id) ? 'fill-current' : ''}`} />
               </button>
             </div>
             
-            {/* Controls */}
-            <div className="flex-1 flex flex-col items-center justify-center gap-2.5">
-              <div className="flex items-center gap-4">
-                <button onClick={toggleShuffle} title={shuffleMode ? "Disable Shuffle" : "Enable Shuffle"} className={`transition-colors ${shuffleMode ? 'text-brand-primary' : 'text-brand-muted hover:text-brand-primary'}`}>
+            {/* Controls (Desktop) & Mobile Play/Pause */}
+            <div className="flex-none md:flex-1 flex items-center justify-end md:justify-center md:flex-col gap-2.5 ml-auto pl-2 shrink-0">
+              <div className="flex items-center gap-2 md:gap-4">
+                <button onClick={toggleShuffle} title={shuffleMode ? "Disable Shuffle" : "Enable Shuffle"} className={`hidden md:block transition-colors ${shuffleMode ? 'text-brand-primary' : 'text-brand-muted hover:text-brand-primary'}`}>
                   <Shuffle className="w-4 h-4" />
                 </button>
-                <button onClick={playPrevious} title="Previous" className="text-brand-muted hover:text-brand-primary transition-colors">
+                <button onClick={playPrevious} title="Previous" className="hidden md:block text-brand-muted hover:text-brand-primary transition-colors">
                   <SkipBack className="w-5 h-5 fill-current" />
                 </button>
                 
                 <button 
-                  onClick={togglePlay}
+                  onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                   title={isPlaying ? "Pause" : "Play"}
-                  className="w-10 h-10 rounded-full bg-brand-primary text-brand-dark flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-sm"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-brand-primary text-brand-dark flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-sm"
                 >
-                  {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-1" />}
+                  {isPlaying ? <Pause className="w-4 h-4 md:w-5 md:h-5 fill-current" /> : <Play className="w-4 h-4 md:w-5 md:h-5 fill-current ml-1" />}
                 </button>
 
-                <button onClick={playNext} title="Next" className="text-brand-muted hover:text-brand-primary transition-colors">
+                <button onClick={playNext} title="Next" className="hidden md:block text-brand-muted hover:text-brand-primary transition-colors">
                   <SkipForward className="w-5 h-5 fill-current" />
                 </button>
-                <button onClick={toggleRepeat} title={repeatMode === 'one' ? "Repeat One" : repeatMode === 'all' ? "Disable Repeat" : "Enable Repeat"} className={`transition-colors ${repeatMode !== 'off' ? 'text-brand-primary' : 'text-brand-muted hover:text-brand-primary'}`}>
+                <button onClick={toggleRepeat} title={repeatMode === 'one' ? "Repeat One" : repeatMode === 'all' ? "Disable Repeat" : "Enable Repeat"} className={`hidden md:block transition-colors ${repeatMode !== 'off' ? 'text-brand-primary' : 'text-brand-muted hover:text-brand-primary'}`}>
                   {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
                 </button>
               </div>
               
-              {/* Progress Bar */}
-              <div className="w-full max-w-md flex items-center gap-3 text-xs text-brand-muted font-medium">
+              {/* Progress Bar (Desktop only) */}
+              <div className="hidden md:flex w-full max-w-md items-center gap-3 text-xs text-brand-muted font-medium">
                 <span>{formatTime((progress / 100) * duration)}</span>
                 <div className="flex-1 flex items-center px-2 group">
                   <ElasticSlider
@@ -324,7 +330,7 @@ const BottomPlayer = () => {
             </div>
             
             {/* Volume, Queue, Timer & Fullscreen */}
-            <div className="w-1/3 flex justify-end items-center gap-2">
+            <div className="hidden md:flex w-1/3 justify-end items-center gap-2">
               <button
                 onClick={() => setVolume(volume > 0 ? 0 : 0.7)}
                 title={volume === 0 ? "Unmute" : "Mute"}
@@ -345,15 +351,15 @@ const BottomPlayer = () => {
 
               {/* Queue Button */}
               <button
-                onClick={() => setShowQueue(!showQueue)}
+                onClick={(e) => { e.stopPropagation(); setShowQueue(!showQueue); }}
                 className={`relative p-2 rounded-full transition-colors ${showQueue ? 'text-brand-primary bg-white/[0.06]' : 'text-brand-muted hover:text-brand-primary'}`}
                 title="Queue"
               >
-                <ListMusic className="w-4 h-4" />
+                <ListMusic className="w-4 h-4 md:w-4 md:h-4" />
               </button>
 
-              {/* Sleep Timer Button */}
-              <div className="relative">
+              {/* Sleep Timer Button (Desktop Only) */}
+              <div className="hidden md:block relative">
                 <button
                   onClick={() => setShowSleepMenu(!showSleepMenu)}
                   className={`p-2 rounded-full transition-colors relative ${sleepTimer ? 'text-sky-400' : 'text-brand-muted hover:text-brand-primary'}`}
@@ -393,10 +399,15 @@ const BottomPlayer = () => {
               <button
                 onClick={() => setIsFullScreenPlayer(!isFullScreenPlayer)}
                 title={isFullScreenPlayer ? "Minimize Player" : "Expand Player"}
-                className="text-brand-muted hover:text-brand-primary transition-colors ml-1"
+                className="hidden md:block text-brand-muted hover:text-brand-primary transition-colors ml-1"
               >
                 {isFullScreenPlayer ? <ChevronDown className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
               </button>
+            </div>
+
+            {/* Mobile Progress Bar absolute bottom edge */}
+            <div className="absolute bottom-0 left-0 h-[2px] bg-brand-primary/20 md:hidden w-full rounded-b-xl overflow-hidden">
+               <div className="h-full bg-brand-primary transition-all duration-200" style={{ width: `${(progress / 100) * 100}%` }} />
             </div>
           </motion.div>
         )}
