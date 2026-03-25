@@ -82,9 +82,12 @@ const Register = ({ setAuth }) => {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-brand-dark flex items-center justify-center">
-      <div className="absolute inset-0 z-0">
+      {/* Full-page Plasma WebGL background */}
+      <div className="absolute inset-0 z-0 hidden md:block">
         <Plasma color="#c0c0c0" speed={0.5} direction="forward" scale={1.2} opacity={1} mouseInteractive={false} />
       </div>
+      {/* Static gradient fallback for mobile to prevent glitching/slowdowns */}
+      <div className="absolute inset-0 z-0 md:hidden bg-gradient-to-br from-brand-dark via-brand-dark/90 to-brand-primary/10"></div>
 
       <div className="relative z-10 w-full max-w-md px-8 py-8 animate-slide-up">
         <div className="flex flex-col items-center mb-8">
