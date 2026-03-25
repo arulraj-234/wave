@@ -25,7 +25,12 @@ pool = pooling.MySQLConnectionPool(
 )
 
 def get_connection():
-    return pool.get_connection()
+    conn = pool.get_connection()
+    # Disable ONLY_FULL_GROUP_BY for TiDB compatibility
+    cursor = conn.cursor()
+    cursor.execute("SET sql_mode = ''")
+    cursor.close()
+    return conn
 
 def fetch_one(query, params=None):
     conn = get_connection()
