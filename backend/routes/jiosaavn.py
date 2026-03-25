@@ -8,7 +8,8 @@ from config import Config
 
 jiosaavn_bp = Blueprint('jiosaavn', __name__)
 
-SAAVN_API_BASE = Config.SAAVN_API_URL
+SAAVN_API_BASE = Config.SAAVN_API_URL.rstrip('/') # Handle trailing slashes gracefully
+print(f"[JioSaavn Config] Active API Base: {SAAVN_API_BASE}")
 
 
 def log_error(msg):
@@ -730,10 +731,15 @@ def get_home_content():
                 if data.get('success'):
                     raw_data = data.get('data', {})
                     results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
+                    if not results:
+                        log_error(f"Empty results for featured playlist query '{query}'")
                     for p in results:
                         if isinstance(p, dict):
                             content['featured_playlists'].append(_normalize_playlist(p))
-            except:
+                else:
+                    log_error(f"Upstream failure for playlist query '{query}': {data.get('message', 'No details')}")
+            except Exception as e:
+                log_error(f"Network error for playlist query '{query}': {str(e)}")
                 continue
 
         # Deduplicate
@@ -756,9 +762,13 @@ def get_home_content():
             if data.get('success'):
                 raw_data = data.get('data', {})
                 results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
+                if not results:
+                    log_error(f"Empty results for trending query '{trending_query}'")
                 content['trending_songs'] = [_normalize_song(s) for s in results if isinstance(s, dict)]
-        except:
-            pass
+            else:
+                log_error(f"Upstream failure for trending query: {data.get('message', 'No details')}")
+        except Exception as e:
+            log_error(f"Failed to fetch trending songs: {str(e)}")
 
         # ── 3. New Releases (personalized) ─────────────────────
         try:
@@ -771,9 +781,13 @@ def get_home_content():
             if data.get('success'):
                 raw_data = data.get('data', {})
                 results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
+                if not results:
+                    log_error(f"Empty results for new releases query '{new_release_query}'")
                 content['new_releases'] = [_normalize_album(a) for a in results if isinstance(a, dict)]
-        except:
-            pass
+            else:
+                log_error(f"Upstream failure for new releases: {data.get('message', 'No details')}")
+        except Exception as e:
+            log_error(f"Failed to fetch new releases: {str(e)}")
 
         # ── 4. Personalized Mixes ("Because you listen to [Genre]" & "More of [artist]") ─
         if genre_names or artist_names:
