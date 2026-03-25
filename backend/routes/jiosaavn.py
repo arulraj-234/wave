@@ -50,7 +50,7 @@ def search_global():
         resp = requests.get(
             url,
             params={'query': query, 'limit': limit},
-            timeout=10
+            timeout=60
         )
         try:
             data = resp.json()
@@ -312,7 +312,7 @@ def import_song():
         log_error(f"Importing song {saavn_id} without audio_url. Attempting backfill...")
         # Fetch full details if metadata is incomplete (e.g. from 'All' tab)
         try:
-            detail_resp = requests.get(f"{SAAVN_API_BASE}/songs/{saavn_id}", timeout=5)
+            detail_resp = requests.get(f"{SAAVN_API_BASE}/songs/{saavn_id}", timeout=60)
             try:
                 detail_data = detail_resp.json()
             except:
@@ -408,7 +408,7 @@ def import_song():
         try:
             import urllib.parse
             query_str = urllib.parse.quote(f"{title} {artist_name}")
-            itunes_resp = requests.get(f"https://itunes.apple.com/search?term={query_str}&entity=song&limit=1", timeout=3)
+            itunes_resp = requests.get(f"https://itunes.apple.com/search?term={query_str}&entity=song&limit=1", timeout=10)
             itunes_data = itunes_resp.json()
             if itunes_data.get('resultCount', 0) > 0:
                 found_genre = itunes_data['results'][0].get('primaryGenreName')
@@ -465,7 +465,7 @@ def get_artist_detail(artist_id):
         resp = requests.get(
             f"{SAAVN_API_BASE}/artists/{artist_id}",
             params={'songCount': 20, 'albumCount': 10, 'sortBy': 'popularity'},
-            timeout=10
+            timeout=60
         )
         try:
             data = resp.json()
@@ -535,7 +535,7 @@ def get_album_detail(album_id):
         resp = requests.get(
             f"{SAAVN_API_BASE}/albums",
             params={'id': album_id},
-            timeout=10
+            timeout=60
         )
         try:
             data = resp.json()
@@ -604,7 +604,7 @@ def get_playlist_detail(playlist_id):
         resp = requests.get(
             f"{SAAVN_API_BASE}/playlists",
             params={'id': playlist_id, 'limit': 50},
-            timeout=10
+            timeout=60
         )
         try:
             data = resp.json()
@@ -759,7 +759,7 @@ def get_home_content():
                 resp = requests.get(
                     f"{SAAVN_API_BASE}/search/playlists",
                     params={'query': query, 'limit': 2},
-                    timeout=5
+                    timeout=60
                 )
                 try:
                     data = resp.json()
@@ -795,7 +795,7 @@ def get_home_content():
             resp = requests.get(
                 f"{SAAVN_API_BASE}/search/songs",
                 params={'query': trending_query, 'limit': 15},
-                timeout=8
+                timeout=60
             )
             data = resp.json()
             if data.get('success'):
@@ -814,7 +814,7 @@ def get_home_content():
             resp = requests.get(
                 f"{SAAVN_API_BASE}/search/albums",
                 params={'query': new_release_query, 'limit': 10},
-                timeout=8
+                timeout=60
             )
             data = resp.json()
             if data.get('success'):
@@ -838,7 +838,7 @@ def get_home_content():
                     resp = requests.get(
                         f"{SAAVN_API_BASE}/search/songs",
                         params={'query': f"{genre} popular", 'limit': 10},
-                        timeout=5
+                        timeout=60
                     )
                     data = resp.json()
                     if data.get('success'):
@@ -868,7 +868,7 @@ def get_home_content():
                     resp = requests.get(
                         f"{SAAVN_API_BASE}/search/songs",
                         params={'query': artist, 'limit': 12},
-                        timeout=5
+                        timeout=60
                     )
                     data = resp.json()
                     if data.get('success'):

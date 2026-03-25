@@ -7,6 +7,7 @@ import datetime
 import hashlib
 from werkzeug.utils import secure_filename
 import mutagen
+import requests as ext_requests
 
 # Ensure upload directory exists
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'songs')
@@ -619,7 +620,7 @@ def get_recommendations(user_id):
             resp = ext_requests.get(
                 f"{SAAVN_API_BASE}/search/songs",
                 params={'query': query, 'limit': 8},
-                timeout=5
+                timeout=60
             )
             data = resp.json()
             if data.get('success'):
