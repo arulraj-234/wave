@@ -15,4 +15,7 @@ class Config:
     DB_SSL_MODE = os.getenv('DB_SSL_MODE', 'false').lower() == 'true'
     
     # Internal Microservice URL for JioSaavn API
-    SAAVN_API_URL = os.getenv('SAAVN_API_URL', 'http://localhost:3001/api')
+    _saavn_url = os.getenv('SAAVN_API_URL', 'http://localhost:3001/api').rstrip('/')
+    if not _saavn_url.endswith('/api'):
+        _saavn_url += '/api'
+    SAAVN_API_URL = _saavn_url
