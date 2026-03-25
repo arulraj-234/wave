@@ -25,6 +25,7 @@ FROM oven/bun:alpine AS production
 WORKDIR /user/app
 
 COPY --from=build /user/app/dist ./dist
+COPY --from=build /user/app/serve.mjs ./serve.mjs
 COPY --from=base /user/app/node_modules ./node_modules
 COPY --from=base /user/app/package.json ./package.json
 
