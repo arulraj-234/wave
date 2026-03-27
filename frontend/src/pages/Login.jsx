@@ -23,8 +23,9 @@ const Login = ({ setAuth }) => {
         login_id: loginId,
         password
       });
-      localStorage.setItem('token', response.data.token);
+      // Backend now sets HttpOnly cookie, we only store user info
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      localStorage.removeItem('token'); // Clear any legacy token
 
       const role = response.data.user.role;
       if (role === 'admin') navigate('/admin', { replace: true });
