@@ -14,6 +14,11 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+from middleware import token_required
+
+# Apply stricter rate limiting specifically to auth endpoints via the limiter instance defined in app.py
+# (We will import the limiter from app.py or rely on blueprint routes, but it's cleaner to handle via a custom decorator or directly passing string rules if we can. To avoid circular imports, we will keep the app.py limiter logic, but remove the blanket 5/min limit.)
+
 @auth_bp.route('/register', methods=['POST'])
 def register():
     data = request.json
@@ -138,6 +143,28 @@ def logout():
     # Clear the HttpOnly cookie
     response.set_cookie('token', '', httponly=True, expires=0)
     return response, 200
+
+@auth_bp.route('/me', methods=['GET'])
+@token_required
+def me():
+    user_id = request.current_user.get('user_id')
+    user = fetch_one("SELECT user_id, username, email, role, avatar_url, first_name, last_name, onboarding_completed FROM users WHERE user_id = %s", (user_id,))
+    if user:
+        is_onboarded = bool(user.get('onboarding_completed', False))
+        return jsonify({
+            "success": True,
+            "user": {
+                "id": user['user_id'],
+                "username": user['username'],
+                "email": user['email'],
+                "role": user['role'],
+                "avatar_url": user['avatar_url'],
+                "first_name": user['first_name'],
+                "last_name": user['last_name'],
+                "onboarding_completed": is_onboarded
+            }
+        }), 200
+    return jsonify({"error": "User not found"}), 404
 
 @auth_bp.route('/onboarding', methods=['POST'])
 def complete_onboarding():
