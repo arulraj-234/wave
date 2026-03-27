@@ -19,12 +19,16 @@ from flask_limiter.util import get_remote_address
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["1000 per day", "100 per hour", "15 per minute"],
+    default_limits=["2000 per day", "300 per hour", "30 per minute"],
     storage_uri="memory://"
 )
 
-# Enable CORS for the frontend
-CORS(app, supports_credentials=True)
+# Protect sensitive authentication endpoints with stricter limits
+limiter.limit("5 per minute")(auth_bp)
+
+# Restrict CORS to specific production/development origins
+ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
 
 # Register Blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
