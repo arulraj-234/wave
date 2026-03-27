@@ -74,11 +74,12 @@ def register():
             }
         })
         # Set HttpOnly cookie instead of sending token in body
+        is_production = os.environ.get('FLASK_ENV') == 'production'
         response.set_cookie(
             'token', token,
             httponly=True,
-            secure=True, # Ensure HTTPS in production
-            samesite='Strict',
+            secure=is_production, # Only require HTTPS in production
+            samesite='Lax' if not is_production else 'Strict',
             max_age=24*60*60 # 1 day
         )
         return response, 201
@@ -119,11 +120,12 @@ def login():
             }
         })
         # Set HttpOnly cookie
+        is_production = os.environ.get('FLASK_ENV') == 'production'
         response.set_cookie(
             'token', token,
             httponly=True,
-            secure=True, # Ensure HTTPS in production
-            samesite='Strict',
+            secure=is_production, # Only require HTTPS in production
+            samesite='Lax' if not is_production else 'Strict',
             max_age=24*60*60 # 1 day
         )
         return response, 200

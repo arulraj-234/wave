@@ -40,7 +40,7 @@ const QueuePanel = ({ isOpen, onClose }) => {
       <div onClick={onClose} className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-sm" />
       
       {/* Panel */}
-      <div className="fixed right-0 top-0 bottom-0 w-[380px] bg-brand-dark border-l border-white/[0.06] z-[70] flex flex-col animate-slide-in-right shadow-2xl">
+      <div className="fixed right-0 top-0 bottom-0 w-full md:w-[380px] bg-brand-dark border-l border-white/[0.06] z-[70] flex flex-col animate-slide-in-right shadow-2xl">
         {/* Header */}
         <div className="p-5 border-b border-white/[0.04] flex items-center justify-between shrink-0">
           <h2 className="text-sm font-bold uppercase tracking-widest text-brand-primary flex items-center gap-2.5">
@@ -103,12 +103,12 @@ const QueuePanel = ({ isOpen, onClose }) => {
                         <div className="w-full h-full flex items-center justify-center"><Music className="w-3.5 h-3.5 text-brand-muted" /></div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold truncate text-brand-primary">{song.title}</div>
-                      <div className="text-[10px] text-brand-muted truncate">{song.artist_name}</div>
+                    <div className="flex-1 min-w-0 pr-2">
+                      <div className="text-xs md:text-sm font-semibold truncate text-brand-primary">{song.title}</div>
+                      <div className="text-[10px] md:text-xs text-brand-muted truncate">{song.artist_name}</div>
                     </div>
-                    <button onClick={() => removeFromQueue(idx)} className="w-7 h-7 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-500/10 flex items-center justify-center transition-all">
-                      <Trash2 className="w-3 h-3 text-red-400" />
+                    <button onClick={() => removeFromQueue(idx)} className="w-8 h-8 md:w-7 md:h-7 rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 bg-white/5 md:bg-transparent hover:bg-red-500/20 md:hover:bg-red-500/10 flex items-center justify-center transition-all shrink-0 active:scale-90">
+                      <Trash2 className="w-4 h-4 md:w-3 md:h-3 text-red-400" />
                     </button>
                   </div>
                 ))}

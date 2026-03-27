@@ -8,20 +8,33 @@ export const PlayerProvider = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolumeState] = useState(0.7);
+
+  // Load persistent volume, shuffle, and repeat state
+  const [volume, setVolumeState] = useState(() => {
+    const saved = localStorage.getItem('wave_volume');
+    return saved !== null ? parseFloat(saved) : 0.7;
+  });
+  const [shuffleMode, setShuffleMode] = useState(() => {
+    const saved = localStorage.getItem('wave_shuffle');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+  const [repeatMode, setRepeatMode] = useState(() => {
+    const saved = localStorage.getItem('wave_repeat');
+    return saved !== null ? saved : 'off';
+  });
+
   const [likedSongs, setLikedSongs] = useState(new Set());
   const [playlists, setPlaylists] = useState([]);
   const [likedPlaylists, setLikedPlaylists] = useState([]);
   const [queue, setQueue] = useState([]);
   const [history, setHistory] = useState([]);
   const [queueIndex, setQueueIndex] = useState(-1);
-  const [shuffleMode, setShuffleMode] = useState(false);
-  const [repeatMode, setRepeatMode] = useState('off'); // 'off' | 'all' | 'one'
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isFullScreenPlayer, setIsFullScreenPlayer] = useState(false);
   const [sleepTimer, setSleepTimerState] = useState(null); // remaining seconds
   const sleepTimerRef = useRef(null);
   const audioRef = useRef(new Audio());
+  const preloadAudioRef = useRef(new Audio()); // Hidden audio element for preloading next track
   const accumulatedDurationRef = useRef(0);
   const lastPlayTimeRef = useRef(null);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -223,7 +236,42 @@ export const PlayerProvider = ({ children }) => {
     
     accumulatedDurationRef.current = 0;
     lastPlayTimeRef.current = Date.now();
+
+    // Setup Media Session API (lock screen controls)
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new window.MediaMetadata({
+        title: targetSong.title,
+        artist: targetSong.artist_name,
+        album: targetSong.album_name || '',
+        artwork: [
+          { src: resolveUrl(targetSong.cover_image_url), sizes: '512x512', type: 'image/jpeg' }
+        ]
+      });
+
+      // Handlers are bound below in the useEffect
+    }
+
   }, [currentSong, recordStream]);
+
+  // Bind Media Session API action handlers dynamically
+  // Note: we use refs or ensure we depend on the exact functions
+  // so stale closures don't break hardware media keys.
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', () => togglePlay());
+      navigator.mediaSession.setActionHandler('pause', () => togglePlay());
+      navigator.mediaSession.setActionHandler('previoustrack', () => playPrevious());
+      navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.fastSeek && ('fastSeek' in audioRef.current)) {
+          audioRef.current.fastSeek(details.seekTime);
+          return;
+        }
+        const percentage = (details.seekTime / audioRef.current.duration) * 100;
+        seek(percentage);
+      });
+    }
+  }, [currentSong, queue, history, repeatMode, shuffleMode]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -231,6 +279,18 @@ export const PlayerProvider = ({ children }) => {
     const handleTimeUpdate = () => {
       if (audio.duration) {
         setProgress((audio.currentTime / audio.duration) * 100);
+
+        // Gapless Preloading Logic: If less than 15 seconds remain, preload the next track
+        // queue[0] is correct here because playNext() always shifts the queue. The next song is ALWAYS queue[0].
+        if (audio.duration - audio.currentTime < 15 && queue.length > 0) {
+          const nextSong = queue[0];
+          const nextUrl = resolveUrl(nextSong.audio_url);
+          if (nextUrl && preloadAudioRef.current.src !== nextUrl) {
+             // Begin fetching the next audio file into browser cache
+             preloadAudioRef.current.src = nextUrl;
+             preloadAudioRef.current.load();
+          }
+        }
       }
     };
     
@@ -455,14 +515,26 @@ export const PlayerProvider = ({ children }) => {
     setProgress(percentage);
   };
 
+  // Set initial audio volume
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, []);
+
   const setVolume = (val) => {
     const v = Math.max(0, Math.min(1, val));
     audioRef.current.volume = v;
     setVolumeState(v);
+    localStorage.setItem('wave_volume', v.toString());
   };
 
   const toggleShuffle = () => {
-    setShuffleMode(prev => !prev);
+    setShuffleMode(prev => {
+      const next = !prev;
+      localStorage.setItem('wave_shuffle', JSON.stringify(next));
+      return next;
+    });
     setQueue(prevQueue => {
       if (!shuffleMode && prevQueue.length > 1) {
         return [...prevQueue].sort(() => Math.random() - 0.5);
@@ -470,7 +542,14 @@ export const PlayerProvider = ({ children }) => {
       return prevQueue;
     });
   };
-  const toggleRepeat = () => setRepeatMode(prev => prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off');
+
+  const toggleRepeat = () => {
+    setRepeatMode(prev => {
+      const next = prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off';
+      localStorage.setItem('wave_repeat', next);
+      return next;
+    });
+  };
 
   // ─── Queue Management ─────────────────────────────────
   const addToQueue = (song) => {
