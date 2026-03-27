@@ -86,6 +86,7 @@ def register():
             
         response = jsonify({
             "message": "User registered successfully", 
+            "token": token,
             "user": {
                 "id": user_id,
                 "username": username,
@@ -95,13 +96,13 @@ def register():
                 "onboarding_completed": is_onboarded
             }
         })
-        # Set HttpOnly cookie instead of sending token in body
-        # Secure, HttpOnly cookie with SameSite=None required for Cross-Domain API (Vercel -> Render)
+        # Set HttpOnly cookie as a backup for same-domain deployments,
+        # but primarily rely on the token returned in the JSON body for split-domain Vercel/Render.
         is_production = os.environ.get('FLASK_ENV') == 'production'
         response.set_cookie(
             'token', token,
             httponly=True,
-            secure=True, # Secure is mandatory when SameSite=None
+            secure=True,
             samesite='None',
             max_age=24*60*60 # 1 day
         )
@@ -136,6 +137,7 @@ def login():
         
         response = jsonify({
             "message": "Login successful",
+            "token": token,
             "user": {
                 "id": user['user_id'],
                 "username": user['username'],
@@ -145,13 +147,12 @@ def login():
                 "onboarding_completed": is_onboarded
             }
         })
-        # Set HttpOnly cookie
-        # Secure, HttpOnly cookie with SameSite=None required for Cross-Domain API (Vercel -> Render)
+        # Set HttpOnly cookie as a backup
         is_production = os.environ.get('FLASK_ENV') == 'production'
         response.set_cookie(
             'token', token,
             httponly=True,
-            secure=True, # Secure is mandatory when SameSite=None
+            secure=True,
             samesite='None',
             max_age=24*60*60 # 1 day
         )
