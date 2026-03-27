@@ -4,9 +4,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true, // Send HttpOnly cookies automatically!
 });
 
-// Attach JWT token to every request if available
+// Attach JWT token to every request if available (Legacy fallback)
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {

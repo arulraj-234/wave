@@ -62,9 +62,8 @@ def register():
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
         }, Config.SECRET_KEY, algorithm="HS256")
             
-        return jsonify({
+        response = jsonify({
             "message": "User registered successfully", 
-            "token": token,
             "user": {
                 "id": user_id,
                 "username": username,
@@ -73,7 +72,16 @@ def register():
                 "role": role,
                 "onboarding_completed": is_onboarded
             }
-        }), 201
+        })
+        # Set HttpOnly cookie instead of sending token in body
+        response.set_cookie(
+            'token', token,
+            httponly=True,
+            secure=True, # Ensure HTTPS in production
+            samesite='Strict',
+            max_age=24*60*60 # 1 day
+        )
+        return response, 201
     else:
         return jsonify({"error": "Failed to register user"}), 500
 
@@ -99,9 +107,8 @@ def login():
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
         }, Config.SECRET_KEY, algorithm="HS256")
         
-        return jsonify({
+        response = jsonify({
             "message": "Login successful",
-            "token": token,
             "user": {
                 "id": user['user_id'],
                 "username": user['username'],
@@ -110,9 +117,25 @@ def login():
                 "role": user['role'],
                 "onboarding_completed": is_onboarded
             }
-        }), 200
+        })
+        # Set HttpOnly cookie
+        response.set_cookie(
+            'token', token,
+            httponly=True,
+            secure=True, # Ensure HTTPS in production
+            samesite='Strict',
+            max_age=24*60*60 # 1 day
+        )
+        return response, 200
 
     return jsonify({"error": "Invalid email or password"}), 401
+
+@auth_bp.route('/logout', methods=['POST'])
+def logout():
+    response = jsonify({"message": "Logout successful"})
+    # Clear the HttpOnly cookie
+    response.set_cookie('token', '', httponly=True, expires=0)
+    return response, 200
 
 @auth_bp.route('/onboarding', methods=['POST'])
 def complete_onboarding():

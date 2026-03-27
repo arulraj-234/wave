@@ -9,8 +9,11 @@ def token_required(f):
     def decorated(*args, **kwargs):
         token = None
         
-        # Check for token in Authorization header
-        if 'Authorization' in request.headers:
+        # Support fallback checking for header (useful for certain mobile apps),
+        # but prioritize secure HttpOnly cookie.
+        token = request.cookies.get('token')
+
+        if not token and 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
             if auth_header.startswith('Bearer '):
                 token = auth_header.split(' ')[1]
