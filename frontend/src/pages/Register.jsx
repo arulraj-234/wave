@@ -59,10 +59,10 @@ const Register = ({ setAuth }) => {
     try {
       const response = await api.post('/api/auth/register', { ...formData, dob: formattedDob });
       
-      // Auto-login via HttpOnly cookie set by backend
-      if (response.data.user) {
+      // Auto-login via localstorage token for cross-domain support
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        localStorage.removeItem('token'); // Clear legacy
 
         const role = response.data.user.role;
         if (role === 'admin') navigate('/admin', { replace: true });

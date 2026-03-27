@@ -37,9 +37,15 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Validate HttpOnly cookie session on initial load
+  // Validate session on initial load using localStorage token
   useEffect(() => {
     const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsAuthenticated(false);
+        setIsInitializing(false);
+        return;
+      }
       try {
         const response = await api.get('/api/auth/me');
         if (response.data.success) {
@@ -49,6 +55,7 @@ function App() {
       } catch (error) {
         setIsAuthenticated(false);
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
       } finally {
         setIsInitializing(false);
       }
@@ -66,6 +73,7 @@ function App() {
            if (!error.config.url.endsWith('/api/auth/me')) {
               setIsAuthenticated(false);
               localStorage.removeItem('user');
+              localStorage.removeItem('token');
            }
         }
         return Promise.reject(error);
