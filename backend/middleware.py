@@ -9,15 +9,21 @@ def token_required(f):
     def decorated(*args, **kwargs):
         token = None
         
-        # Support fallback checking for header (useful for certain mobile apps),
-        # but prioritize secure HttpOnly cookie.
-        token = request.cookies.get('token')
+        # Allow preflight requests to succeed instantly
+        if request.method == 'OPTIONS':
+            return jsonify({}), 200
 
-        if not token and 'Authorization' in request.headers:
+        # Prioritize the Authorization Bearer token header over cookies,
+        # as split-domain architectures (Vercel to Render) primarily use explicit headers.
+        if 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
             if auth_header.startswith('Bearer '):
                 token = auth_header.split(' ')[1]
         
+        # Fallback to cookies only if no Bearer header is present
+        if not token:
+            token = request.cookies.get('token')
+
         if not token:
             return jsonify({"error": "Authentication token is missing"}), 401
         
