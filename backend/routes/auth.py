@@ -16,11 +16,28 @@ def allowed_file(filename):
 
 from middleware import token_required
 
-# Apply stricter rate limiting specifically to auth endpoints via the limiter instance defined in app.py
-# (We will import the limiter from app.py or rely on blueprint routes, but it's cleaner to handle via a custom decorator or directly passing string rules if we can. To avoid circular imports, we will keep the app.py limiter logic, but remove the blanket 5/min limit.)
+# We cannot run the limiter inline via request cleanly without complex wrapper logic,
+# so we will use a simpler custom local rate limiter check for these 2 routes
+# since blueprint decorators clash with preflight OPTIONS and app.py decorators are messy.
+import time
+from collections import defaultdict
+auth_limits = defaultdict(list)
+
+def enforce_auth_rate_limit():
+    ip = request.remote_addr
+    now = time.time()
+    # Keep only requests from the last 60 seconds
+    auth_limits[ip] = [t for t in auth_limits[ip] if now - t < 60]
+    if len(auth_limits[ip]) >= 5:
+        return jsonify({"error": "Too many requests"}), 429
+    auth_limits[ip].append(now)
+    return None
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
+    limit_err = enforce_auth_rate_limit()
+    if limit_err: return limit_err
+
     data = request.json
     username = data.get('username')
     email = data.get('email')
@@ -79,12 +96,13 @@ def register():
             }
         })
         # Set HttpOnly cookie instead of sending token in body
+        # Secure, HttpOnly cookie with SameSite=None required for Cross-Domain API (Vercel -> Render)
         is_production = os.environ.get('FLASK_ENV') == 'production'
         response.set_cookie(
             'token', token,
             httponly=True,
-            secure=is_production, # Only require HTTPS in production
-            samesite='Lax' if not is_production else 'Strict',
+            secure=True, # Secure is mandatory when SameSite=None
+            samesite='None',
             max_age=24*60*60 # 1 day
         )
         return response, 201
@@ -93,6 +111,9 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
+    limit_err = enforce_auth_rate_limit()
+    if limit_err: return limit_err
+
     data = request.json
     login_id = data.get('login_id') or data.get('email')
     password = data.get('password')
@@ -125,12 +146,13 @@ def login():
             }
         })
         # Set HttpOnly cookie
+        # Secure, HttpOnly cookie with SameSite=None required for Cross-Domain API (Vercel -> Render)
         is_production = os.environ.get('FLASK_ENV') == 'production'
         response.set_cookie(
             'token', token,
             httponly=True,
-            secure=is_production, # Only require HTTPS in production
-            samesite='Lax' if not is_production else 'Strict',
+            secure=True, # Secure is mandatory when SameSite=None
+            samesite='None',
             max_age=24*60*60 # 1 day
         )
         return response, 200
@@ -140,8 +162,8 @@ def login():
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     response = jsonify({"message": "Logout successful"})
-    # Clear the HttpOnly cookie
-    response.set_cookie('token', '', httponly=True, expires=0)
+    # Clear the HttpOnly cookie (must match the SameSite/Secure params it was set with)
+    response.set_cookie('token', '', httponly=True, secure=True, samesite='None', expires=0)
     return response, 200
 
 @auth_bp.route('/me', methods=['GET'])

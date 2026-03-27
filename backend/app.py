@@ -23,24 +23,28 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
-# Restrict CORS to specific production/development origins
-# In development, we want to allow local network IPs for mobile testing
+# Configure CORS to allow the frontend production domain and local development
 import re
-is_production = os.environ.get('FLASK_ENV') == 'production'
+import os
 
-if is_production:
-    ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 'https://your-production-domain.com').split(',')
-    CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
+ALLOWED_ORIGINS_ENV = os.environ.get('ALLOWED_ORIGINS')
+
+if ALLOWED_ORIGINS_ENV:
+    # If the environment explicitly specifies origins, trust them
+    origins = ALLOWED_ORIGINS_ENV.split(',')
 else:
-    # Allow localhost and any local network IP (e.g., 192.168.x.x) for easy mobile testing
-    CORS(app, supports_credentials=True, origins=re.compile(r"https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?"))
+    # Default allowed origins for production + dynamic matching for local development
+    origins = [
+        "https://wavemusic-six.vercel.app",
+        "http://localhost:5173",
+        re.compile(r"https?://(127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?")
+    ]
+
+CORS(app, supports_credentials=True, origins=origins)
 
 # Register Blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
-# Apply rate limits manually to specific endpoints to avoid blueprint-wide conflicts with OPTIONS
-limiter.limit("5 per minute")(app.view_functions['auth.login'])
-limiter.limit("5 per minute")(app.view_functions['auth.register'])
 app.register_blueprint(songs_bp, url_prefix='/api/songs')
 app.register_blueprint(playlists_bp, url_prefix='/api/playlists')
 app.register_blueprint(admin_bp, url_prefix='/api/admin')
