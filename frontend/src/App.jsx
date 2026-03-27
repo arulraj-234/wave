@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
+import api from './api';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -33,16 +34,50 @@ const ProtectedRoute = ({ children, allowedRoles, isAuthenticated }) => {
 };
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
+  // Validate HttpOnly cookie session on initial load
   useEffect(() => {
-    const handleStorageChange = () => {
-      setIsAuthenticated(!!localStorage.getItem('token'));
+    const checkAuth = async () => {
+      try {
+        const response = await api.get('/api/auth/me');
+        if (response.data.success) {
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        setIsAuthenticated(false);
+        localStorage.removeItem('user');
+      } finally {
+        setIsInitializing(false);
+      }
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    checkAuth();
   }, []);
 
+  // Add an interceptor to globally catch 401s (expired session) and log out
+  useEffect(() => {
+    const interceptor = api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+           // We ignore 401s from the /api/auth/me route because we handle that during initialization
+           if (!error.config.url.endsWith('/api/auth/me')) {
+              setIsAuthenticated(false);
+              localStorage.removeItem('user');
+           }
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => api.interceptors.response.eject(interceptor);
+  }, []);
+
+
+  if (isInitializing) {
+    return <div className="min-h-screen bg-brand-dark flex items-center justify-center"><div className="w-8 h-8 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" /></div>;
+  }
 
   return (
     <Router>
