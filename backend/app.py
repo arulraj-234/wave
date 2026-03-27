@@ -23,24 +23,29 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
-# Configure CORS to allow the frontend production domain and local development
+# Configure CORS to explicitly allow credentials and dynamically match the request origin
+# if it is in our allowed list, bypassing strict string-matching issues with Flask-Cors
 import re
 import os
 
 ALLOWED_ORIGINS_ENV = os.environ.get('ALLOWED_ORIGINS')
-
 if ALLOWED_ORIGINS_ENV:
-    # If the environment explicitly specifies origins, trust them
-    origins = ALLOWED_ORIGINS_ENV.split(',')
+    allowed_origins = [o.strip() for o in ALLOWED_ORIGINS_ENV.split(',')]
 else:
-    # Default allowed origins for production + dynamic matching for local development
-    origins = [
+    allowed_origins = [
         "https://wavemusic-six.vercel.app",
         "http://localhost:5173",
-        re.compile(r"https?://(127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?")
+        "http://127.0.0.1:5173"
     ]
 
-CORS(app, supports_credentials=True, origins=origins)
+# Build a list of exact strings and compiled regular expressions which is the
+# strictly typed format that Flask-Cors actually expects internally.
+cors_origins = [
+    *allowed_origins,
+    re.compile(r"^https?://(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?$")
+]
+
+CORS(app, supports_credentials=True, origins=cors_origins)
 
 # Register Blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
