@@ -10,7 +10,6 @@ const Artist = lazy(() => import('./pages/Artist'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { BackgroundMode } from '@awesome-cordova-plugins/background-mode';
 
 const ProtectedRoute = ({ children, allowedRoles, isAuthenticated }) => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -89,12 +88,6 @@ function App() {
         await StatusBar.setOverlaysWebView({ overlay: true });
         await StatusBar.setStyle({ style: Style.Dark });
         await StatusBar.setBackgroundColor({ color: '#00000000' });
-        
-        try {
-          BackgroundMode.enable();
-          BackgroundMode.disableWebViewOptimizations();
-        } catch (e) { console.log('Bg mode not supported'); }
-
       } catch (e) {
         // Will throw on web/non-native
       }

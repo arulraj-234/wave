@@ -593,7 +593,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-brand-dark relative">
         {/* Top Navigation Bar */}
-        <div className="h-14 md:h-16 px-4 md:px-8 flex items-center justify-between sticky top-0 z-40 bg-brand-dark/90 backdrop-blur-2xl border-b border-white/[0.03] transition-all duration-500 shadow-sm">
+        <div className="min-h-[3.5rem] md:min-h-[4rem] py-2 md:py-3 pt-safe px-4 md:px-8 flex items-center justify-between sticky top-0 z-40 bg-brand-dark/90 backdrop-blur-2xl border-b border-white/[0.03] transition-all duration-500 shadow-sm">
            {/* Left Logo (Visible mainly on Mobile since Sidebar is hidden) */}
            <div className="flex-1 flex items-center justify-start gap-2.5">
               <div className="flex items-center gap-2 cursor-pointer group md:hidden" onClick={() => navigate('/dashboard')}>

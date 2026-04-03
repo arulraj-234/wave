@@ -285,9 +285,9 @@ const BottomPlayer = () => {
             </div>
 
             {/* Mobile Fullscreen View (Spotify Style) */}
-            <div className="md:hidden flex flex-col w-full h-full relative z-10 px-6 pt-12 pb-8">
+            <div className="md:hidden flex flex-col w-full h-full relative z-10 px-6 pt-safe pb-8">
               {/* Top Header */}
-              <div className="flex items-center justify-between shrink-0 mb-8 mt-2">
+              <div className="flex items-center justify-between shrink-0 mb-8 mt-4">
                 <button onClick={() => setIsFullScreenPlayer(false)} className="p-2 text-white">
                   <ChevronDown className="w-8 h-8" />
                 </button>
