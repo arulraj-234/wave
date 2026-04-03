@@ -1,5 +1,6 @@
 import React, { createContext, useState, useRef, useEffect, useCallback } from 'react';
 import api, { resolveUrl } from '../api';
+import { App as CapacitorApp } from '@capacitor/app';
 
 export const PlayerContext = createContext();
 
@@ -622,6 +623,25 @@ export const PlayerProvider = ({ children }) => {
       if (sleepTimerRef.current) clearInterval(sleepTimerRef.current);
     };
   }, []);
+
+  // Hardware Back Button Integration
+  useEffect(() => {
+    // Only works on Android/native environments via Capacitor
+    const backButtonListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (isFullScreenPlayer) {
+        // If the fullscreen player is open, intercept back button to just close the player
+        setIsFullScreenPlayer(false);
+      } else if (canGoBack) {
+        window.history.back();
+      } else {
+        CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      backButtonListener.then(listener => listener.remove()).catch(() => {});
+    };
+  }, [isFullScreenPlayer]);
 
   return (
     <PlayerContext.Provider value={{ 

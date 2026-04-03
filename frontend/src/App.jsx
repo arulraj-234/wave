@@ -1,13 +1,14 @@
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import api from './api';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Artist from './pages/Artist';
-import Admin from './pages/Admin';
-import Search from './pages/Search';
-import Onboarding from './pages/Onboarding';
+
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Artist = lazy(() => import('./pages/Artist'));
+const Admin = lazy(() => import('./pages/Admin'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 const ProtectedRoute = ({ children, allowedRoles, isAuthenticated }) => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -36,6 +37,19 @@ const ProtectedRoute = ({ children, allowedRoles, isAuthenticated }) => {
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+
+  // Initialize Native Android Status bar
+  useEffect(() => {
+    const initCapacitor = async () => {
+      try {
+        await StatusBar.setOverlaysWebView({ overlay: true });
+        await StatusBar.setStyle({ style: Style.Dark });
+      } catch (e) {
+        // Will throw on web/non-native, completely fine to ignore
+      }
+    };
+    initCapacitor();
+  }, []);
 
   // Validate session on initial load using localStorage token
   useEffect(() => {
@@ -90,31 +104,33 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen flex flex-col">
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<Login setAuth={setIsAuthenticated} />} />
-          <Route path="/register" element={<Register setAuth={setIsAuthenticated} />} />
-          <Route 
-            path="/dashboard/*" 
-            element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Dashboard /></ProtectedRoute>} 
-          />
-          <Route 
-            path="/onboarding" 
-            element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Onboarding /></ProtectedRoute>} 
-          />
-          <Route 
-            path="/search" 
-            element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Dashboard defaultView="search" /></ProtectedRoute>} 
-          />
-          <Route 
-            path="/artist" 
-            element={<ProtectedRoute allowedRoles={['artist', 'admin']} isAuthenticated={isAuthenticated}><Artist /></ProtectedRoute>} 
-          />
-          <Route 
-            path="/admin" 
-            element={<ProtectedRoute allowedRoles={['admin']} isAuthenticated={isAuthenticated}><Admin /></ProtectedRoute>} 
-          />
-        </Routes>
+        <Suspense fallback={<div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center"><div className="w-8 h-8 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" /><p className="mt-4 text-gray-400 text-sm">Loading Wave...</p></div>}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<Login setAuth={setIsAuthenticated} />} />
+            <Route path="/register" element={<Register setAuth={setIsAuthenticated} />} />
+            <Route 
+              path="/dashboard/*" 
+              element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Dashboard /></ProtectedRoute>} 
+            />
+            <Route 
+              path="/onboarding" 
+              element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Onboarding /></ProtectedRoute>} 
+            />
+            <Route 
+              path="/search" 
+              element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Dashboard defaultView="search" /></ProtectedRoute>} 
+            />
+            <Route 
+              path="/artist" 
+              element={<ProtectedRoute allowedRoles={['artist', 'admin']} isAuthenticated={isAuthenticated}><Artist /></ProtectedRoute>} 
+            />
+            <Route 
+              path="/admin" 
+              element={<ProtectedRoute allowedRoles={['admin']} isAuthenticated={isAuthenticated}><Admin /></ProtectedRoute>} 
+            />
+          </Routes>
+        </Suspense>
       </div>
     </Router>
   );

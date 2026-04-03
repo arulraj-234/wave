@@ -243,7 +243,7 @@ const Search = () => {
     : (localResults?.length > 0 || globalResults?.length > 0);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-brand-dark p-8 pb-32 animate-fade-in">
+    <div className="flex-1 overflow-y-auto bg-brand-dark p-4 md:p-8 pb-[10rem] md:pb-32 animate-fade-in custom-scrollbar">
       <div className="max-w-6xl mx-auto">
         {/* Search Bar */}
         <div className="relative mb-8 animate-slide-up">
@@ -253,7 +253,7 @@ const Search = () => {
             name="search-page-input"
             type="text" 
             placeholder="Search millions of songs..." 
-            className="w-full bg-brand-surface border border-white/[0.02] rounded-full py-5 pl-16 pr-8 text-xl font-medium focus:ring-2 focus:ring-brand-accent/30 focus:bg-white/[0.03] outline-none transition-all shadow-sm placeholder-brand-muted text-brand-primary"
+            className="w-full bg-brand-surface border border-white/[0.02] rounded-full py-3 pl-12 md:py-5 md:pl-16 pr-8 text-base md:text-xl font-medium focus:ring-2 focus:ring-brand-accent/30 focus:bg-white/[0.03] outline-none transition-all shadow-sm placeholder-brand-muted text-brand-primary"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus
@@ -331,7 +331,7 @@ const Search = () => {
                  <div 
                   key={genre.name}
                   onClick={() => setSearchTerm(genre.name)}
-                  className={`aspect-square rounded-xl p-5 flex flex-col justify-between ${genre.color} hover:brightness-110 active:scale-95 transition-all cursor-pointer group relative overflow-hidden shadow-lg`}
+                  className={`aspect-[3/2] md:aspect-square rounded-xl p-5 flex flex-col justify-between ${genre.color} hover:brightness-110 active:scale-95 transition-all cursor-pointer group relative overflow-hidden shadow-lg`}
                  >
                    <div className="text-xl font-black text-white relative z-10 tracking-tight leading-tight">{genre.name}</div>
                    

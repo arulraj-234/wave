@@ -814,7 +814,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {/*              LIBRARY VIEW                   */}
         {/* ============================================ */}
         {currentView === 'library' && (
-          <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
+          <div className="flex-1 overflow-y-auto relative pb-[10rem] md:pb-32 animate-fade-in custom-scrollbar">
             <div className="p-4 md:p-8 max-w-7xl mx-auto">
               <h1 className="text-3xl md:text-5xl font-black mb-8 md:mb-12 tracking-tight flex items-center gap-5 pt-4 text-white drop-shadow-lg">
                 Your Library
@@ -898,7 +898,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {/*        LOCAL PLAYLIST VIEW                   */}
         {/* ============================================ */}
         {currentView === 'playlist' && (
-          <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
+          <div className="flex-1 overflow-y-auto relative pb-[10rem] md:pb-32 animate-fade-in custom-scrollbar">
              {isLoading ? (
                <div className="p-4 md:p-8 pt-10 md:pt-20">
                   <div className="flex flex-col md:flex-row items-center md:items-end gap-6 mb-12">
@@ -957,7 +957,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {/*        LOCAL ARTIST PROFILE VIEW             */}
         {/* ============================================ */}
         {currentView === 'artist-profile' && (
-          <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
+          <div className="flex-1 overflow-y-auto relative pb-[10rem] md:pb-32 animate-fade-in custom-scrollbar">
             {isLoading ? (
                <div className="animate-pulse">
                   <div className="h-64 md:h-80 bg-white/5 w-full" />
@@ -1042,7 +1042,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {/*      JIOSAAVN ARTIST PROFILE VIEW            */}
         {/* ============================================ */}
         {currentView === 'saavn-artist' && (
-          <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
+          <div className="flex-1 overflow-y-auto relative pb-[10rem] md:pb-32 animate-fade-in custom-scrollbar">
             {isLoading ? (
               <div className="animate-pulse">
                 <div className="h-64 md:h-80 bg-white/5 w-full" />
@@ -1136,7 +1136,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {/*        JIOSAAVN ALBUM VIEW                  */}
         {/* ============================================ */}
         {currentView === 'saavn-album' && (
-          <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
+          <div className="flex-1 overflow-y-auto relative pb-[10rem] md:pb-32 animate-fade-in custom-scrollbar">
             {isLoading ? (
               <div className="p-4 md:p-8 pt-10 md:pt-20 animate-pulse">
                 <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-8 md:mb-12">
@@ -1205,7 +1205,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {/*       JIOSAAVN PLAYLIST VIEW                 */}
         {/* ============================================ */}
         {currentView === 'saavn-playlist' && (
-          <div className="flex-1 overflow-y-auto relative pb-32 animate-fade-in custom-scrollbar">
+          <div className="flex-1 overflow-y-auto relative pb-[10rem] md:pb-32 animate-fade-in custom-scrollbar">
             {isLoading ? (
               <div className="p-4 md:p-8 pt-10 md:pt-20 animate-pulse">
                 <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-8 md:mb-12">

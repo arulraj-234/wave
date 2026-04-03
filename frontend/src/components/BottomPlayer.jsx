@@ -79,11 +79,13 @@ const BottomPlayer = () => {
   const location = useLocation();
 
   const idleTimerRef = useRef(null);
+  const touchStartY = useRef(0);
+  const touchEndY = useRef(0);
 
   const resetIdleTimer = () => {
     setIsIdle(false);
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    if (isFullScreenPlayer) {
+    if (isFullScreenPlayer && window.innerWidth >= 768) {
       idleTimerRef.current = setTimeout(() => {
         setIsIdle(true);
       }, 3000);
@@ -123,202 +125,289 @@ const BottomPlayer = () => {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartY.current - touchEndY.current < -50 && touchEndY.current !== 0) {
+      // Swiped down
+      setIsFullScreenPlayer(false);
+    }
+    touchStartY.current = 0;
+    touchEndY.current = 0;
+  };
+
   if (!currentSong) return null;
 
   const sidebarOffset = isFullScreenPlayer ? 'left-0' : (isSidebarCollapsed ? 'left-0 md:left-20' : 'left-0 md:left-64');
 
   return (
     <>
-
-
-      {/* Queue Panel */}
       <QueuePanel isOpen={showQueue} onClose={() => setShowQueue(false)} />
 
       {/* Full Screen Player Overlay */}
       <AnimatePresence>
         {isFullScreenPlayer && (
           <motion.div 
-            initial={{ opacity: 0, y: 100 }}
+            initial={{ opacity: 0, y: "100%" }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 100 }}
+            exit={{ opacity: 0, y: "100%" }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 left-0 w-full h-full pb-24 z-[45] flex items-center justify-center shadow-2xl overflow-hidden cursor-none"
+            className="fixed top-0 left-0 w-full h-full pb-safe z-[45] flex flex-col md:items-center md:justify-center overflow-y-auto md:overflow-hidden cursor-default md:cursor-none"
             style={{ 
               background: `linear-gradient(to bottom, ${dominantColor} 0%, #121212 100%)`,
-              cursor: isIdle ? 'none' : 'default'
+              cursor: (isIdle && window.innerWidth >= 768) ? 'none' : 'default'
             }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
-            {/* Internal Dimming Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent z-0 opacity-80" />
+            {/* Dimming gradient */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/80 to-transparent z-0 opacity-100" />
 
-            {/* Top Controls (Auto-hide) */}
-            <AnimatePresence>
-              {!isIdle && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="absolute top-8 right-8 flex gap-3 z-50"
-                >
-                  <button 
-                    onClick={() => {
-                      if (!document.fullscreenElement) {
-                        document.documentElement.requestFullscreen().catch(err => console.error("Error attempting to enable full-screen mode:", err));
-                      } else if (document.exitFullscreen) {
-                        document.exitFullscreen();
-                      }
-                    }}
-                    className="p-2.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-brand-muted hover:text-white transition-colors shadow-lg backdrop-blur-md"
-                    title="Toggle True Fullscreen"
+            {/* Desktop Fullscreen View */}
+            <div className="hidden md:flex w-full h-full items-center justify-center relative z-10">
+              <AnimatePresence>
+                {!isIdle && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="absolute top-8 right-8 flex gap-3 z-50"
                   >
-                    <Maximize2 className="w-5 h-5 cursor-pointer" />
-                  </button>
-                  <button 
-                    onClick={() => setIsFullScreenPlayer(false)}
-                    className="p-2.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-brand-muted hover:text-white transition-colors shadow-lg backdrop-blur-md"
-                    title="Minimize"
+                    <button 
+                      onClick={() => {
+                        if (!document.fullscreenElement) {
+                          document.documentElement.requestFullscreen().catch(err => console.error("Fullscreen error:", err));
+                        } else if (document.exitFullscreen) {
+                          document.exitFullscreen();
+                        }
+                      }}
+                      className="p-2.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-brand-muted hover:text-white transition-colors shadow-lg backdrop-blur-md"
+                      title="Toggle True Fullscreen"
+                    >
+                      <Maximize2 className="w-5 h-5 cursor-pointer" />
+                    </button>
+                    <button 
+                      onClick={() => setIsFullScreenPlayer(false)}
+                      className="p-2.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-brand-muted hover:text-white transition-colors shadow-lg backdrop-blur-md"
+                      title="Minimize"
+                    >
+                      <ChevronDown className="w-5 h-5" />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              <div className="w-full max-w-[500px] aspect-square relative transition-all duration-1000 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:scale-[1.02]">
+                <TiltedCard
+                  imageSrc={resolveUrl(currentSong.cover_image_url) || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=2070'}
+                  altText={currentSong.title}
+                  containerHeight="100%"
+                  containerWidth="100%"
+                  imageHeight="100%"
+                  imageWidth="100%"
+                  scaleOnHover={1.03}
+                  rotateAmplitude={5}
+                  showMobileWarning={false}
+                  showTooltip={false}
+                  displayOverlayContent={false}
+                />
+              </div>
+
+              <AnimatePresence>
+                {isIdle && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="absolute bottom-24 left-0 w-full text-center z-20 pointer-events-none"
                   >
-                    <ChevronDown className="w-5 h-5" />
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            
-            <div className="w-full max-w-[500px] aspect-square relative z-10 transition-all duration-1000 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:scale-[1.02]">
-              <TiltedCard
-                imageSrc={resolveUrl(currentSong.cover_image_url) || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=2070'}
-                altText={currentSong.title}
-                captionText=""
-                containerHeight="100%"
-                containerWidth="100%"
-                imageHeight="100%"
-                imageWidth="100%"
-                scaleOnHover={1.03}
-                rotateAmplitude={5}
-                showMobileWarning={false}
-                showTooltip={false}
-                displayOverlayContent={false}
-              />
+                    <h2 className="text-4xl font-black tracking-tighter text-white/90 drop-shadow-2xl px-8">
+                      {currentSong.title}
+                    </h2>
+                    <p className="text-xl font-bold text-white/40 mt-2 tracking-tight">
+                      {currentSong.artist_name}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* Rest Mode Footer (Song Title) */}
-            <AnimatePresence>
-              {isIdle && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                  className="absolute bottom-16 left-0 w-full text-center z-20"
+            {/* Mobile Fullscreen View (Spotify Style) */}
+            <div className="md:hidden flex flex-col w-full h-full relative z-10 px-6 pt-12 pb-8">
+              {/* Top Header */}
+              <div className="flex items-center justify-between shrink-0 mb-8 mt-2">
+                <button onClick={() => setIsFullScreenPlayer(false)} className="p-2 text-white">
+                  <ChevronDown className="w-8 h-8" />
+                </button>
+                <div className="text-xs font-bold uppercase tracking-widest text-white/80">
+                  Now Playing
+                </div>
+                <div className="w-8" /> {/* Spacer for centering */}
+              </div>
+
+              {/* Cover Art */}
+              <div className="w-full aspect-square bg-brand-surface rounded-xl shadow-2xl overflow-hidden mb-8 shrink-0 flex items-center justify-center">
+                {currentSong.cover_image_url ? (
+                  <img src={resolveUrl(currentSong.cover_image_url)} alt="Cover Art" className="w-full h-full object-cover" />
+                ) : (
+                  <Music className="w-24 h-24 text-brand-muted" />
+                )}
+              </div>
+
+              {/* Track Info & Like */}
+              <div className="flex items-center justify-between mb-8 shrink-0">
+                <div className="flex-1 min-w-0 pr-4">
+                  <h1 className="text-2xl font-bold text-white truncate mb-1">{currentSong.title}</h1>
+                  <p className="text-brand-muted font-medium text-lg truncate">{currentSong.artist_name}</p>
+                </div>
+                <button 
+                  onClick={() => toggleLike(currentSong.song_id)}
+                  className={`p-2 transition-colors ${likedSongs.has(currentSong.song_id) ? 'text-brand-primary' : 'text-brand-muted'}`}
                 >
-                  <h2 className="text-4xl font-black tracking-tighter text-white/90 drop-shadow-2xl px-8">
-                    {currentSong.title}
-                  </h2>
-                  <p className="text-xl font-bold text-white/40 mt-2 tracking-tight">
-                    {currentSong.artist_name}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <Heart className={`w-7 h-7 ${likedSongs.has(currentSong.song_id) ? 'fill-current' : ''}`} />
+                </button>
+              </div>
+
+              {/* Mobile Progress Bar (using ElasticSlider) */}
+              <div className="mb-6 shrink-0 text-brand-muted text-[11px] font-medium tracking-wide">
+                <ElasticSlider
+                  defaultValue={progress}
+                  maxValue={100}
+                  onChange={(val) => seek(val)}
+                  className="w-full !p-0 mb-2"
+                  leftIcon={null}
+                  rightIcon={null}
+                />
+                <div className="flex justify-between w-full mt-2">
+                  <span>{formatTime((progress / 100) * duration)}</span>
+                  <span>{formatTime(duration || currentSong.duration)}</span>
+                </div>
+              </div>
+
+              {/* Playback Controls */}
+              <div className="flex items-center justify-between mb-6 shrink-0">
+                <button onClick={toggleShuffle} className={`p-3 ${shuffleMode ? 'text-brand-primary' : 'text-brand-muted'}`}>
+                  <Shuffle className="w-6 h-6" />
+                </button>
+                <button onClick={playPrevious} className="p-3 text-white">
+                  <SkipBack className="w-10 h-10 fill-current" />
+                </button>
+                <button 
+                  onClick={togglePlay}
+                  className="w-20 h-20 rounded-full bg-brand-primary text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+                >
+                  {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current ml-1.5" />}
+                </button>
+                <button onClick={playNext} className="p-3 text-white">
+                  <SkipForward className="w-10 h-10 fill-current" />
+                </button>
+                <button onClick={toggleRepeat} className={`p-3 ${repeatMode !== 'off' ? 'text-brand-primary' : 'text-brand-muted'}`}>
+                  {repeatMode === 'one' ? <Repeat1 className="w-6 h-6" /> : <Repeat className="w-6 h-6" />}
+                </button>
+              </div>
+
+              {/* Extra Bottom Actions (Queue) */}
+              <div className="flex items-center justify-between mt-auto">
+                <button className="p-2 text-brand-muted">
+                  <Volume2 className="w-5 h-5 invisible" /> {/* Placeholder for balance */}
+                </button>
+                <button 
+                  onClick={() => setShowQueue(!showQueue)}
+                  className={`p-2 transition-colors ${showQueue ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`}
+                >
+                  <ListMusic className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
           </motion.div>
         )}
       </AnimatePresence>
       
-      {/* Modify Bottom Control Bar to hide when in Fullscreen + Idle */}
+      {/* Bottom Control Bar (Compact Toolbar) - always visible unless mobile fullscreen */}
       <AnimatePresence>
-        {(!isFullScreenPlayer || !isIdle) && (
+        {(!isFullScreenPlayer || window.innerWidth >= 768) && (
           <motion.div 
-            initial={{ y: 100 }}
+            initial={{ y: 200 }}
             animate={{ y: 0 }}
-            exit={{ y: 100 }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-[3.5rem] md:h-24 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] z-50 flex items-center px-3 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300`}
+            exit={{ y: 200 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-[3.5rem] md:h-24 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] z-[40] flex items-center px-3 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300 shadow-xl md:shadow-none pb-safe`}
             style={{ 
-              opacity: (isFullScreenPlayer && isIdle) ? 0 : 1, 
-              pointerEvents: (isFullScreenPlayer && isIdle) ? 'none' : 'auto' 
+              display: (isFullScreenPlayer && window.innerWidth < 768) ? 'none' : 'flex',
+              opacity: (isFullScreenPlayer && isIdle && window.innerWidth >= 768) ? 0 : 1, 
+              pointerEvents: (isFullScreenPlayer && isIdle && window.innerWidth >= 768) ? 'none' : 'auto' 
             }}
             onClick={(e) => {
-              // On mobile, tapping the bottom player (except controls) expands to fullscreen
               if (window.innerWidth < 768 && !e.target.closest('button')) {
                 setIsFullScreenPlayer(true);
               }
             }}
           >
             {/* Song Info */}
-            <div className="flex items-center gap-3 md:gap-4 w-full md:w-1/3 overflow-hidden cursor-pointer md:cursor-default">
+            <div className="flex items-center gap-3 w-full md:w-1/3 overflow-hidden cursor-pointer md:cursor-default">
               <div className="w-10 h-10 md:w-14 md:h-14 bg-brand-dark rounded-md shadow-sm overflow-hidden flex items-center justify-center shrink-0">
                 {currentSong.cover_image_url ? 
                   <img src={resolveUrl(currentSong.cover_image_url)} className="w-full h-full object-cover"/> : 
                   <Music className="w-6 h-6 text-brand-muted" />
                 }
               </div>
-              <div className="overflow-hidden">
-                <div className="text-sm font-semibold text-brand-primary truncate">{currentSong.title}</div>
+              <div className="overflow-hidden min-w-0 pr-1">
+                <div className="text-sm font-semibold text-white truncate">{currentSong.title}</div>
                 <div className="flex items-center gap-1 text-[10px] md:text-xs text-brand-muted truncate mt-0.5">
                   {currentSong.artists && currentSong.artists.length > 0 ? (
                     currentSong.artists.map((artist, idx) => (
                       <React.Fragment key={artist.id}>
-                        <Link 
-                          to={`/dashboard/artist/${artist.id}`}
-                          className="hover:text-brand-primary transition-colors whitespace-nowrap"
-                        >
-                          {artist.name}
-                        </Link>
+                        <span className="hover:text-white transition-colors">{artist.name}</span>
                         {idx < currentSong.artists.length - 1 && <span className="text-white/20">,</span>}
                       </React.Fragment>
                     ))
                   ) : (
-                    <Link 
-                      to={`/dashboard/artist/${currentSong.artist_id}`}
-                      className="hover:text-brand-primary transition-colors"
-                    >
-                      {currentSong.artist_name}
-                    </Link>
+                    <span className="hover:text-white transition-colors">{currentSong.artist_name}</span>
                   )}
                 </div>
               </div>
               
               <button 
-                onClick={() => toggleLike(currentSong.song_id)}
-                title={likedSongs.has(currentSong.song_id) ? "Remove from Liked Songs" : "Add to Liked Songs"}
-                className={`ml-1 md:ml-2 p-1.5 md:p-2 rounded-full transition-colors ${likedSongs.has(currentSong.song_id) ? 'text-brand-primary' : 'text-brand-muted hover:text-brand-primary'}`}
+                onClick={(e) => { e.stopPropagation(); toggleLike(currentSong.song_id); }}
+                className={`ml-auto md:ml-2 p-1.5 md:p-2 rounded-full transition-colors ${likedSongs.has(currentSong.song_id) ? 'text-brand-primary' : 'text-white/60 hover:text-white'}`}
               >
-                <Heart className={`w-4 h-4 md:w-5 md:h-5 ${likedSongs.has(currentSong.song_id) ? 'fill-current' : ''}`} />
+                <Heart className={`w-5 h-5 md:w-5 md:h-5 ${likedSongs.has(currentSong.song_id) ? 'fill-current' : ''}`} />
               </button>
             </div>
             
             {/* Controls (Desktop) & Mobile Play/Pause */}
-            <div className="flex-none md:flex-1 flex items-center justify-end md:justify-center md:flex-col gap-2.5 ml-auto pl-2 shrink-0">
+            <div className="flex-none md:flex-1 flex items-center justify-end md:justify-center md:flex-col gap-2.5 ml-2 pl-2 shrink-0 md:ml-0 md:pl-0">
               <div className="flex items-center gap-3 md:gap-4">
-                <button onClick={toggleShuffle} title={shuffleMode ? "Disable Shuffle" : "Enable Shuffle"} className={`hidden md:block transition-colors ${shuffleMode ? 'text-brand-primary' : 'text-brand-muted hover:text-brand-primary'}`}>
+                <button onClick={toggleShuffle} className={`hidden md:block transition-colors ${shuffleMode ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`}>
                   <Shuffle className="w-4 h-4" />
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); playPrevious(); }} title="Previous" className="text-brand-muted hover:text-brand-primary transition-colors">
-                  <SkipBack className="w-5 h-5 md:w-5 md:h-5 fill-current" />
+                <button onClick={(e) => { e.stopPropagation(); playPrevious(); }} className="hidden md:block text-brand-muted hover:text-white transition-colors">
+                  <SkipBack className="w-5 h-5 fill-current" />
                 </button>
                 
                 <button 
                   onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-                  title={isPlaying ? "Pause" : "Play"}
-                  className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-brand-primary text-brand-dark flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-sm"
+                  className="w-10 h-10 md:w-10 md:h-10 rounded-full bg-brand-primary text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
                 >
                   {isPlaying ? <Pause className="w-4 h-4 md:w-5 md:h-5 fill-current" /> : <Play className="w-4 h-4 md:w-5 md:h-5 fill-current ml-1" />}
                 </button>
 
-                <button onClick={(e) => { e.stopPropagation(); playNext(); }} title="Next" className="text-brand-muted hover:text-brand-primary transition-colors">
-                  <SkipForward className="w-5 h-5 md:w-5 md:h-5 fill-current" />
+                <button onClick={(e) => { e.stopPropagation(); playNext(); }} className="hidden md:block text-brand-muted hover:text-white transition-colors">
+                  <SkipForward className="w-5 h-5 fill-current" />
                 </button>
-                <button onClick={toggleRepeat} title={repeatMode === 'one' ? "Repeat One" : repeatMode === 'all' ? "Disable Repeat" : "Enable Repeat"} className={`hidden md:block transition-colors ${repeatMode !== 'off' ? 'text-brand-primary' : 'text-brand-muted hover:text-brand-primary'}`}>
+                <button onClick={toggleRepeat} className={`hidden md:block transition-colors ${repeatMode !== 'off' ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`}>
                   {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
                 </button>
               </div>
               
-              {/* Progress Text (Mobile) */}
-              <div className="flex md:hidden items-center gap-1 text-[9px] text-brand-muted font-semibold tracking-wider mt-0.5 opacity-80">
-                 <span>{formatTime((progress / 100) * duration)}</span>
-                 <span className="opacity-50">/</span>
-                 <span>{formatTime(duration || currentSong.duration)}</span>
-              </div>
-
               {/* Progress Bar (Desktop only) */}
               <div className="hidden md:flex w-full max-w-md items-center gap-3 text-xs text-brand-muted font-medium">
                 <span>{formatTime((progress / 100) * duration)}</span>
@@ -336,13 +425,9 @@ const BottomPlayer = () => {
               </div>
             </div>
             
-            {/* Volume, Queue, Timer & Fullscreen */}
+            {/* Volume, Queue, Timer & Fullscreen (Desktop only mostly) */}
             <div className="hidden md:flex w-1/3 justify-end items-center gap-2">
-              <button
-                onClick={() => setVolume(volume > 0 ? 0 : 0.7)}
-                title={volume === 0 ? "Unmute" : "Mute"}
-                className="text-brand-muted hover:text-brand-primary transition-colors"
-              >
+              <button onClick={() => setVolume(volume > 0 ? 0 : 0.7)} className="text-brand-muted hover:text-white transition-colors">
                 {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
               </button>
               <div className="w-24 flex items-center pr-2 group">
@@ -356,37 +441,33 @@ const BottomPlayer = () => {
                 />
               </div>
 
-              {/* Queue Button */}
               <button
                 onClick={(e) => { e.stopPropagation(); setShowQueue(!showQueue); }}
-                className={`relative p-2 rounded-full transition-colors ${showQueue ? 'text-brand-primary bg-white/[0.06]' : 'text-brand-muted hover:text-brand-primary'}`}
-                title="Queue"
+                className={`relative p-2 rounded-full transition-colors ${showQueue ? 'text-brand-primary bg-white/[0.06]' : 'text-brand-muted hover:text-white'}`}
               >
-                <ListMusic className="w-4 h-4 md:w-4 md:h-4" />
+                <ListMusic className="w-4 h-4" />
               </button>
 
-              {/* Sleep Timer Button (Desktop Only) */}
-              <div className="hidden md:block relative">
+              <div className="relative">
                 <button
                   onClick={() => setShowSleepMenu(!showSleepMenu)}
-                  className={`p-2 rounded-full transition-colors relative ${sleepTimer ? 'text-sky-400' : 'text-brand-muted hover:text-brand-primary'}`}
-                  title="Sleep Timer"
+                  className={`p-2 rounded-full transition-colors relative ${sleepTimer ? 'text-sky-400' : 'text-brand-muted hover:text-white'}`}
                 >
                   <Moon className="w-4 h-4" />
                   {sleepTimer && (
-                    <span className="absolute -top-1.5 -right-2 text-[9px] font-black text-sky-400 whitespace-nowrap">
+                    <span className="absolute -top-1.5 -right-2 text-[9px] font-black text-sky-400">
                       {formatTimerDisplay(sleepTimer)}
                     </span>
                   )}
                 </button>
                 {showSleepMenu && (
-                  <div className="absolute bottom-full right-0 mb-3 w-44 bg-brand-surface border border-white/[0.06] rounded-xl shadow-2xl p-2 z-[60] animate-fade-in">
+                  <div className="absolute bottom-full right-0 mb-3 w-44 bg-brand-surface border border-white/[0.06] rounded-xl shadow-2xl p-2 z-[60]">
                     <div className="text-[10px] font-bold text-brand-muted uppercase tracking-widest px-3 py-2">Sleep Timer</div>
                     {[5, 15, 30, 45, 60, 90].map(mins => (
                       <button
                         key={mins}
                         onClick={() => { setSleepTimer(mins); setShowSleepMenu(false); }}
-                        className="w-full text-left px-3 py-2 text-sm font-medium text-brand-primary hover:bg-white/[0.04] rounded-lg transition-colors"
+                        className="w-full text-left px-3 py-2 text-sm font-medium text-white hover:bg-white/[0.08] rounded-lg transition-colors"
                       >
                         {mins} minutes
                       </button>
@@ -405,14 +486,13 @@ const BottomPlayer = () => {
 
               <button
                 onClick={() => setIsFullScreenPlayer(!isFullScreenPlayer)}
-                title={isFullScreenPlayer ? "Minimize Player" : "Expand Player"}
-                className="hidden md:block text-brand-muted hover:text-brand-primary transition-colors ml-1"
+                className="text-brand-muted hover:text-white transition-colors ml-1 p-2"
               >
                 {isFullScreenPlayer ? <ChevronDown className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
               </button>
             </div>
 
-            {/* Mobile Progress Bar absolute bottom edge */}
+            {/* Mobile Progress Bar (absolute bottom edge of compact bar) */}
             <div className="absolute bottom-0 left-0 h-[2.5px] bg-white/10 md:hidden w-full rounded-b-xl overflow-hidden shadow-inner">
                <div className="h-full bg-brand-primary shadow-[0_0_10px_rgba(255,255,255,0.8)] transition-all duration-300 ease-linear" style={{ width: `${(progress / 100) * 100}%` }} />
             </div>

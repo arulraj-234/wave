@@ -52,16 +52,18 @@ const Login = ({ setAuth }) => {
       <div className="absolute inset-0 z-0 md:hidden bg-gradient-to-br from-brand-dark via-brand-dark/90 to-brand-primary/10"></div>
 
       {/* Centered form card */}
-      <div className="relative z-10 w-full max-w-md px-8 animate-slide-up">
+      <div className="relative z-10 w-full max-w-md px-4 md:px-8 py-4 animate-slide-up">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-10">
-          <WaveLogo size={48} className="mb-4" />
-          <h1 className="text-4xl font-black tracking-tighter bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">Wave</h1>
-          <p className="text-brand-muted mt-2 font-medium text-sm">Your music. Your stats. Your story.</p>
+        <div className="flex flex-col items-center mb-6 md:mb-10">
+          <div className="scale-75 md:scale-100 transform transform-origin-bottom transition-transform">
+             <WaveLogo size={48} className="mb-2 md:mb-4" />
+          </div>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tighter bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">Wave</h1>
+          <p className="text-brand-muted mt-1 md:mt-2 font-medium text-xs md:text-sm">Your music. Your stats. Your story.</p>
         </div>
 
         {/* Glass card */}
-        <div className="bg-brand-dark/80 backdrop-blur-lg rounded-2xl p-8 border border-white/[0.06]">
+        <div className="bg-brand-dark/80 backdrop-blur-lg rounded-2xl p-6 md:p-8 border border-white/[0.06]">
           <div className="mb-6">
             <h2 className="text-2xl font-black tracking-tight">Welcome back</h2>
             <p className="text-brand-muted mt-1 text-sm font-medium">Enter your credentials to continue listening.</p>

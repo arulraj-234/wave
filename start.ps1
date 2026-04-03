@@ -1,5 +1,46 @@
 # Wave - Single-Click Startup Script
 # Starts database init, backend, and frontend in one go
+param (
+    [switch]$BuildAPK
+)
+
+if ($BuildAPK) {
+    Write-Host ""
+    Write-Host "==============================" -ForegroundColor Cyan
+    Write-Host "   WAVE - Building APK...     " -ForegroundColor Cyan
+    Write-Host "==============================" -ForegroundColor Cyan
+    Write-Host ""
+
+    $env:JAVA_HOME = "D:\apps\android studio\jbr"
+    $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+
+    Write-Host "[1/3] Building Web Frontend..." -ForegroundColor Yellow
+    Push-Location "$PSScriptRoot\frontend"
+    npm run build
+    Pop-Location
+
+    Write-Host "[2/3] Syncing Capacitor..." -ForegroundColor Yellow
+    Push-Location "$PSScriptRoot\frontend"
+    npx cap sync android
+    Pop-Location
+
+    Write-Host "[3/3] Building Android APK (Debug)..." -ForegroundColor Yellow
+    Push-Location "$PSScriptRoot\frontend\android"
+    # Stop existing daemons to avoid cache issues
+    ./gradlew --stop
+    ./gradlew assembleDebug
+    Pop-Location
+
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host ""
+        Write-Host "SUCCESS! APK is ready at:" -ForegroundColor Green
+        Write-Host "$PSScriptRoot\frontend\android\app\build\outputs\apk\debug\app-debug.apk" -ForegroundColor White
+    } else {
+        Write-Host ""
+        Write-Host "ERROR: Build failed. Check logs above." -ForegroundColor Red
+    }
+    exit
+}
 
 Write-Host ""
 Write-Host "==============================" -ForegroundColor Cyan
@@ -42,6 +83,18 @@ Write-Host "[4/4] Starting Vite frontend dev server..." -ForegroundColor Yellow
 $frontend = Start-Process powershell -ArgumentList "-ExecutionPolicy", "Bypass", "-NoExit", "-Command", "cd '$PSScriptRoot\frontend'; npm run dev" -PassThru
 Write-Host "  Frontend started (PID: $($frontend.Id))." -ForegroundColor Green
 Write-Host ""
+
+# --- Step 5: Setup Emulator Connection (Optional) ---
+$ADB = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+if (Test-Path $ADB) {
+    $devices = & $ADB devices | Select-String "device$"
+    if ($devices) {
+        Write-Host "[5/5] Mapping emulator ports..." -ForegroundColor Yellow
+        & $ADB reverse tcp:5000 tcp:5000
+        & $ADB reverse tcp:3001 tcp:3001
+        Write-Host "  Emulator connected to Backend & JioSaavn API." -ForegroundColor Green
+    }
+}
 
 Write-Host "==============================" -ForegroundColor Cyan
 Write-Host "   WAVE is running!           " -ForegroundColor Cyan

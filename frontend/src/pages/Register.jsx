@@ -89,13 +89,15 @@ const Register = ({ setAuth }) => {
       {/* Static gradient fallback for mobile to prevent glitching/slowdowns */}
       <div className="absolute inset-0 z-0 md:hidden bg-gradient-to-br from-brand-dark via-brand-dark/90 to-brand-primary/10"></div>
 
-      <div className="relative z-10 w-full max-w-md px-8 py-8 animate-slide-up">
-        <div className="flex flex-col items-center mb-8">
-          <WaveLogo size={42} className="mb-3" />
+      <div className="relative z-10 w-full max-w-md px-4 md:px-8 py-4 animate-slide-up">
+        <div className="flex flex-col items-center mb-4 md:mb-8">
+          <div className="scale-75 md:scale-100 transform transform-origin-bottom transition-transform">
+             <WaveLogo size={42} className="mb-2 md:mb-3" />
+          </div>
           <h1 className="text-3xl font-black tracking-tighter bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">Wave</h1>
         </div>
 
-        <div className="bg-brand-dark/80 backdrop-blur-lg rounded-2xl p-8 border border-white/[0.06] shadow-2xl">
+        <div className="bg-brand-dark/80 backdrop-blur-lg rounded-2xl p-6 md:p-8 border border-white/[0.06] shadow-2xl">
           <div className="mb-6 flex justify-between items-end">
             <div>
               <h2 className="text-2xl font-black tracking-tight">Join Wave</h2>

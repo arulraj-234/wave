@@ -163,19 +163,19 @@ const Onboarding = () => {
                 initial={{ scale: 0.8, opacity: 0 }} 
                 animate={{ scale: 1, opacity: 1 }} 
                 transition={{ delay: 0.2 }}
-                className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-tr from-brand-primary/20 to-brand-accent/20 flex items-center justify-center mb-6 border border-white/10 shadow-2xl"
+                className="w-16 h-16 md:w-20 md:h-20 mx-auto rounded-2xl md:rounded-3xl bg-gradient-to-tr from-brand-primary/20 to-brand-accent/20 flex items-center justify-center mb-4 md:mb-6 border border-white/10 shadow-2xl"
               >
                 {step === 1 && <Globe className="w-10 h-10 text-brand-primary" />}
                 {step === 2 && <Music className="w-10 h-10 text-brand-primary" />}
                 {step === 3 && <Mic2 className="w-10 h-10 text-brand-primary" />}
               </motion.div>
               
-              <h1 className="text-5xl md:text-6xl font-black tracking-tighter mb-4 text-white drop-shadow-xl">
+              <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tighter mb-2 md:mb-4 text-white drop-shadow-xl px-4">
                 {step === 1 && "What do you listen to?"}
                 {step === 2 && "Pick your vibe"}
                 {step === 3 && "Who are your favorites?"}
               </h1>
-              <p className="text-xl text-brand-muted font-medium">
+              <p className="text-base md:text-xl text-brand-muted font-medium px-6">
                 {step === 1 && "Let us know which languages you prefer."}
                 {step === 2 && "Select the genres that match your frequency."}
                 {step === 3 && "Tell us artists you love so we can tune your feed."}
@@ -189,7 +189,7 @@ const Onboarding = () => {
                 <button
                   key={lang}
                   onClick={() => toggleSelection(lang, selectedLanguages, setSelectedLanguages)}
-                  className={`p-5 rounded-2xl flex items-center justify-between transition-all duration-300 transform hover:-translate-y-1 ${
+                  className={`p-4 md:p-5 rounded-2xl flex items-center justify-between transition-all duration-300 transform hover:-translate-y-1 ${
                     selectedLanguages.includes(lang) 
                       ? 'bg-brand-primary/10 border-2 border-brand-primary text-brand-primary shadow-[0_0_20px_rgba(255,255,255,0.1)]' 
                       : 'bg-white/[0.03] border-2 border-white/5 text-white hover:bg-white/[0.08] hover:border-white/20'
@@ -204,7 +204,7 @@ const Onboarding = () => {
                 <button
                   key={genre}
                   onClick={() => toggleSelection(genre, selectedGenres, setSelectedGenres)}
-                  className={`p-5 rounded-2xl flex items-center justify-between transition-all duration-300 transform hover:-translate-y-1 ${
+                  className={`p-4 md:p-5 rounded-2xl flex items-center justify-between transition-all duration-300 transform hover:-translate-y-1 ${
                     selectedGenres.includes(genre) 
                       ? 'bg-brand-primary/10 border-2 border-brand-primary text-brand-primary shadow-[0_0_20px_rgba(255,255,255,0.1)]' 
                       : 'bg-white/[0.03] border-2 border-white/5 text-white hover:bg-white/[0.08] hover:border-white/20'
@@ -219,7 +219,7 @@ const Onboarding = () => {
                 <button
                   key={artist}
                   onClick={() => toggleSelection(artist, selectedArtists, setSelectedArtists)}
-                  className={`relative overflow-hidden p-6 h-32 rounded-3xl flex items-end transition-all duration-300 transform hover:scale-[1.05] border ${
+                  className={`relative overflow-hidden p-4 md:p-6 h-28 md:h-32 rounded-3xl flex items-end transition-all duration-300 transform hover:scale-[1.05] border ${
                     selectedArtists.includes(artist) 
                       ? 'border-brand-primary shadow-[0_0_30px_rgba(255,255,255,0.2)]' 
                       : 'border-white/5 text-white hover:border-white/30'
@@ -252,9 +252,9 @@ const Onboarding = () => {
       </main>
 
       {/* Footer / Controls */}
-      <footer className="relative z-10 p-8 border-t border-white/[0.05] bg-brand-dark/50 backdrop-blur-xl">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="text-sm font-bold text-brand-muted uppercase tracking-widest flex items-center gap-2">
+      <footer className="relative z-10 p-4 md:p-8 pb-8 md:pb-8 border-t border-white/[0.05] bg-brand-dark/95 backdrop-blur-xl">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
+          <div className="text-[10px] md:text-sm font-bold text-brand-muted uppercase tracking-widest flex items-center gap-1 md:gap-2">
             {!isStepValid() && <Sparkles className="w-4 h-4 opacity-50" />}
             {getStepValidationText()}
           </div>
@@ -262,7 +262,7 @@ const Onboarding = () => {
           <button
             onClick={handleNext}
             disabled={!isStepValid() || isSubmitting}
-            className={`px-10 py-4 rounded-full font-black uppercase tracking-widest flex items-center gap-3 transition-all duration-300 ${
+            className={`px-6 md:px-10 py-3 md:py-4 rounded-full text-xs md:text-base font-black uppercase tracking-widest flex items-center gap-2 md:gap-3 transition-all duration-300 ${
               isStepValid() && !isSubmitting
                 ? 'bg-brand-primary text-brand-dark hover:scale-105 shadow-[0_0_30px_rgba(255,255,255,0.3)]' 
                 : 'bg-white/5 text-brand-muted cursor-not-allowed'
