@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { resolveUrl } from '../api';
 import { X, Camera, User, Check, Loader2, LogOut } from 'lucide-react';
 import api from '../api';
 
 const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: user?.username || '',
     avatar_url: user?.avatar_url || ''
@@ -26,7 +28,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/login';
+    navigate('/login');
   };
 
   const handleSave = async (e) => {

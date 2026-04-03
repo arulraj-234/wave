@@ -76,11 +76,11 @@ const Onboarding = () => {
         const updatedUser = { ...user, onboarding_completed: true };
         localStorage.setItem('user', JSON.stringify(updatedUser));
         
-        // Use React Router for seamless transition
+        // Navigate to dashboard and force React to re-render
         navigate('/dashboard', { replace: true });
-        
-        // Force a window reload briefly to reset the App.jsx React Context state seamlessly
+        // Small delay to let React Router settle, then force a state refresh
         setTimeout(() => {
+          window.location.hash = '#/dashboard';
           window.location.reload();
         }, 100);
       } catch (err) {

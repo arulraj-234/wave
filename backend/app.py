@@ -35,7 +35,9 @@ else:
     allowed_origins = [
         "https://wavemusic-six.vercel.app",
         "http://localhost:5173",
-        "http://127.0.0.1:5173"
+        "http://127.0.0.1:5173",
+        "capacitor://localhost",
+        "http://localhost"
     ]
 
 # Build a list of exact strings and compiled regular expressions which is the

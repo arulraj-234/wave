@@ -1,0 +1,8 @@
+{
+  "appId": "com.wave.app",
+  "appName": "Wave",
+  "webDir": "dist",
+  "server": {
+    "cleartext": true
+  }
+}
