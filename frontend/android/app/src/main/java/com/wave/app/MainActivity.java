@@ -15,7 +15,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         super.onPause();
 
         // Resume WebView timers immediately so audio/JS keeps running in background
@@ -29,7 +29,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
     }
 }
