@@ -1,0 +1,188 @@
+
+> frontend@0.0.0 build
+> vite build
+
+[36mvite v8.0.0 [32mbuilding client environment for production...[36m[39m
+[2K
+transforming...Γ£ô 2286 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                 0.87 kB Γöé gzip:  0.47 kB
+dist/assets/Plasma-iXNm4i_o.css                 0.18 kB Γöé gzip:  0.14 kB
+dist/assets/index-T5nMeBeZ.css                127.47 kB Γöé gzip: 16.98 kB
+dist/assets/user-5wKbsTXn.js                    0.18 kB Γöé gzip:  0.17 kB
+dist/assets/music-DTlvMX-Q.js                   0.20 kB Γöé gzip:  0.17 kB
+dist/assets/users-ooV1UAYk.js                   0.29 kB Γöé gzip:  0.21 kB
+dist/assets/x-Dsh5QBW5.js                       0.31 kB Γöé gzip:  0.22 kB
+dist/assets/upload-W-7ifzam.js                  0.37 kB Γöé gzip:  0.24 kB
+dist/assets/web-Br-3n74B.js                     0.84 kB Γöé gzip:  0.40 kB
+dist/assets/mail-DltdDAkR.js                    0.92 kB Γöé gzip:  0.47 kB
+dist/assets/sparkles-B8JBQFNc.js                0.96 kB Γöé gzip:  0.48 kB
+dist/assets/Login-j47h1eU0.js                   4.35 kB Γöé gzip:  1.67 kB
+dist/assets/Logo-BpJIDaL1.js                    5.63 kB Γöé gzip:  2.94 kB
+dist/assets/ProfileSettingsModal-rqzZLUXG.js    5.95 kB Γöé gzip:  2.40 kB
+dist/assets/Onboarding-CzIHs3o6.js              7.77 kB Γöé gzip:  2.85 kB
+dist/assets/dist-CN37MRKh.js                    8.21 kB Γöé gzip:  3.21 kB
+dist/assets/Register-BOEq_a-2.js               10.51 kB Γöé gzip:  2.81 kB
+dist/assets/Artist-WaRdWKy1.js                 20.30 kB Γöé gzip:  5.32 kB
+dist/assets/Admin-9GJNM_71.js                  27.15 kB Γöé gzip:  6.85 kB
+dist/assets/Plasma-DxvBaCQU.js                 48.22 kB Γöé gzip: 14.76 kB
+dist/assets/MagicBento-BedINQh8.js             78.33 kB Γöé gzip: 30.01 kB
+dist/assets/jsx-runtime-C9raNza8.js            85.86 kB Γöé gzip: 31.34 kB
+dist/assets/Dashboard-bio4JzQA.js             118.55 kB Γöé gzip: 26.76 kB
+dist/assets/proxy-BuqnKQRt.js                 124.80 kB Γöé gzip: 40.80 kB
+dist/assets/index-CywD7175.js                 196.22 kB Γöé gzip: 61.88 kB
+
+[32mΓ£ô built in 700ms[39m
+ΓêÜ Copying web assets from dist to android\app\src\main\assets\public in 25.46ms
+ΓêÜ Creating capacitor.config.json in android\app\src\main\assets in 785.70╬╝s
+ΓêÜ copy android in 48.42ms
+ΓêÜ Updating Android plugins in 5.79ms
+[info] Found 2 Capacitor plugins for android:
+       @capacitor/app@8.1.0
+       @capacitor/status-bar@8.0.2
+ΓêÜ update android in 64.00ms
+[info] Sync finished in 0.147s
+
+Welcome to Gradle 8.9!
+
+Here are the highlights of this release:
+ - Enhanced Error and Warning Messages
+ - IDE Integration Improvements
+ - Daemon JVM Information
+
+For more details see https://docs.gradle.org/8.9/release-notes.html
+
+Stopping Daemon(s)
+2 Daemons stopped
+Starting a Gradle Daemon, 2 stopped Daemons could not be reused, use --status for details
+
+> Configure project :app
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Configure project :capacitor-cordova-android-plugins
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :capacitor-android:preBuild UP-TO-DATE
+> Task :capacitor-android:preDebugBuild UP-TO-DATE
+> Task :capacitor-app:preBuild UP-TO-DATE
+> Task :capacitor-app:preDebugBuild UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:preBuild UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:preDebugBuild UP-TO-DATE
+> Task :app:javaPreCompileDebug
+> Task :capacitor-android:writeDebugAarMetadata
+> Task :capacitor-app:writeDebugAarMetadata
+> Task :capacitor-status-bar:preBuild UP-TO-DATE
+> Task :capacitor-status-bar:preDebugBuild UP-TO-DATE
+> Task :capacitor-cordova-android-plugins:writeDebugAarMetadata
+> Task :capacitor-status-bar:writeDebugAarMetadata
+> Task :app:generateDebugResValues
+> Task :capacitor-android:generateDebugResValues
+> Task :capacitor-android:generateDebugResources
+> Task :app:checkDebugAarMetadata
+> Task :capacitor-android:packageDebugResources
+> Task :capacitor-app:generateDebugResValues
+> Task :capacitor-app:generateDebugResources
+> Task :capacitor-app:packageDebugResources
+> Task :capacitor-cordova-android-plugins:generateDebugResValues
+> Task :capacitor-cordova-android-plugins:generateDebugResources
+> Task :capacitor-cordova-android-plugins:packageDebugResources
+> Task :capacitor-status-bar:generateDebugResValues
+> Task :capacitor-status-bar:generateDebugResources
+> Task :capacitor-status-bar:packageDebugResources
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:mergeDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :capacitor-android:extractDeepLinksDebug
+> Task :capacitor-app:extractDeepLinksDebug
+> Task :capacitor-cordova-android-plugins:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
+> Task :capacitor-status-bar:extractDeepLinksDebug
+> Task :capacitor-status-bar:processDebugManifest
+> Task :capacitor-android:processDebugManifest
+> Task :capacitor-app:processDebugManifest
+> Task :capacitor-cordova-android-plugins:processDebugManifest
+> Task :capacitor-android:compileDebugLibraryResources
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :capacitor-android:parseDebugLocalResources
+> Task :capacitor-app:compileDebugLibraryResources
+> Task :capacitor-app:parseDebugLocalResources
+> Task :capacitor-cordova-android-plugins:compileDebugLibraryResources
+> Task :app:processDebugManifestForPackage
+> Task :capacitor-cordova-android-plugins:parseDebugLocalResources
+> Task :capacitor-app:generateDebugRFile
+> Task :capacitor-android:generateDebugRFile
+> Task :capacitor-status-bar:compileDebugLibraryResources
+> Task :capacitor-cordova-android-plugins:generateDebugRFile
+> Task :capacitor-android:javaPreCompileDebug
+> Task :capacitor-status-bar:parseDebugLocalResources
+> Task :capacitor-app:javaPreCompileDebug
+> Task :capacitor-status-bar:generateDebugRFile
+
+> Task :capacitor-android:compileDebugJavaWithJavac
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :capacitor-cordova-android-plugins:javaPreCompileDebug
+> Task :capacitor-status-bar:javaPreCompileDebug
+> Task :capacitor-cordova-android-plugins:compileDebugJavaWithJavac NO-SOURCE
+> Task :capacitor-cordova-android-plugins:bundleLibCompileToJarDebug
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :capacitor-android:mergeDebugShaders
+> Task :capacitor-android:compileDebugShaders NO-SOURCE
+> Task :capacitor-android:bundleLibCompileToJarDebug
+> Task :capacitor-android:generateDebugAssets UP-TO-DATE
+> Task :app:processDebugResources
+> Task :capacitor-app:compileDebugJavaWithJavac
+> Task :capacitor-app:bundleLibCompileToJarDebug
+
+> Task :capacitor-status-bar:compileDebugJavaWithJavac FAILED
+D:\vscode\wave\frontend\node_modules\@capacitor\status-bar\android\src\main\java\com\capacitorjs\plugins\statusbar\StatusBar.java:124: error: cannot find symbol
+        if (deviceApi < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                                           ^
+  symbol:   variable VANILLA_ICE_CREAM
+  location: class VERSION_CODES
+D:\vscode\wave\frontend\node_modules\@capacitor\status-bar\android\src\main\java\com\capacitorjs\plugins\statusbar\StatusBar.java:127: error: cannot find symbol
+        } else if (deviceApi == Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                                                   ^
+  symbol:   variable VANILLA_ICE_CREAM
+  location: class VERSION_CODES
+D:\vscode\wave\frontend\node_modules\@capacitor\status-bar\android\src\main\java\com\capacitorjs\plugins\statusbar\StatusBar.java:136: error: cannot find symbol
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                                                        ^
+  symbol:   variable VANILLA_ICE_CREAM
+  location: class VERSION_CODES
+D:\vscode\wave\frontend\node_modules\@capacitor\status-bar\android\src\main\java\com\capacitorjs\plugins\statusbar\StatusBar.java:138: error: cannot find symbol
+            window.getContext().getTheme().resolveAttribute(android.R.attr.windowOptOutEdgeToEdgeEnforcement, value, true);
+                                                                          ^
+  symbol:   variable windowOptOutEdgeToEdgeEnforcement
+  location: class attr
+4 errors
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':capacitor-status-bar:compileDebugJavaWithJavac'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --info option to get more log output.
+> Run with --scan to get full insights.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.9/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 27s
+57 actionable tasks: 57 executed

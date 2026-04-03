@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, request
 from flask_cors import CORS
 from config import Config
 from routes.auth import auth_bp
@@ -48,6 +48,17 @@ cors_origins = [
 ]
 
 CORS(app, supports_credentials=True, origins=cors_origins)
+
+# Capacitor Android WebView sometimes sends a null or missing Origin header.
+# Flask-CORS won't match those, so we handle it manually.
+@app.after_request
+def handle_capacitor_cors(response):
+    origin = request.headers.get('Origin', '')
+    if not origin or origin == 'null':
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+    return response
 
 # Register Blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
