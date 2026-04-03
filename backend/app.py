@@ -83,15 +83,69 @@ def serve_avatar(filename):
     upload_dir = os.path.join(app.root_path, 'uploads', 'avatars')
     return send_from_directory(upload_dir, filename)
 
-@app.route('/api/health', methods=['GET'])
-def health_check():
+# Track server start time for uptime calculation
+import time as _time
+_server_start_time = _time.time()
+
+@app.route('/', methods=['GET'])
+def root():
+    """Landing page — shows API status and basic info."""
     from db import get_connection
+    import datetime
+
+    uptime_secs = int(_time.time() - _server_start_time)
+    hours, remainder = divmod(uptime_secs, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    db_status = "connected"
     try:
         conn = get_connection()
         conn.close()
-        return jsonify({"status": "healthy", "database": "connected"}), 200
     except Exception:
-        return jsonify({"status": "healthy", "database": "disconnected"}), 200
+        db_status = "disconnected"
+
+    return jsonify({
+        "app": "Wave Music API",
+        "version": "1.0.0",
+        "status": "🟢 running",
+        "uptime": f"{hours}h {minutes}m {seconds}s",
+        "database": db_status,
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "endpoints": {
+            "health": "/api/health",
+            "auth": "/api/auth",
+            "songs": "/api/songs",
+            "playlists": "/api/playlists",
+            "stats": "/api/stats",
+            "jiosaavn": "/api/jiosaavn",
+            "albums": "/api/albums",
+            "admin": "/api/admin"
+        },
+        "docs": "Wave is a full-stack music streaming platform. This is the backend REST API."
+    }), 200
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    from db import get_connection
+    import datetime
+
+    uptime_secs = int(_time.time() - _server_start_time)
+    hours, remainder = divmod(uptime_secs, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    db_status = "connected"
+    try:
+        conn = get_connection()
+        conn.close()
+    except Exception:
+        db_status = "disconnected"
+
+    return jsonify({
+        "status": "healthy",
+        "database": db_status,
+        "uptime": f"{hours}h {minutes}m {seconds}s",
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+    }), 200
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
