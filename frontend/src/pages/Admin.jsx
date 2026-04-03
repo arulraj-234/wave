@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Users, Music as MusicIcon, Activity, Trash2, Upload, Plus, 
   TrendingUp, BarChart2, CheckCircle, XCircle, LayoutDashboard, 
-  Settings, Image as ImageIcon, Edit, X, Save, FileAudio, LogOut
+  Settings, Image as ImageIcon, Edit, X, Save, FileAudio, LogOut,
+  MessageSquare, AlertCircle, Check
 } from 'lucide-react';
 import api, { resolveUrl } from '../api';
 import WaveLogo from '../components/Logo';
@@ -88,6 +89,7 @@ const Admin = () => {
             { id: 'songs', icon: MusicIcon, label: 'Manage Songs' },
             { id: 'upload', icon: Upload, label: 'Upload Tracks' },
             { id: 'users', icon: Users, label: 'Manage Users' },
+            { id: 'issues', icon: MessageSquare, label: 'User Issues' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -146,6 +148,7 @@ const Admin = () => {
               {activeTab === 'upload' && <UploadTab token={token} currentUser={currentUser} onUploadComplete={fetchAdminData} />}
               {activeTab === 'songs' && <SongsTab token={token} />}
               {activeTab === 'users' && <UsersTab token={token} />}
+              {activeTab === 'issues' && <IssuesTab token={token} />}
             </ErrorBoundary>
           </div>
         </div>
@@ -157,6 +160,7 @@ const Admin = () => {
             { id: 'songs', icon: MusicIcon, label: 'Songs' },
             { id: 'upload', icon: Upload, label: 'Upload' },
             { id: 'users', icon: Users, label: 'Users' },
+            { id: 'issues', icon: MessageSquare, label: 'Issues' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -742,6 +746,114 @@ const UsersTab = ({ token }) => {
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ==================== [ ISSUES MANAGEMENT TAB ] ====================
+
+const IssuesTab = ({ token }) => {
+  const [issues, setIssues] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchIssues = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/api/issues/');
+      setIssues(res.data.issues);
+    } catch (e) {
+      console.error(e);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchIssues(); }, []);
+
+  const handleResolve = async (issueId, currentStatus) => {
+    const newStatus = currentStatus === 'open' ? 'resolved' : 'open';
+    try {
+      await api.put(`/api/issues/${issueId}/resolve`, { status: newStatus });
+      fetchIssues();
+    } catch (e) {
+      alert("Failed to update status");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold mb-6">User Reported Issues</h2>
+      <div className="grid grid-cols-1 gap-4">
+        {loading ? (
+          <div className="p-12 text-center text-white/30 animate-pulse bg-white/[0.02] rounded-3xl border border-white/5">
+            Scanning for reports...
+          </div>
+        ) : issues.length === 0 ? (
+          <div className="p-20 text-center text-white/20 bg-white/[0.02] rounded-3xl border border-white/5 italic">
+            No issues reported. System is clean.
+          </div>
+        ) : (
+          issues.map(issue => (
+            <div 
+              key={issue.issue_id} 
+              className={`p-6 rounded-3xl border transition-all ${
+                issue.status === 'resolved' 
+                  ? 'bg-emerald-500/[0.02] border-emerald-500/10 opacity-70' 
+                  : 'bg-white/[0.03] border-white/10 shadow-xl'
+              }`}
+            >
+              <div className="flex flex-col md:flex-row justify-between gap-4">
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest border ${
+                      issue.status === 'resolved' 
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                    }`}>
+                      {issue.status}
+                    </span>
+                    <span className="text-xs text-white/40 font-mono">
+                      {new Date(issue.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-lg font-bold text-white mb-1">{issue.description}</h4>
+                    <p className="text-xs text-indigo-300/60 font-semibold flex items-center gap-2">
+                       <Users className="w-3 h-3" /> Reported by @{issue.username} ({issue.email})
+                    </p>
+                  </div>
+
+                  {issue.error_log && issue.error_log !== 'Manual report' && (
+                    <div className="mt-4 p-4 bg-black/40 rounded-2xl border border-white/5 overflow-x-auto">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 mb-2">Technical Logs</p>
+                      <pre className="text-[10px] font-mono text-rose-400/80 leading-relaxed">
+                        {issue.error_log}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-row md:flex-col justify-end gap-2 shrink-0">
+                  <button 
+                    onClick={() => handleResolve(issue.issue_id, issue.status)}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs transition-all ${
+                      issue.status === 'resolved'
+                        ? 'bg-white/5 text-white/40 hover:bg-white/10'
+                        : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                    }`}
+                  >
+                    {issue.status === 'resolved' ? (
+                      <><AlertCircle className="w-4 h-4" /> Re-open</>
+                    ) : (
+                      <><Check className="w-4 h-4" /> Resolve Issue</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>

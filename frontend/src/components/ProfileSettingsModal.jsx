@@ -24,6 +24,9 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
   const [usernameStatus, setUsernameStatus] = useState(null); // null, 'checking', 'available', 'taken'
   const usernameTimerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [issueDescription, setIssueDescription] = useState('');
+  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
+  const [showIssueForm, setShowIssueForm] = useState(false);
 
   // Reset form when user prop changes
   React.useEffect(() => {
@@ -82,6 +85,25 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
+  };
+
+  const handleReportIssue = async (e) => {
+    e.preventDefault();
+    if (!issueDescription.trim()) return;
+    setIsSubmittingIssue(true);
+    try {
+      await api.post('/api/issues/', {
+        description: issueDescription,
+        error_log: 'Manual report'
+      });
+      toast.success('Issue reported! Thank you.');
+      setIssueDescription('');
+      setShowIssueForm(false);
+    } catch (err) {
+      toast.error('Failed to send report');
+    } finally {
+      setIsSubmittingIssue(false);
+    }
   };
 
   const handleSave = async (e) => {
@@ -303,7 +325,49 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
                   </div>
                   <ChevronRight className="w-4 h-4 text-brand-muted" />
                 </button>
-                <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl">
+
+                <button
+                  type="button"
+                  onClick={() => setShowIssueForm(!showIssueForm)}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/[0.04] transition-colors text-left"
+                >
+                  <Info className="w-5 h-5 text-brand-muted" />
+                  <div className="flex-1">
+                    <span className="text-sm font-semibold text-brand-primary">Report an Issue</span>
+                    <p className="text-[10px] text-brand-muted">Help us fix bugs or request features</p>
+                  </div>
+                  <ChevronRight className={`w-4 h-4 text-brand-muted transition-transform ${showIssueForm ? 'rotate-90' : ''}`} />
+                </button>
+
+                <AnimatePresence>
+                  {showIssueForm && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden px-4"
+                    >
+                      <div className="py-2 space-y-2">
+                        <textarea
+                          value={issueDescription}
+                          onChange={(e) => setIssueDescription(e.target.value)}
+                          placeholder="Describe the issue you're facing..."
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm text-brand-primary focus:outline-none focus:border-brand-primary/40 min-h-[100px] resize-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={isSubmittingIssue || !issueDescription.trim()}
+                          onClick={handleReportIssue}
+                          className="w-full py-2.5 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary rounded-xl font-bold text-xs transition-all disabled:opacity-50"
+                        >
+                          {isSubmittingIssue ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Send Report'}
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl opacity-60">
                   <Info className="w-5 h-5 text-brand-muted" />
                   <div className="flex-1">
                     <span className="text-sm font-semibold text-brand-primary">Wave</span>

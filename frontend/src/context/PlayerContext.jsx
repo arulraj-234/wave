@@ -1,6 +1,7 @@
 import React, { createContext, useState, useRef, useEffect, useCallback } from 'react';
 import api, { resolveUrl } from '../api';
 import { App as CapacitorApp } from '@capacitor/app';
+import { CapacitorMusicControls } from 'capacitor-music-controls-plugin';
 
 export const PlayerContext = createContext();
 
@@ -88,6 +89,43 @@ export const PlayerProvider = ({ children }) => {
     playPrevious: () => playPrevious(),
     togglePlay: () => togglePlay()
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.Capacitor) return;
+    
+    const handleControlsEvent = (action) => {
+      const message = action.message || action; 
+      switch(message) {
+        case 'music-controls-next': controlsRef.current.playNext(); break;
+        case 'music-controls-previous': controlsRef.current.playPrevious(); break;
+        case 'music-controls-pause':
+        case 'music-controls-play':
+        case 'music-controls-toggle-play-pause': controlsRef.current.togglePlay(); break;
+        case 'music-controls-destroy':
+          audioRef.current?.pause();
+          setIsPlaying(false);
+          try { CapacitorMusicControls.updateIsPlaying({ isPlaying: false }); } catch(e){}
+          break;
+      }
+    };
+
+    let listenerObj = null;
+    try {
+      CapacitorMusicControls.addListener("controlsNotification", handleControlsEvent)
+        .then(l => listenerObj = l).catch(e => console.log('MusicControls init err', e));
+
+      const androidListener = (event) => handleControlsEvent(event.message || event);
+      document.addEventListener("controlsNotification", androidListener);
+
+      return () => {
+        if (listenerObj) listenerObj.remove();
+        document.removeEventListener("controlsNotification", androidListener);
+        try { CapacitorMusicControls.destroy(); } catch(e){}
+      };
+    } catch (err) {
+      console.error("Music Controls init failed", err);
+    }
+  }, []);
 
   const createPlaylist = async (title) => {
     try {
@@ -260,6 +298,34 @@ export const PlayerProvider = ({ children }) => {
         ] : []
       });
       navigator.mediaSession.playbackState = 'playing';
+    }
+
+    // Native Media Controls for Android
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+      try {
+        const coverUrl = targetSong.cover_image_url ? resolveUrl(targetSong.cover_image_url) : '';
+        CapacitorMusicControls.create({
+          track: targetSong.title || 'Unknown Track',
+          artist: targetSong.artist_name || 'Unknown Artist',
+          album: targetSong.album_name || 'Wave Music',
+          cover: coverUrl,
+          isPlaying: true,
+          dismissable: false,
+          hasPrev: true,
+          hasNext: true,
+          hasClose: true,
+          // Android 14 requirements
+          ticker: `Now playing: ${targetSong.title}`,
+          playIcon: 'media_play',
+          pauseIcon: 'media_pause',
+          prevIcon: 'media_prev',
+          nextIcon: 'media_next',
+          closeIcon: 'media_close',
+          notificationIcon: 'notification'
+        }).catch(err => console.error("Native Controls Create Error:", err));
+      } catch (err) {
+        console.log("CapacitorMusicControls sync error:", err);
+      }
     }
   }, [currentSong, recordStream]);
 
@@ -510,9 +576,19 @@ export const PlayerProvider = ({ children }) => {
     if (isPlaying) {
       audioRef.current.pause();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      try { 
+        if (window.Capacitor?.isNativePlatform()) {
+          CapacitorMusicControls.updateIsPlaying({ isPlaying: false }); 
+        }
+      } catch(e){}
     } else {
       audioRef.current.play();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+      try { 
+        if (window.Capacitor?.isNativePlatform()) {
+          CapacitorMusicControls.updateIsPlaying({ isPlaying: true }); 
+        }
+      } catch(e){}
     }
     setIsPlaying(!isPlaying);
   };

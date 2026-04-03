@@ -9,6 +9,7 @@ from routes.admin import admin_bp
 from routes.stats import stats_bp
 from routes.albums import albums_bp
 from routes.jiosaavn import jiosaavn_bp
+from routes.issues import issues_bp
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -69,6 +70,7 @@ app.register_blueprint(admin_bp, url_prefix='/api/admin')
 app.register_blueprint(stats_bp, url_prefix='/api/stats')
 app.register_blueprint(albums_bp, url_prefix='/api/albums')
 app.register_blueprint(jiosaavn_bp, url_prefix='/api/jiosaavn')
+app.register_blueprint(issues_bp, url_prefix='/api/issues')
 
 # Serve static audio files (legacy path)
 @app.route('/uploads/songs/<filename>', methods=['GET'])

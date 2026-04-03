@@ -95,6 +95,41 @@ function App() {
     initCapacitor();
   }, []);
 
+  // Global error reporting to backend
+  useEffect(() => {
+    const reportError = async (errorMsg, stack) => {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!user.id) return;
+        await api.post('/api/issues/', {
+          description: `Auto-caught error: ${errorMsg}`,
+          error_log: stack
+        });
+      } catch (e) {
+        console.error('Failed to report auto-caught error', e);
+      }
+    };
+
+    const handleError = (event) => {
+      const msg = event.message || 'Unknown Error';
+      const stack = event.error?.stack || '';
+      reportError(msg, stack);
+    };
+
+    const handleRejection = (event) => {
+      const msg = event.reason?.message || 'Unhandled Rejection';
+      const stack = event.reason?.stack || '';
+      reportError(msg, stack);
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleRejection);
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleRejection);
+    };
+  }, []);
+
   // Offline detection
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
