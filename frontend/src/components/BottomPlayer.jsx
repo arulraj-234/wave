@@ -384,7 +384,7 @@ const BottomPlayer = () => {
             animate={{ y: 0 }}
             exit={{ y: 200 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-16 md:h-24 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] z-[40] flex items-center px-3 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300 shadow-xl md:shadow-none pb-safe`}
+            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-[4.5rem] md:h-24 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] z-[40] flex items-center px-4 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300 shadow-xl md:shadow-none pb-safe`}
             onTouchStart={handleCompactTouchStart}
             onTouchEnd={handleCompactTouchEnd}
             style={{ 

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useRef, useEffect, useCallback } from 'react';
 import api, { resolveUrl } from '../api';
 import { App as CapacitorApp } from '@capacitor/app';
+import { CapacitorMusicControls } from 'capacitor-music-controls-plugin';
 
 export const PlayerContext = createContext();
 
@@ -80,6 +81,45 @@ export const PlayerProvider = ({ children }) => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id]);
+
+  // Stable refs for event listeners
+  const controlsRef = useRef({ playNext: () => {}, playPrevious: () => {}, togglePlay: () => {} });
+  controlsRef.current = {
+    playNext: () => playNext(),
+    playPrevious: () => playPrevious(),
+    togglePlay: () => togglePlay()
+  };
+
+  useEffect(() => {
+    const handleControlsEvent = (action) => {
+      const message = action.message || action; 
+      switch(message) {
+        case 'music-controls-next': controlsRef.current.playNext(); break;
+        case 'music-controls-previous': controlsRef.current.playPrevious(); break;
+        case 'music-controls-pause':
+        case 'music-controls-play':
+        case 'music-controls-toggle-play-pause': controlsRef.current.togglePlay(); break;
+        case 'music-controls-destroy':
+          audioRef.current?.pause();
+          setIsPlaying(false);
+          try { CapacitorMusicControls.updateIsPlaying({ isPlaying: false }); } catch(e){}
+          break;
+      }
+    };
+
+    let listenerObj = null;
+    CapacitorMusicControls.addListener("controlsNotification", handleControlsEvent)
+      .then(l => listenerObj = l).catch(e => console.log('MusicControls init err', e));
+
+    const androidListener = (event) => handleControlsEvent(event.message || event);
+    document.addEventListener("controlsNotification", androidListener);
+
+    return () => {
+      if (listenerObj) listenerObj.remove();
+      document.removeEventListener("controlsNotification", androidListener);
+      try { CapacitorMusicControls.destroy(); } catch(e){}
+    };
+  }, []);
 
   const createPlaylist = async (title) => {
     try {
@@ -254,7 +294,24 @@ export const PlayerProvider = ({ children }) => {
       navigator.mediaSession.playbackState = 'playing';
     }
 
+    try {
+      const coverUrl = targetSong.cover_image_url ? resolveUrl(targetSong.cover_image_url) : '';
+      CapacitorMusicControls.create({
+        track: targetSong.title || 'Unknown Track',
+        artist: targetSong.artist_name || 'Unknown Artist',
+        album: targetSong.album_name || 'Wave Music',
+        cover: coverUrl,
+        isPlaying: true,
+        dismissable: false,
+        hasPrev: true,
+        hasNext: true,
+        hasClose: true
+      });
+    } catch (err) {
+      console.log("CapacitorMusicControls error:", err);
+    }
   }, [currentSong, recordStream]);
+
 
   // Bind Media Session API action handlers dynamically
   // Note: we use refs or ensure we depend on the exact functions
@@ -502,9 +559,11 @@ export const PlayerProvider = ({ children }) => {
     if (isPlaying) {
       audioRef.current.pause();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+      try { CapacitorMusicControls.updateIsPlaying({ isPlaying: false }); } catch(e){}
     } else {
       audioRef.current.play();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+      try { CapacitorMusicControls.updateIsPlaying({ isPlaying: true }); } catch(e){}
     }
     setIsPlaying(!isPlaying);
   };

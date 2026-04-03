@@ -337,7 +337,7 @@ def upload_avatar():
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{timestamp}_{filename}"
         
-        upload_folder = os.path.join('uploads', 'avatars')
+        upload_folder = os.path.join(current_app.root_path, 'uploads', 'avatars')
         if not os.path.exists(upload_folder):
             os.makedirs(upload_folder)
             
