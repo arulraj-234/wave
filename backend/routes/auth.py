@@ -142,12 +142,7 @@ def login():
     if not check_password_hash(user['hashed_password'], password):
         return jsonify({"error": "Incorrect password"}), 401
 
-    # Check for existing active session
-    if user.get('active_session') and not force_login:
-        return jsonify({
-            "error": "session_conflict",
-            "message": "This account is currently logged in on another device. Would you like to log out from the other device and continue here?"
-        }), 409
+    # We skip session_conflict check and allow force_login silently
 
     # Extract onboarding state directly from dict (1/0 to true/false)
     is_onboarded = bool(user.get('onboarding_completed', False))
