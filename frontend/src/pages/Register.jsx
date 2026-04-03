@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
-import { User, Lock, Mail, Users, Mic, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Mail, Users, Mic, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 import WaveLogo from '../components/Logo';
 import Plasma from '../components/Plasma';
+import { useToast } from '../context/ToastContext';
 
 const Register = ({ setAuth }) => {
   const [step, setStep] = useState(1);
@@ -17,15 +18,18 @@ const Register = ({ setAuth }) => {
     gender: 'prefer_not_to_say'
   });
   
-  // Custom DOB State
   const [dobMonth, setDobMonth] = useState('');
   const [dobDay, setDobDay] = useState('');
   const [dobYear, setDobYear] = useState('');
+  const [dobError, setDobError] = useState('');
 
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState(null); // null, 'checking', 'available', 'taken'
+  const usernameTimerRef = useRef(null);
   const navigate = useNavigate();
+  const toast = useToast();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -35,10 +39,91 @@ const Register = ({ setAuth }) => {
     setFormData({ ...formData, role });
   };
 
+  // Debounced username availability check
+  const checkUsername = useCallback((username) => {
+    if (usernameTimerRef.current) clearTimeout(usernameTimerRef.current);
+    if (!username || username.length < 3) {
+      setUsernameStatus(null);
+      return;
+    }
+    setUsernameStatus('checking');
+    usernameTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get(`/api/auth/check-username/${encodeURIComponent(username)}`);
+        setUsernameStatus(res.data.available ? 'available' : 'taken');
+      } catch {
+        setUsernameStatus(null);
+      }
+    }, 500);
+  }, []);
+
+  const handleUsernameChange = (e) => {
+    const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    setFormData({ ...formData, username: val });
+    checkUsername(val);
+  };
+
+  // DOB validation
+  const getDaysInMonth = (month, year) => {
+    if (!month) return 31;
+    return new Date(year || 2000, parseInt(month), 0).getDate();
+  };
+
+  const validateDob = () => {
+    if (!dobMonth && !dobDay && !dobYear) return true; // All empty = optional
+    if (!dobMonth || !dobDay || !dobYear) {
+      setDobError('Please fill all date fields or leave all empty');
+      return false;
+    }
+    const day = parseInt(dobDay);
+    const year = parseInt(dobYear);
+    const maxDays = getDaysInMonth(dobMonth, year);
+    
+    if (day < 1 || day > maxDays) {
+      setDobError(`Day must be between 1 and ${maxDays}`);
+      return false;
+    }
+    if (year < 1900 || year > new Date().getFullYear()) {
+      setDobError(`Year must be between 1900 and ${new Date().getFullYear()}`);
+      return false;
+    }
+    // Must be at least 13 years old
+    const dob = new Date(year, parseInt(dobMonth) - 1, day);
+    const today = new Date();
+    const age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (age < 13 || (age === 13 && monthDiff < 0) || (age === 13 && monthDiff === 0 && today.getDate() < dob.getDate())) {
+      setDobError('You must be at least 13 years old');
+      return false;
+    }
+    setDobError('');
+    return true;
+  };
+
+  const handleDayChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+    setDobDay(val);
+    setDobError('');
+  };
+
+  const handleYearChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setDobYear(val);
+    setDobError('');
+  };
+
   const handleNext = (e) => {
     e.preventDefault();
     if (!formData.username || !formData.email || !formData.password) {
-      setError('Please fill in required fields.');
+      setError('Please fill in all required fields.');
+      return;
+    }
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    if (usernameStatus === 'taken') {
+      setError('That username is taken. Please choose another.');
       return;
     }
     setError('');
@@ -47,10 +132,15 @@ const Register = ({ setAuth }) => {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    if (!formData.first_name.trim()) {
+      setError('First name is required.');
+      return;
+    }
+    if (!validateDob()) return;
+    
     setIsLoading(true);
     setError('');
     
-    // Format DOB if all fields are provided
     let formattedDob = null;
     if (dobYear && dobMonth && dobDay) {
       formattedDob = `${dobYear}-${dobMonth.padStart(2, '0')}-${dobDay.padStart(2, '0')}`;
@@ -59,7 +149,6 @@ const Register = ({ setAuth }) => {
     try {
       const response = await api.post('/api/auth/register', { ...formData, dob: formattedDob });
       
-      // Auto-login via localstorage token for cross-domain support
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -67,9 +156,10 @@ const Register = ({ setAuth }) => {
         const role = response.data.user.role;
         if (role === 'admin') navigate('/admin', { replace: true });
         else if (role === 'artist') navigate('/artist', { replace: true });
-        else navigate('/onboarding', { replace: true }); // listener
+        else navigate('/onboarding', { replace: true });
 
         setTimeout(() => { if (setAuth) setAuth(true); }, 0);
+        toast.success('Account created!');
       } else {
         navigate('/login');
       }
@@ -81,12 +171,10 @@ const Register = ({ setAuth }) => {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-brand-dark flex items-center justify-center">
-      {/* Full-page Plasma WebGL background */}
+    <div className="min-h-screen relative overflow-hidden bg-brand-dark flex items-center justify-center pt-safe">
       <div className="absolute inset-0 z-0 hidden md:block">
         <Plasma color="#c0c0c0" speed={0.5} direction="forward" scale={1.2} opacity={1} mouseInteractive={false} />
       </div>
-      {/* Static gradient fallback for mobile to prevent glitching/slowdowns */}
       <div className="absolute inset-0 z-0 md:hidden bg-gradient-to-br from-brand-dark via-brand-dark/90 to-brand-primary/10"></div>
 
       <div className="relative z-10 w-full max-w-md px-4 md:px-8 py-4 animate-slide-up">
@@ -155,12 +243,17 @@ const Register = ({ setAuth }) => {
                       name="username"
                       type="text" 
                       placeholder="Choose a username" 
-                      className="input-field pl-12"
+                      className={`input-field pl-12 pr-10 ${usernameStatus === 'taken' ? 'border-red-500/50' : usernameStatus === 'available' ? 'border-emerald-500/50' : ''}`}
                       value={formData.username}
-                      onChange={handleChange}
+                      onChange={handleUsernameChange}
+                      autoComplete="username"
                       required 
                     />
+                    {usernameStatus === 'available' && <CheckCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />}
+                    {usernameStatus === 'taken' && <XCircle className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-red-400" />}
+                    {usernameStatus === 'checking' && <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-brand-muted/30 border-t-brand-muted rounded-full animate-spin" />}
                   </div>
+                  {usernameStatus === 'taken' && <p className="text-red-400 text-xs mt-1.5 font-medium">Username is already taken</p>}
                 </div>
 
                 <div>
@@ -174,6 +267,7 @@ const Register = ({ setAuth }) => {
                       className="input-field pl-12"
                       value={formData.email}
                       onChange={handleChange}
+                      autoComplete="email"
                       required 
                     />
                   </div>
@@ -190,6 +284,7 @@ const Register = ({ setAuth }) => {
                       className="input-field pl-12 pr-12"
                       value={formData.password}
                       onChange={handleChange}
+                      autoComplete="new-password"
                       required 
                       minLength={6}
                     />
@@ -201,6 +296,17 @@ const Register = ({ setAuth }) => {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  {formData.password && (
+                    <div className="mt-2 flex gap-1">
+                      {[1,2,3,4].map(i => (
+                        <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${
+                          formData.password.length >= i * 3 
+                            ? i <= 1 ? 'bg-red-400' : i <= 2 ? 'bg-amber-400' : i <= 3 ? 'bg-emerald-400' : 'bg-emerald-400'
+                            : 'bg-white/10'
+                        }`} />
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <button 
@@ -214,14 +320,15 @@ const Register = ({ setAuth }) => {
               <div className="animate-slide-up space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-brand-muted uppercase tracking-wider mb-2 block">First Name</label>
+                    <label className="text-xs font-semibold text-brand-muted uppercase tracking-wider mb-2 block">First Name <span className="text-red-400">*</span></label>
                     <input 
                       name="first_name"
                       type="text" 
-                      placeholder="First (Optional)" 
+                      placeholder="First name" 
                       className="input-field"
                       value={formData.first_name}
                       onChange={handleChange}
+                      required
                     />
                   </div>
                   <div>
@@ -243,43 +350,33 @@ const Register = ({ setAuth }) => {
                     <select 
                       className="input-field cursor-pointer flex-[2] bg-zinc-900 border border-white/10"
                       value={dobMonth}
-                      onChange={(e) => setDobMonth(e.target.value)}
+                      onChange={(e) => { setDobMonth(e.target.value); setDobError(''); }}
                     >
                       <option value="" disabled className="bg-zinc-900 text-white">Month</option>
-                      <option value="1" className="bg-zinc-900 text-white">January</option>
-                      <option value="2" className="bg-zinc-900 text-white">February</option>
-                      <option value="3" className="bg-zinc-900 text-white">March</option>
-                      <option value="4" className="bg-zinc-900 text-white">April</option>
-                      <option value="5" className="bg-zinc-900 text-white">May</option>
-                      <option value="6" className="bg-zinc-900 text-white">June</option>
-                      <option value="7" className="bg-zinc-900 text-white">July</option>
-                      <option value="8" className="bg-zinc-900 text-white">August</option>
-                      <option value="9" className="bg-zinc-900 text-white">September</option>
-                      <option value="10" className="bg-zinc-900 text-white">October</option>
-                      <option value="11" className="bg-zinc-900 text-white">November</option>
-                      <option value="12" className="bg-zinc-900 text-white">December</option>
+                      {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => (
+                        <option key={i+1} value={String(i+1)} className="bg-zinc-900 text-white">{m}</option>
+                      ))}
                     </select>
                     <input 
                       type="text"
                       inputMode="numeric"
-                      pattern="[0-9]*"
                       maxLength="2"
                       placeholder="DD" 
                       className="input-field flex-1 text-center"
                       value={dobDay}
-                      onChange={(e) => setDobDay(e.target.value)}
+                      onChange={handleDayChange}
                     />
                     <input 
                       type="text"
                       inputMode="numeric"
-                      pattern="[0-9]*"
                       maxLength="4"
                       placeholder="YYYY" 
                       className="input-field flex-[1.2] text-center"
                       value={dobYear}
-                      onChange={(e) => setDobYear(e.target.value)}
+                      onChange={handleYearChange}
                     />
                   </div>
+                  {dobError && <p className="text-red-400 text-xs mt-1.5 font-medium">{dobError}</p>}
                 </div>
 
                 <div>

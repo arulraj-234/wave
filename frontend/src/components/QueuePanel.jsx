@@ -1,5 +1,5 @@
 import React, { useContext, useRef, useState } from 'react';
-import { X, Music, Play, GripVertical, Trash2, ListMusic, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Music, Play, GripVertical, Trash2, ListMusic } from 'lucide-react';
 import { PlayerContext } from '../context/PlayerContext';
 
 const QueuePanel = ({ isOpen, onClose }) => {
@@ -9,13 +9,13 @@ const QueuePanel = ({ isOpen, onClose }) => {
   const dragOverItem = useRef(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
 
+  // Touch-based reordering for mobile
+  const touchStartY = useRef(null);
+  const touchItemIndex = useRef(null);
+
   const handleDragStart = (e, index) => {
     dragItem.current = index;
     setDraggedIndex(index);
-    // Allow small delay before turning invisible using setTimeout
-    setTimeout(() => {
-        // Optional drag styling could go here
-    }, 0);
   };
 
   const handleDragEnter = (e, index) => {
@@ -31,28 +31,42 @@ const QueuePanel = ({ isOpen, onClose }) => {
     setDraggedIndex(null);
   };
 
+  const handleTouchStart = (e, index) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchItemIndex.current = index;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartY.current === null || touchItemIndex.current === null) return;
+    const endY = e.changedTouches[0].clientY;
+    const diff = endY - touchStartY.current;
+    const idx = touchItemIndex.current;
+    if (Math.abs(diff) > 40) {
+      if (diff < 0 && idx > 0) reorderQueue(idx, idx - 1);
+      if (diff > 0 && idx < queue.length - 1) reorderQueue(idx, idx + 1);
+    }
+    touchStartY.current = null;
+    touchItemIndex.current = null;
+  };
+
 
   if (!isOpen) return null;
 
   return (
     <>
-      {/* Backdrop */}
       <div onClick={onClose} className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-sm" />
       
-      {/* Panel */}
       <div className="fixed right-0 top-0 bottom-0 w-full md:w-[380px] bg-brand-dark border-l border-white/[0.06] z-[70] flex flex-col animate-slide-in-right shadow-2xl">
-        {/* Header */}
-        <div className="p-5 border-b border-white/[0.04] flex items-center justify-between shrink-0">
+        <div className="p-5 border-b border-white/[0.04] flex items-center justify-between shrink-0 pt-safe">
           <h2 className="text-sm font-bold uppercase tracking-widest text-brand-primary flex items-center gap-2.5">
             <ListMusic className="w-4 h-4 text-brand-muted" />
             Queue
           </h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-white/[0.06] flex items-center justify-center transition-colors text-brand-muted hover:text-brand-primary">
-            <X className="w-4 h-4" />
+          <button onClick={onClose} className="w-10 h-10 rounded-full hover:bg-white/[0.06] flex items-center justify-center transition-colors text-brand-muted hover:text-brand-primary">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Now Playing */}
         {currentSong && (
           <div className="p-5 border-b border-white/[0.04] shrink-0">
             <span className="text-[10px] font-bold uppercase tracking-widest text-brand-muted mb-3 block">Now Playing</span>
@@ -72,7 +86,6 @@ const QueuePanel = ({ isOpen, onClose }) => {
           </div>
         )}
 
-        {/* Queue List */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {queue.length > 0 ? (
             <>
@@ -93,29 +106,13 @@ const QueuePanel = ({ isOpen, onClose }) => {
                     onDragEnter={(e) => handleDragEnter(e, idx)}
                     onDragEnd={handleDragEnd}
                     onDragOver={(e) => e.preventDefault()}
-                    className={`flex items-center gap-2 md:gap-3 p-2 rounded-lg transition-all group cursor-grab active:cursor-grabbing hover:bg-white/[0.05] ${draggedIndex === idx ? 'opacity-30' : 'opacity-100'}`}
+                    onTouchStart={(e) => handleTouchStart(e, idx)}
+                    onTouchEnd={handleTouchEnd}
+                    className={`flex items-center gap-3 p-2.5 rounded-lg transition-all group cursor-grab active:cursor-grabbing hover:bg-white/[0.05] ${draggedIndex === idx ? 'opacity-30' : 'opacity-100'}`}
                   >
-                    <GripVertical className="w-4 h-4 text-brand-muted/30 group-hover:text-brand-muted/80 cursor-grab shrink-0 hidden md:block" />
-                    
-                    {/* Mobile Move Buttons */}
-                    <div className="flex flex-col gap-1 md:hidden shrink-0 pl-1">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); if (idx > 0) reorderQueue(idx, idx - 1); }}
-                        className={`p-1 rounded bg-white/5 active:bg-white/20 transition-colors ${idx === 0 ? 'opacity-30 cursor-not-allowed' : 'text-brand-primary'}`}
-                        disabled={idx === 0}
-                      >
-                        <ChevronUp className="w-3 h-3" />
-                      </button>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); if (idx < queue.length - 1) reorderQueue(idx, idx + 1); }}
-                        className={`p-1 rounded bg-white/5 active:bg-white/20 transition-colors ${idx === queue.length - 1 ? 'opacity-30 cursor-not-allowed' : 'text-brand-primary'}`}
-                        disabled={idx === queue.length - 1}
-                      >
-                        <ChevronDown className="w-3 h-3" />
-                      </button>
-                    </div>
+                    <GripVertical className="w-4 h-4 text-brand-muted/30 group-hover:text-brand-muted/80 cursor-grab shrink-0" />
 
-                    <div className="w-9 h-9 rounded-md overflow-hidden bg-brand-surface shrink-0 ml-1 md:ml-0">
+                    <div className="w-10 h-10 rounded-md overflow-hidden bg-brand-surface shrink-0">
                       {song.cover_image_url ? (
                         <img src={resolveUrl(song.cover_image_url)} alt="" className="w-full h-full object-cover pointer-events-none" />
                       ) : (
@@ -123,11 +120,11 @@ const QueuePanel = ({ isOpen, onClose }) => {
                       )}
                     </div>
                     <div className="flex-1 min-w-0 pr-1">
-                      <div className="text-xs md:text-sm font-semibold truncate text-brand-primary">{song.title}</div>
-                      <div className="text-[10px] md:text-xs text-brand-muted truncate">{song.artist_name}</div>
+                      <div className="text-sm font-semibold truncate text-brand-primary">{song.title}</div>
+                      <div className="text-xs text-brand-muted truncate">{song.artist_name}</div>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); removeFromQueue(idx); }} className="w-8 h-8 rounded-full bg-white/5 md:bg-transparent md:opacity-0 group-hover:opacity-100 hover:bg-red-500/20 flex items-center justify-center transition-all shrink-0 active:scale-90">
-                      <Trash2 className="w-4 h-4 md:w-3 md:h-3 text-red-400" />
+                    <button onClick={(e) => { e.stopPropagation(); removeFromQueue(idx); }} className="w-10 h-10 rounded-full bg-white/5 md:bg-transparent md:opacity-0 group-hover:opacity-100 hover:bg-red-500/20 flex items-center justify-center transition-all shrink-0 active:scale-90">
+                      <Trash2 className="w-4 h-4 text-red-400" />
                     </button>
                   </div>
                 ))}

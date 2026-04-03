@@ -1,5 +1,6 @@
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import api from './api';
 
 const Login = lazy(() => import('./pages/Login'));
@@ -20,38 +21,93 @@ const ProtectedRoute = ({ children, allowedRoles, isAuthenticated }) => {
     return <Navigate to="/dashboard" replace />;
   }
   
-  // Enforce Onboarding for listeners
-  const currentPath = window.location.pathname;
-  if (user.role === 'listener' && !user.onboarding_completed && currentPath !== '/onboarding') {
+  const currentPath = window.location.hash?.replace('#', '') || '/';
+  if (user.role === 'listener' && !user.onboarding_completed && !currentPath.includes('/onboarding')) {
     return <Navigate to="/onboarding" replace />;
   }
   
-  // Prevent onboarded users from going back to onboarding
-  if (user.role === 'listener' && user.onboarding_completed && currentPath === '/onboarding') {
+  if (user.role === 'listener' && user.onboarding_completed && currentPath.includes('/onboarding')) {
     return <Navigate to="/dashboard" replace />;
   }
   
   return children;
 };
 
+// Animated route wrapper
+const AnimatedRoutes = ({ isAuthenticated, setIsAuthenticated }) => {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="flex-1 flex flex-col"
+      >
+        <Routes location={location}>
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<Login setAuth={setIsAuthenticated} />} />
+          <Route path="/register" element={<Register setAuth={setIsAuthenticated} />} />
+          <Route 
+            path="/dashboard/*" 
+            element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Dashboard /></ProtectedRoute>} 
+          />
+          <Route 
+            path="/onboarding" 
+            element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Onboarding /></ProtectedRoute>} 
+          />
+          <Route 
+            path="/search" 
+            element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Dashboard defaultView="search" /></ProtectedRoute>} 
+          />
+          <Route 
+            path="/artist" 
+            element={<ProtectedRoute allowedRoles={['artist', 'admin']} isAuthenticated={isAuthenticated}><Artist /></ProtectedRoute>} 
+          />
+          <Route 
+            path="/admin" 
+            element={<ProtectedRoute allowedRoles={['admin']} isAuthenticated={isAuthenticated}><Admin /></ProtectedRoute>} 
+          />
+        </Routes>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-  // Initialize Native Android Status bar
+  // Initialize Native Android Status bar — don't overlay so status bar has its own space
   useEffect(() => {
     const initCapacitor = async () => {
       try {
-        await StatusBar.setOverlaysWebView({ overlay: true });
+        await StatusBar.setOverlaysWebView({ overlay: false });
         await StatusBar.setStyle({ style: Style.Dark });
+        await StatusBar.setBackgroundColor({ color: '#0a0a0a' });
       } catch (e) {
-        // Will throw on web/non-native, completely fine to ignore
+        // Will throw on web/non-native
       }
     };
     initCapacitor();
   }, []);
 
-  // Validate session on initial load using localStorage token
+  // Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Validate session on initial load
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
@@ -77,13 +133,12 @@ function App() {
     checkAuth();
   }, []);
 
-  // Add an interceptor to globally catch 401s (expired session) and log out
+  // Global 401 interceptor
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       (error) => {
         if (error.response && error.response.status === 401) {
-           // We ignore 401s from the /api/auth/me route because we handle that during initialization
            if (!error.config.url.endsWith('/api/auth/me')) {
               setIsAuthenticated(false);
               localStorage.removeItem('user');
@@ -104,32 +159,14 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen flex flex-col">
+        {/* Offline banner */}
+        {isOffline && (
+          <div className="bg-amber-500/90 text-black text-xs font-bold text-center py-2 px-4 z-[300] shrink-0">
+            You're offline — some features may not work
+          </div>
+        )}
         <Suspense fallback={<div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center"><div className="w-8 h-8 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" /><p className="mt-4 text-gray-400 text-sm">Loading Wave...</p></div>}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<Login setAuth={setIsAuthenticated} />} />
-            <Route path="/register" element={<Register setAuth={setIsAuthenticated} />} />
-            <Route 
-              path="/dashboard/*" 
-              element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Dashboard /></ProtectedRoute>} 
-            />
-            <Route 
-              path="/onboarding" 
-              element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Onboarding /></ProtectedRoute>} 
-            />
-            <Route 
-              path="/search" 
-              element={<ProtectedRoute allowedRoles={['listener']} isAuthenticated={isAuthenticated}><Dashboard defaultView="search" /></ProtectedRoute>} 
-            />
-            <Route 
-              path="/artist" 
-              element={<ProtectedRoute allowedRoles={['artist', 'admin']} isAuthenticated={isAuthenticated}><Artist /></ProtectedRoute>} 
-            />
-            <Route 
-              path="/admin" 
-              element={<ProtectedRoute allowedRoles={['admin']} isAuthenticated={isAuthenticated}><Admin /></ProtectedRoute>} 
-            />
-          </Routes>
+          <AnimatedRoutes isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated} />
         </Suspense>
       </div>
     </Router>

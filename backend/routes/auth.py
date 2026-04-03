@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 import jwt
 import datetime
 import os
+import uuid
 from db import execute_query, fetch_one
 from config import Config
 
@@ -53,12 +54,19 @@ def register():
     if not username or not email or not password:
         return jsonify({"error": "Missing required fields: username, email, password"}), 400
 
+    if not first_name or not first_name.strip():
+        return jsonify({"error": "First name is required"}), 400
+
     hashed_password = generate_password_hash(password)
 
-    # Check if user exists
-    existing_user = fetch_one("SELECT user_id FROM users WHERE email = %s OR username = %s", (email, username))
-    if existing_user:
-        return jsonify({"error": "User with this email or username already exists"}), 409
+    # Check for specific duplicate conflicts
+    existing_username = fetch_one("SELECT user_id FROM users WHERE username = %s", (username,))
+    if existing_username:
+        return jsonify({"error": "Username is already taken"}), 409
+
+    existing_email = fetch_one("SELECT user_id FROM users WHERE email = %s", (email,))
+    if existing_email:
+        return jsonify({"error": "An account with this email already exists"}), 409
 
     # Artist and Admin accounts bypass onboarding by default
     is_onboarded = True if role in ['artist', 'admin'] else False
@@ -67,7 +75,7 @@ def register():
         INSERT INTO users (username, email, hashed_password, first_name, last_name, role, gender, dob, onboarding_completed)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
-    user_id = execute_query(query, (username, email, hashed_password, first_name, last_name, role, gender, dob, is_onboarded))
+    user_id = execute_query(query, (username, email, hashed_password, first_name.strip(), last_name.strip(), role, gender, dob, is_onboarded))
 
     if user_id:
         if role == 'artist':
@@ -77,10 +85,13 @@ def register():
         import jwt
         import datetime
         from config import Config
+        session_id = str(uuid.uuid4())
+        execute_query("UPDATE users SET active_session = %s WHERE user_id = %s", (session_id, user_id))
         token = jwt.encode({
             'user_id': user_id,
             'email': email,
             'role': role,
+            'session_id': session_id,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
         }, Config.SECRET_KEY, algorithm="HS256")
             
@@ -118,61 +129,98 @@ def login():
     data = request.json
     login_id = data.get('login_id') or data.get('email')
     password = data.get('password')
+    force_login = data.get('force_login', False)
 
     if not login_id or not password:
         return jsonify({"error": "Missing email/username or password"}), 400
 
     user = fetch_one("SELECT * FROM users WHERE email = %s OR username = %s", (login_id, login_id))
 
-    if user and check_password_hash(user['hashed_password'], password):
-        # Extract onboarding state directly from dict (1/0 to true/false)
-        is_onboarded = bool(user.get('onboarding_completed', False))
-        
-        token = jwt.encode({
-            'user_id': user['user_id'],
-            'email': user['email'],
-            'role': user['role'],
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-        }, Config.SECRET_KEY, algorithm="HS256")
-        
-        response = jsonify({
-            "message": "Login successful",
-            "token": token,
-            "user": {
-                "id": user['user_id'],
-                "username": user['username'],
-                "first_name": user['first_name'],
-                "email": user['email'],
-                "role": user['role'],
-                "onboarding_completed": is_onboarded
-            }
-        })
-        # Set HttpOnly cookie as a backup
-        is_production = os.environ.get('FLASK_ENV') == 'production'
-        response.set_cookie(
-            'token', token,
-            httponly=True,
-            secure=True,
-            samesite='None',
-            max_age=24*60*60 # 1 day
-        )
-        return response, 200
+    if not user:
+        return jsonify({"error": "No account found with that email or username"}), 404
 
-    return jsonify({"error": "Invalid email or password"}), 401
+    if not check_password_hash(user['hashed_password'], password):
+        return jsonify({"error": "Incorrect password"}), 401
+
+    # Check for existing active session
+    if user.get('active_session') and not force_login:
+        return jsonify({
+            "error": "session_conflict",
+            "message": "This account is currently logged in on another device. Would you like to log out from the other device and continue here?"
+        }), 409
+
+    # Extract onboarding state directly from dict (1/0 to true/false)
+    is_onboarded = bool(user.get('onboarding_completed', False))
+    
+    session_id = str(uuid.uuid4())
+    execute_query("UPDATE users SET active_session = %s WHERE user_id = %s", (session_id, user['user_id']))
+    
+    token = jwt.encode({
+        'user_id': user['user_id'],
+        'email': user['email'],
+        'role': user['role'],
+        'session_id': session_id,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+    }, Config.SECRET_KEY, algorithm="HS256")
+    
+    response = jsonify({
+        "message": "Login successful",
+        "token": token,
+        "user": {
+            "id": user['user_id'],
+            "username": user['username'],
+            "first_name": user['first_name'],
+            "email": user['email'],
+            "role": user['role'],
+            "onboarding_completed": is_onboarded
+        }
+    })
+    # Set HttpOnly cookie as a backup
+    is_production = os.environ.get('FLASK_ENV') == 'production'
+    response.set_cookie(
+        'token', token,
+        httponly=True,
+        secure=True,
+        samesite='None',
+        max_age=24*60*60 # 1 day
+    )
+    return response, 200
 
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
+    # Clear active session in DB if we have a valid token
+    token = request.cookies.get('token')
+    if not token and 'Authorization' in request.headers:
+        auth_header = request.headers['Authorization']
+        if auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+    if token:
+        try:
+            data = jwt.decode(token, Config.SECRET_KEY, algorithms=["HS256"])
+            execute_query("UPDATE users SET active_session = NULL WHERE user_id = %s", (data.get('user_id'),))
+        except:
+            pass
     response = jsonify({"message": "Logout successful"})
     # Clear the HttpOnly cookie (must match the SameSite/Secure params it was set with)
     response.set_cookie('token', '', httponly=True, secure=True, samesite='None', expires=0)
     return response, 200
 
+@auth_bp.route('/check-username/<username>', methods=['GET'])
+def check_username(username):
+    """Check if a username is available"""
+    existing = fetch_one("SELECT user_id FROM users WHERE username = %s", (username,))
+    return jsonify({"available": existing is None}), 200
+
 @auth_bp.route('/me', methods=['GET'])
 @token_required
 def me():
     user_id = request.current_user.get('user_id')
-    user = fetch_one("SELECT user_id, username, email, role, avatar_url, first_name, last_name, onboarding_completed FROM users WHERE user_id = %s", (user_id,))
+    session_id = request.current_user.get('session_id')
+    user = fetch_one("SELECT user_id, username, email, role, avatar_url, first_name, last_name, onboarding_completed, active_session FROM users WHERE user_id = %s", (user_id,))
     if user:
+        # Enforce concurrent session: if this token's session_id doesn't match, kick them out
+        if session_id and user.get('active_session') and user['active_session'] != session_id:
+            return jsonify({"error": "Session expired — you logged in on another device"}), 401
         is_onboarded = bool(user.get('onboarding_completed', False))
         return jsonify({
             "success": True,

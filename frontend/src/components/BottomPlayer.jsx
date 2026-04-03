@@ -81,6 +81,11 @@ const BottomPlayer = () => {
   const idleTimerRef = useRef(null);
   const touchStartY = useRef(0);
   const touchEndY = useRef(0);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  // Compact bar swipe refs
+  const compactTouchStartX = useRef(0);
+  const compactTouchStartY = useRef(0);
 
   const resetIdleTimer = () => {
     setIsIdle(false);
@@ -127,19 +132,59 @@ const BottomPlayer = () => {
 
   const handleTouchStart = (e) => {
     touchStartY.current = e.touches[0].clientY;
+    touchStartX.current = e.touches[0].clientX;
   };
 
   const handleTouchMove = (e) => {
     touchEndY.current = e.touches[0].clientY;
+    touchEndX.current = e.touches[0].clientX;
   };
 
   const handleTouchEnd = () => {
-    if (touchStartY.current - touchEndY.current < -50 && touchEndY.current !== 0) {
-      // Swiped down
+    const deltaY = touchStartY.current - touchEndY.current;
+    const deltaX = touchStartX.current - touchEndX.current;
+    const absDeltaX = Math.abs(deltaX);
+    const absDeltaY = Math.abs(deltaY);
+
+    // Only trigger if dominant axis is clear
+    if (absDeltaX > absDeltaY && absDeltaX > 60) {
+      // Horizontal swipe on fullscreen cover art
+      if (deltaX > 0) {
+        playNext(); // swiped left → next
+      } else {
+        playPrevious(); // swiped right → previous
+      }
+    } else if (deltaY < -50 && touchEndY.current !== 0) {
+      // Swiped down → minimize
       setIsFullScreenPlayer(false);
     }
     touchStartY.current = 0;
     touchEndY.current = 0;
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+  };
+
+  // Compact bar swipe handlers
+  const handleCompactTouchStart = (e) => {
+    compactTouchStartX.current = e.touches[0].clientX;
+    compactTouchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleCompactTouchEnd = (e) => {
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const deltaX = compactTouchStartX.current - endX;
+    const deltaY = Math.abs(compactTouchStartY.current - endY);
+    const absDeltaX = Math.abs(deltaX);
+
+    if (absDeltaX > deltaY && absDeltaX > 60) {
+      e.preventDefault();
+      if (deltaX > 0) {
+        playNext();
+      } else {
+        playPrevious();
+      }
+    }
   };
 
   if (!currentSong) return null;
@@ -339,7 +384,9 @@ const BottomPlayer = () => {
             animate={{ y: 0 }}
             exit={{ y: 200 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-[3.5rem] md:h-24 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] z-[40] flex items-center px-3 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300 shadow-xl md:shadow-none pb-safe`}
+            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-16 md:h-24 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] z-[40] flex items-center px-3 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300 shadow-xl md:shadow-none pb-safe`}
+            onTouchStart={handleCompactTouchStart}
+            onTouchEnd={handleCompactTouchEnd}
             style={{ 
               display: (isFullScreenPlayer && window.innerWidth < 768) ? 'none' : 'flex',
               opacity: (isFullScreenPlayer && isIdle && window.innerWidth >= 768) ? 0 : 1, 

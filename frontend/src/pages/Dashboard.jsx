@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, Link, useLocation, useParams } from 'react-router-dom';
 import { Home, Search as SearchIcon, Music, Play, Pause, SkipForward, SkipBack, Heart, Clock, TrendingUp, Headphones, Disc3, Users, BarChart3, ChevronLeft, ChevronRight, Loader2, Sparkles, Library, Plus } from 'lucide-react';
@@ -78,7 +78,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, onShowAll }) => (
 );
 
 /* ============ Playable Card (for songs/playlists/albums) ============ */
-const ContentCard = ({ image, title, subtitle, onClick, isRound = false, size = 'normal' }) => {
+const ContentCard = ({ image, title, subtitle, onClick, isRound = false, size = 'normal', isCurrentlyPlaying = false, isCurrentlyPaused = false }) => {
   const w = size === 'large' ? 'w-40 md:w-52 shrink-0' : 'w-36 md:w-44 shrink-0';
   const [imgError, setImgError] = useState(false);
   return (
@@ -95,11 +95,22 @@ const ContentCard = ({ image, title, subtitle, onClick, isRound = false, size = 
         ) : (
           <Music className="w-10 h-10 text-brand-muted opacity-50" />
         )}
-        <div className="absolute inset-0 bg-brand-dark/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-          <div className="w-12 h-12 bg-brand-primary rounded-full flex items-center justify-center shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-            <Play className="w-6 h-6 fill-current text-brand-dark ml-1" />
+        {/* Playing indicator — only show when this specific song is playing */}
+        {isCurrentlyPlaying && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center transition-all duration-300">
+            <div className="w-12 h-12 bg-brand-primary rounded-full flex items-center justify-center shadow-lg animate-pulse">
+              <Pause className="w-5 h-5 fill-current text-brand-dark" />
+            </div>
           </div>
-        </div>
+        )}
+        {/* Hover play — only on non-playing cards */}
+        {!isCurrentlyPlaying && (
+          <div className="absolute inset-0 bg-brand-dark/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+            <div className="w-12 h-12 bg-brand-primary rounded-full flex items-center justify-center shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+              <Play className="w-6 h-6 fill-current text-brand-dark ml-1" />
+            </div>
+          </div>
+        )}
       </div>
       <div className="font-semibold truncate text-xs md:text-sm text-brand-primary">{title}</div>
       {subtitle && <div className="text-[10px] md:text-xs text-brand-muted truncate mt-0.5">{subtitle}</div>}
@@ -310,10 +321,17 @@ const Dashboard = ({ defaultView = 'home' }) => {
   else if (location.pathname.startsWith('/dashboard/artist/saavn_')) currentView = 'saavn-artist';
   else if (location.pathname.startsWith('/dashboard/artist/')) currentView = 'artist-profile';
 
+  // Cache ref: skip re-fetching home data when switching tabs
+  const hasLoadedHome = useRef(false);
+
   useEffect(() => {
     const loadContent = async () => {
-      setIsLoading(true);
       if (currentView === 'home') {
+        if (hasLoadedHome.current) {
+          // Data already loaded, don't show loading state or re-fetch  
+          return;
+        }
+        setIsLoading(true);
         await Promise.all([
           fetchRecentSongs(),
           fetchTrending(),
@@ -321,19 +339,26 @@ const Dashboard = ({ defaultView = 'home' }) => {
           fetchRecommendations(),
           fetchFollowedArtists(),
         ]);
+        hasLoadedHome.current = true;
       } else if (currentView === 'library') {
+        setIsLoading(true);
         await fetchLikedSongs();
       } else if (currentView === 'playlist' && location.pathname.split('/').pop()) {
+        setIsLoading(true);
         await fetchPlaylistSongs(location.pathname.split('/').pop());
       } else if (currentView === 'artist-profile' && location.pathname.split('/').pop()) {
+        setIsLoading(true);
         await fetchArtistProfile(location.pathname.split('/').pop());
       } else if (currentView === 'saavn-artist') {
+        setIsLoading(true);
         const saavnId = location.pathname.split('saavn_')[1];
         if (saavnId) await fetchSaavnArtist(saavnId);
       } else if (currentView === 'saavn-album') {
+        setIsLoading(true);
         const saavnId = location.pathname.split('saavn_')[1];
         if (saavnId) await fetchSaavnAlbum(saavnId);
       } else if (currentView === 'saavn-playlist') {
+        setIsLoading(true);
         const saavnId = location.pathname.split('/').pop();
         if (saavnId) await fetchSaavnPlaylist(saavnId);
       }
@@ -499,6 +524,59 @@ const Dashboard = ({ defaultView = 'home' }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Pull-to-refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [fetchError, setFetchError] = useState(null);
+  const pullStartY = useRef(0);
+  const scrollContainerRef = useRef(null);
+  const PULL_THRESHOLD = 80;
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    setFetchError(null);
+    hasLoadedHome.current = false;
+    try {
+      await Promise.all([
+        fetchRecentSongs(),
+        fetchTrending(),
+        fetchHomeContent(),
+        fetchRecommendations(),
+        fetchFollowedArtists(),
+      ]);
+      hasLoadedHome.current = true;
+    } catch (err) {
+      setFetchError('Failed to load content. Pull down to retry.');
+    } finally {
+      setIsRefreshing(false);
+      setPullDistance(0);
+    }
+  }, []);
+
+  const handlePullStart = useCallback((e) => {
+    if (scrollContainerRef.current?.scrollTop === 0) {
+      pullStartY.current = e.touches[0].clientY;
+    }
+  }, []);
+
+  const handlePullMove = useCallback((e) => {
+    if (!pullStartY.current || isRefreshing) return;
+    const scrollTop = scrollContainerRef.current?.scrollTop || 0;
+    if (scrollTop > 0) { pullStartY.current = 0; setPullDistance(0); return; }
+    const delta = e.touches[0].clientY - pullStartY.current;
+    if (delta > 0) {
+      setPullDistance(Math.min(delta * 0.5, PULL_THRESHOLD * 1.5));
+    }
+  }, [isRefreshing]);
+
+  const handlePullEnd = useCallback(() => {
+    if (pullDistance >= PULL_THRESHOLD && !isRefreshing) {
+      handleRefresh();
+    } else {
+      setPullDistance(0);
+    }
+    pullStartY.current = 0;
+  }, [pullDistance, isRefreshing, handleRefresh]);
 
 
   return (
@@ -519,7 +597,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
            {/* Left Logo (Visible mainly on Mobile since Sidebar is hidden) */}
            <div className="flex-1 flex items-center justify-start gap-2.5">
               <div className="flex items-center gap-2 cursor-pointer group md:hidden" onClick={() => navigate('/dashboard')}>
-                 <WaveLogo size={24} className="shrink-0 group-hover:scale-105 transition-transform" />
+                 <WaveLogo size={20} className="shrink-0 group-hover:scale-105 transition-transform" />
               </div>
            </div>
            
@@ -573,7 +651,32 @@ const Dashboard = ({ defaultView = 'home' }) => {
         {/*              HOME VIEW                     */}
         {/* ============================================ */}
         {currentView === 'home' && (
-          <div className="flex-1 overflow-y-auto relative pb-32 md:pb-32 custom-scrollbar animate-fade-in">
+          <div 
+            ref={scrollContainerRef}
+            onTouchStart={handlePullStart}
+            onTouchMove={handlePullMove}
+            onTouchEnd={handlePullEnd}
+            className="flex-1 overflow-y-auto relative pb-32 md:pb-32 custom-scrollbar animate-fade-in"
+          >
+            {/* Pull-to-refresh indicator */}
+            {(pullDistance > 0 || isRefreshing) && (
+              <div 
+                className="flex items-center justify-center transition-all duration-200 overflow-hidden"
+                style={{ height: isRefreshing ? 48 : pullDistance }}
+              >
+                <div className={`w-6 h-6 border-[3px] border-brand-primary/20 border-t-brand-primary rounded-full ${isRefreshing ? 'animate-spin' : ''}`}
+                  style={{ transform: !isRefreshing ? `rotate(${pullDistance * 3}deg)` : undefined, opacity: Math.min(pullDistance / PULL_THRESHOLD, 1) }}
+                />
+              </div>
+            )}
+
+            {/* Error state */}
+            {fetchError && !isLoading && (
+              <div className="mx-4 md:mx-8 mt-4 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center gap-3">
+                <div className="text-red-400 text-sm font-medium flex-1">{fetchError}</div>
+                <button onClick={handleRefresh} className="px-4 py-2 rounded-xl bg-red-500/20 text-red-300 text-xs font-bold hover:bg-red-500/30 transition-colors">Retry</button>
+              </div>
+            )}
 
 
 

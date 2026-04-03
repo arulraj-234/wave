@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
-import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import WaveLogo from '../components/Logo';
 import Plasma from '../components/Plasma';
+import { useToast } from '../context/ToastContext';
 
 const Login = ({ setAuth }) => {
   const [loginId, setLoginId] = useState('');
@@ -12,18 +13,20 @@ const Login = ({ setAuth }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [sessionConflict, setSessionConflict] = useState(false);
   const navigate = useNavigate();
+  const toast = useToast();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const attemptLogin = async (forceLogin = false) => {
     setIsLoading(true);
     setError('');
+    setSessionConflict(false);
     try {
       const response = await api.post('/api/auth/login', {
         login_id: loginId,
-        password
+        password,
+        force_login: forceLogin
       });
-      // Store token explicitly since split-domain hosting blocks cookies on Safari/Brave
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
 
@@ -32,23 +35,38 @@ const Login = ({ setAuth }) => {
       else if (role === 'artist') navigate('/artist', { replace: true });
       else navigate('/dashboard', { replace: true });
 
-      // Set auth AFTER navigate so ProtectedRoute reads the fresh user from localStorage
       setTimeout(() => setAuth(true), 0);
+      toast.success('Welcome back!');
 
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.');
+      const errorData = err.response?.data;
+      if (errorData?.error === 'session_conflict') {
+        setSessionConflict(true);
+        setError(errorData.message);
+      } else {
+        setError(errorData?.error || 'Login failed. Check your connection and try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    await attemptLogin(false);
+  };
+
+  const handleForceLogin = async () => {
+    await attemptLogin(true);
+  };
+
   return (
-    <div className="min-h-screen relative overflow-hidden bg-brand-dark flex items-center justify-center">
+    <div className="min-h-screen relative overflow-hidden bg-brand-dark flex items-center justify-center pt-safe">
       {/* Full-page Plasma WebGL background */}
       <div className="absolute inset-0 z-0 hidden md:block">
         <Plasma color="#c0c0c0" speed={0.5} direction="forward" scale={1.2} opacity={1} mouseInteractive={false} />
       </div>
-      {/* Static gradient fallback for mobile to prevent glitching/slowdowns */}
+      {/* Static gradient fallback for mobile */}
       <div className="absolute inset-0 z-0 md:hidden bg-gradient-to-br from-brand-dark via-brand-dark/90 to-brand-primary/10"></div>
 
       {/* Centered form card */}
@@ -70,8 +88,20 @@ const Login = ({ setAuth }) => {
           </div>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-300 px-4 py-3 rounded-xl mb-6 text-sm font-medium animate-slide-up">
-              {error}
+            <div className={`${sessionConflict ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-red-500/10 border-red-500/20 text-red-300'} border px-4 py-3 rounded-xl mb-6 text-sm font-medium animate-slide-up`}>
+              <div className="flex items-start gap-2">
+                {sessionConflict && <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />}
+                <span>{error}</span>
+              </div>
+              {sessionConflict && (
+                <button
+                  onClick={handleForceLogin}
+                  disabled={isLoading}
+                  className="mt-3 w-full py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-lg text-sm font-bold text-amber-200 transition-colors disabled:opacity-50"
+                >
+                  {isLoading ? 'Logging in...' : 'Yes, log out other device & continue'}
+                </button>
+              )}
             </div>
           )}
 
@@ -87,6 +117,7 @@ const Login = ({ setAuth }) => {
                   value={loginId}
                   onChange={(e) => setLoginId(e.target.value)}
                   required
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -101,6 +132,7 @@ const Login = ({ setAuth }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"

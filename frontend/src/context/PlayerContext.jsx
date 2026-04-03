@@ -238,18 +238,20 @@ export const PlayerProvider = ({ children }) => {
     accumulatedDurationRef.current = 0;
     lastPlayTimeRef.current = Date.now();
 
-    // Setup Media Session API (lock screen controls)
+    // Setup Media Session API (lock screen / notification controls)
     if ('mediaSession' in navigator) {
+      const coverUrl = targetSong.cover_image_url ? resolveUrl(targetSong.cover_image_url) : '';
       navigator.mediaSession.metadata = new window.MediaMetadata({
         title: targetSong.title,
         artist: targetSong.artist_name,
-        album: targetSong.album_name || '',
-        artwork: [
-          { src: resolveUrl(targetSong.cover_image_url), sizes: '512x512', type: 'image/jpeg' }
-        ]
+        album: targetSong.album_name || 'Wave',
+        artwork: coverUrl ? [
+          { src: coverUrl, sizes: '96x96', type: 'image/jpeg' },
+          { src: coverUrl, sizes: '256x256', type: 'image/jpeg' },
+          { src: coverUrl, sizes: '512x512', type: 'image/jpeg' }
+        ] : []
       });
-
-      // Handlers are bound below in the useEffect
+      navigator.mediaSession.playbackState = 'playing';
     }
 
   }, [currentSong, recordStream]);
@@ -281,13 +283,22 @@ export const PlayerProvider = ({ children }) => {
       if (audio.duration) {
         setProgress((audio.currentTime / audio.duration) * 100);
 
-        // Gapless Preloading Logic: If less than 15 seconds remain, preload the next track
-        // queue[0] is correct here because playNext() always shifts the queue. The next song is ALWAYS queue[0].
+        // Update MediaSession position state for lock screen seekbar
+        if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration: audio.duration,
+              playbackRate: audio.playbackRate,
+              position: audio.currentTime
+            });
+          } catch(e) { /* ignore */ }
+        }
+
+        // Gapless Preloading Logic
         if (audio.duration - audio.currentTime < 15 && queue.length > 0) {
           const nextSong = queue[0];
           const nextUrl = resolveUrl(nextSong.audio_url);
           if (nextUrl && preloadAudioRef.current.src !== nextUrl) {
-             // Begin fetching the next audio file into browser cache
              preloadAudioRef.current.src = nextUrl;
              preloadAudioRef.current.load();
           }
@@ -490,8 +501,10 @@ export const PlayerProvider = ({ children }) => {
     if (!currentSong) return;
     if (isPlaying) {
       audioRef.current.pause();
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     } else {
       audioRef.current.play();
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     }
     setIsPlaying(!isPlaying);
   };
@@ -624,14 +637,13 @@ export const PlayerProvider = ({ children }) => {
     };
   }, []);
 
-  // Hardware Back Button Integration
+  // Hardware Back Button / Gesture Integration
   useEffect(() => {
-    // Only works on Android/native environments via Capacitor
-    const backButtonListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+    const backButtonListener = CapacitorApp.addListener('backButton', () => {
       if (isFullScreenPlayer) {
-        // If the fullscreen player is open, intercept back button to just close the player
         setIsFullScreenPlayer(false);
-      } else if (canGoBack) {
+      } else if (window.history.length > 1) {
+        // Use history.length since HashRouter doesn't report canGoBack correctly
         window.history.back();
       } else {
         CapacitorApp.exitApp();

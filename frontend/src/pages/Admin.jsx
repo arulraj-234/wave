@@ -74,8 +74,8 @@ const Admin = () => {
 
   return (
     <div className="flex h-screen bg-brand-dark overflow-hidden font-sans text-white">
-      {/* Sidebar Navigation */}
-      <div className="w-64 border-r border-white/5 bg-brand-dark/50 backdrop-blur-md flex flex-col">
+      {/* Sidebar Navigation — desktop only */}
+      <div className="hidden md:flex w-64 border-r border-white/5 bg-brand-dark/50 backdrop-blur-md flex-col">
         <div className="p-8 pb-4">
           <h1 className="text-xl font-black text-brand-primary flex items-center gap-2">
             <WaveLogo size={24} />
@@ -120,14 +120,57 @@ const Admin = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-8 relative">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <ErrorBoundary>
-            {activeTab === 'overview' && <OverviewTab stats={stats} platformStats={platformStats} />}
-            {activeTab === 'upload' && <UploadTab token={token} currentUser={currentUser} onUploadComplete={fetchAdminData} />}
-            {activeTab === 'songs' && <SongsTab token={token} />}
-            {activeTab === 'users' && <UsersTab token={token} />}
-          </ErrorBoundary>
+      <div className="flex-1 overflow-y-auto relative flex flex-col">
+        {/* Mobile header */}
+        <div className="md:hidden flex items-center justify-between px-4 pt-safe pb-3 border-b border-white/5 bg-brand-dark/90 backdrop-blur-xl sticky top-0 z-30">
+          <h1 className="text-base font-black text-brand-primary flex items-center gap-2">
+            <WaveLogo size={18} />
+            ADMIN
+          </h1>
+          <button
+            onClick={() => {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              navigate('/login');
+            }}
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-rose-500/10 text-white/60 hover:text-rose-400 transition-all"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 p-4 md:p-8">
+          <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 pb-24 md:pb-8">
+            <ErrorBoundary>
+              {activeTab === 'overview' && <OverviewTab stats={stats} platformStats={platformStats} />}
+              {activeTab === 'upload' && <UploadTab token={token} currentUser={currentUser} onUploadComplete={fetchAdminData} />}
+              {activeTab === 'songs' && <SongsTab token={token} />}
+              {activeTab === 'users' && <UsersTab token={token} />}
+            </ErrorBoundary>
+          </div>
+        </div>
+
+        {/* Mobile bottom tab bar */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-brand-dark/95 backdrop-blur-xl border-t border-white/[0.06] flex items-center justify-around px-2 pb-safe z-40">
+          {[
+            { id: 'overview', icon: LayoutDashboard, label: 'Overview' },
+            { id: 'songs', icon: MusicIcon, label: 'Songs' },
+            { id: 'upload', icon: Upload, label: 'Upload' },
+            { id: 'users', icon: Users, label: 'Users' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex flex-col items-center gap-1 py-3 px-3 rounded-xl transition-all min-w-[56px] ${
+                activeTab === tab.id 
+                  ? 'text-indigo-300' 
+                  : 'text-white/40'
+              }`}
+            >
+              <tab.icon className="w-5 h-5" />
+              <span className="text-[10px] font-bold">{tab.label}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

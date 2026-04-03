@@ -2,9 +2,13 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+// Capacitor Android WebView doesn't need cookie credentials — we use Bearer tokens.
+// withCredentials + wildcard CORS origin causes browsers to reject responses.
+const isCapacitor = typeof window !== 'undefined' && window.Capacitor !== undefined;
+
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // Send HttpOnly cookies automatically!
+  withCredentials: !isCapacitor,
 });
 
 // Attach JWT token to every request if available (Legacy fallback)
