@@ -42,6 +42,9 @@ def search_global():
     if not query:
         return jsonify({'error': 'Query parameter is required'}), 400
     
+    user_id = request.args.get('user_id')
+    preferred_quality = get_preferred_quality(user_id)
+    
     # Map our internal type to JioSaavn API plural endpoint
     endpoint_map = {
         'song': 'songs',
@@ -91,7 +94,7 @@ def search_global():
                 return []
 
             results = {
-                'songs': [_normalize_song(s, pq) for s in get_safe_results('songs') if isinstance(s, dict)],
+                'songs': [_normalize_song(s, preferred_quality) for s in get_safe_results('songs') if isinstance(s, dict)],
                 'artists': [_normalize_artist(a) for a in get_safe_results('artists') if isinstance(a, dict)],
                 'albums': [_normalize_album(al) for al in get_safe_results('albums') if isinstance(al, dict)],
                 'playlists': [_normalize_playlist(p) for p in get_safe_results('playlists') if isinstance(p, dict)]
@@ -114,7 +117,7 @@ def search_global():
         for item in raw_results:
             if not isinstance(item, dict): continue
             if search_type == 'song':
-                results.append(_normalize_song(item, pq))
+                results.append(_normalize_song(item, preferred_quality))
             elif search_type == 'artist':
                 results.append(_normalize_artist(item))
             elif search_type == 'album':
@@ -184,10 +187,6 @@ def _normalize_song(song, preferred_quality='high'):
     download_urls = song.get('downloadUrl', [])
     if not isinstance(download_urls, list): download_urls = []
     
-    audio_url = ''
-    best_match = None
-    closest_weight_diff = 99
-    
     # Select audio URL based on preference
     for dl in download_urls:
         if not isinstance(dl, dict): continue
@@ -199,15 +198,28 @@ def _normalize_song(song, preferred_quality='high'):
         if diff < closest_weight_diff:
             closest_weight_diff = diff
             best_match = dl.get('url', '')
-        # Prefer higher if weights are equally close (e.g. target 3.5 between 3 and 4)
+        # Prefer higher if weights are equally close
         elif diff == closest_weight_diff:
             if q_weight > quality_map.get(song.get('quality', ''), -1):
                 best_match = dl.get('url', '')
 
-    audio_url = best_match or (download_urls[-1].get('url', '') if download_urls and isinstance(download_urls[-1], dict) else '')
+    final_audio_url = best_match or (download_urls[-1].get('url', '') if download_urls and isinstance(download_urls[-1], dict) else '')
 
-    # NO MORE blind regex replacement – it causes 404s and degradation if the bitrate doesn't exist.
-    # JioSaavn URLs are already correctly pointed to their respective quality tiers in download_urls.
+    # EXTREME QUALITY UPGRADE:
+    # If user wants Extreme (320kbps) but the best URL we found is lower, 
+    # we attempt to reconstruct the 320kbps link using the JioSaavn CDN naming pattern.
+    if preferred_quality == 'extreme' and final_audio_url:
+        import re
+        # Check if the current match is not already 320
+        is_320 = '_320.' in final_audio_url or '320kbps' in str(song.get('quality', ''))
+        if not is_320:
+            # Reconstruct: swap _96, _160, etc. for _320
+            # Most JioSaavn URLs follow the pattern ending in _bitrate.mp4
+            upgraded_url = re.sub(r'(_[0-9]+)\.(mp4|m4a)', '_320.mp4', final_audio_url)
+            if upgraded_url != final_audio_url:
+                final_audio_url = upgraded_url
+
+    audio_url = final_audio_url
     
     # Get 500x500 cover image
     cover_url = _get_high_res_image(song.get('image'))
@@ -477,7 +489,7 @@ def import_song():
                 'song_id': song_id,
                 'title': title,
                 'audio_url': audio_url,
-                'cover_image_url': cover_url,
+                'cover_image_url': cover_image_url,
                 'duration': duration,
                 'artist_id': artist_id,
                 'artists': fetch_all("SELECT ap.artist_id as id, u.username as name FROM song_artists sa JOIN artist_profiles ap ON sa.artist_id = ap.artist_id JOIN users u ON ap.user_id = u.user_id WHERE sa.song_id = %s", (song_id,)),

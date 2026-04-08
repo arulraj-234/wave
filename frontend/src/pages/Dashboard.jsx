@@ -489,8 +489,8 @@ const Dashboard = ({ defaultView = 'home' }) => {
                 {recentSongs.length > 0 && (
                   <>
                     <SectionHeader title="Quick Picks" icon={Clock} subtitle="Jump back in" />
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
-                      {recentSongs.slice(0, window.innerWidth < 768 ? 6 : 8).map(song => (
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 md:gap-4">
+                      {recentSongs.slice(0, 8).map(song => (
                         <QuickPickCard key={`qp-${song.song_id}`} song={song} onClick={() => playSong(song, recentSongs)} resolveUrl={resolveUrl} />
                       ))}
                     </div>

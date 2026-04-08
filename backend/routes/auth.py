@@ -266,7 +266,17 @@ def complete_onboarding():
 @token_required
 def update_profile():
     data = request.json
-    user_id = request.current_user.get('user_id')  # From JWT, not request body
+    # Ensure user_id is an integer for reliability across different DB drivers
+    raw_id = request.current_user.get('user_id')
+    try:
+        user_id = int(raw_id) if raw_id is not None else None
+    except (ValueError, TypeError):
+        print(f"[Profile Update Error] Invalid user_id in token: {raw_id}")
+        return jsonify({"error": "Invalid user token"}), 401
+    
+    if not user_id:
+        return jsonify({"error": "User not identified"}), 401
+
     username = data.get('username')
     first_name = data.get('first_name')
     last_name = data.get('last_name')
@@ -299,11 +309,12 @@ def update_profile():
     params.append(user_id)
 
     try:
-        execute_query(query, tuple(params))
+        # execute_query returns lastrowid or True if success
+        result = execute_query(query, tuple(params))
+        
         # Fetch updated user
         user = fetch_one("SELECT user_id, username, email, role, avatar_url, first_name, last_name, streaming_quality FROM users WHERE user_id = %s", (user_id,))
         if user:
-            # Normalize avatar_url for frontend if needed (though here we just return as is)
             return jsonify({"success": True, "message": "Profile updated", "user": {
                 "id": user['user_id'],
                 "username": user['username'],
@@ -314,10 +325,12 @@ def update_profile():
                 "last_name": user['last_name'],
                 "streaming_quality": user.get('streaming_quality', 'auto')
             }}), 200
-        return jsonify({"error": "User not found"}), 404
+            
+        print(f"[Profile Update Error] User ID {user_id} not found in DB after UPDATE attempt. Result: {result}")
+        return jsonify({"error": f"User record not found (ID: {user_id})"}), 404
     except Exception as e:
-        print(f"Profile update error: {e}")
-        return jsonify({"error": str(e)}), 500
+        print(f"Profile update exception: {e}")
+        return jsonify({"error": "A database error occurred during update"}), 500
 
 @auth_bp.route('/upload-avatar', methods=['POST'])
 def upload_avatar():
