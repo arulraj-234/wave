@@ -23,11 +23,25 @@ yarn-error.log*
 
 # Wave Specific
 tmp/
-*.zip
-wave_safe_backup.zip
 backend/uploads/songs/*
 backend/uploads/images/*
 backend/uploads/avatars/*
 !backend/uploads/songs/.gitkeep
 !backend/uploads/images/.gitkeep
 !backend/uploads/avatars/.gitkeep
+
+# Binary build artifacts
+*.apk
+*.zip
+*.jks
+
+# Build logs & scratch files
+build_apk_log*.txt
+build_output.txt
+build_log*.txt
+_conv_files.txt
+server.log
+
+# Env files (use .env.example as reference)
+backend/.env
+frontend/.env.local

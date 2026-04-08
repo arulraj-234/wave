@@ -122,7 +122,7 @@ def like_saavn_playlist():
 @playlists_bp.route('/liked/<saavn_id>', methods=['DELETE'])
 @token_required
 def unlike_saavn_playlist(saavn_id):
-    user_id = request.user['id'] # From token_required
+    user_id = request.current_user.get('user_id')  # From token_required
     query = "DELETE FROM liked_playlists WHERE user_id = %s AND saavn_playlist_id = %s"
     if execute_query(query, (user_id, saavn_id)):
         return jsonify({"message": "Playlist unliked"}), 200

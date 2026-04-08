@@ -79,11 +79,11 @@ export const PlayerProvider = ({ children }) => {
       fetchPlaylists();
       fetchLikedPlaylists();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id]);
 
   // Stable refs for event listeners
-  const controlsRef = useRef({ playNext: () => {}, playPrevious: () => {}, togglePlay: () => {} });
+  const controlsRef = useRef({ playNext: () => { }, playPrevious: () => { }, togglePlay: () => { } });
   controlsRef.current = {
     playNext: () => playNext(),
     playPrevious: () => playPrevious(),
@@ -92,10 +92,10 @@ export const PlayerProvider = ({ children }) => {
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.Capacitor) return;
-    
+
     const handleControlsEvent = (action) => {
-      const message = action.message || action; 
-      switch(message) {
+      const message = action.message || action;
+      switch (message) {
         case 'music-controls-next': controlsRef.current.playNext(); break;
         case 'music-controls-previous': controlsRef.current.playPrevious(); break;
         case 'music-controls-pause':
@@ -104,7 +104,7 @@ export const PlayerProvider = ({ children }) => {
         case 'music-controls-destroy':
           audioRef.current?.pause();
           setIsPlaying(false);
-          try { CapacitorMusicControls.updateIsPlaying({ isPlaying: false }); } catch(e){}
+          try { CapacitorMusicControls.updateIsPlaying({ isPlaying: false }); } catch (e) { }
           break;
       }
     };
@@ -120,7 +120,7 @@ export const PlayerProvider = ({ children }) => {
       return () => {
         if (listenerObj) listenerObj.remove();
         document.removeEventListener("controlsNotification", androidListener);
-        try { CapacitorMusicControls.destroy(); } catch(e){}
+        try { CapacitorMusicControls.destroy(); } catch (e) { }
       };
     } catch (err) {
       console.error("Music Controls init failed", err);
@@ -225,7 +225,7 @@ export const PlayerProvider = ({ children }) => {
   // Internal: start playing a specific song object
   const startPlayback = useCallback(async (song) => {
     if (!song) return;
-    
+
     let targetSong = song;
 
     // Intercept raw JioSaavn songs from the queue and auto-import them on the fly
@@ -246,7 +246,7 @@ export const PlayerProvider = ({ children }) => {
             artists: imported.artists,
             source: 'local'
           };
-          
+
           // Silently upgrade the queue array with the localized database song pointer
           setQueue(prev => {
             const next = [...prev];
@@ -280,7 +280,7 @@ export const PlayerProvider = ({ children }) => {
     setCurrentSong(targetSong);
     setIsPlaying(true);
     setProgress(0);
-    
+
     accumulatedDurationRef.current = 0;
     lastPlayTimeRef.current = Date.now();
 
@@ -352,7 +352,7 @@ export const PlayerProvider = ({ children }) => {
 
   useEffect(() => {
     const audio = audioRef.current;
-    
+
     const handleTimeUpdate = () => {
       if (audio.duration) {
         setProgress((audio.currentTime / audio.duration) * 100);
@@ -365,7 +365,7 @@ export const PlayerProvider = ({ children }) => {
               playbackRate: audio.playbackRate,
               position: audio.currentTime
             });
-          } catch(e) { /* ignore */ }
+          } catch (e) { /* ignore */ }
         }
 
         // Gapless Preloading Logic
@@ -373,13 +373,13 @@ export const PlayerProvider = ({ children }) => {
           const nextSong = queue[0];
           const nextUrl = resolveUrl(nextSong.audio_url);
           if (nextUrl && preloadAudioRef.current.src !== nextUrl) {
-             preloadAudioRef.current.src = nextUrl;
-             preloadAudioRef.current.load();
+            preloadAudioRef.current.src = nextUrl;
+            preloadAudioRef.current.load();
           }
         }
       }
     };
-    
+
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
     };
@@ -396,7 +396,7 @@ export const PlayerProvider = ({ children }) => {
           recordStream(currentSong.song_id, finalDuration);
         }
         accumulatedDurationRef.current = 0;
-        
+
         audio.currentTime = 0;
         audio.play();
         return;
@@ -413,10 +413,10 @@ export const PlayerProvider = ({ children }) => {
           }
           return [];
         }
-        
+
         const nextSong = prevQueue[0];
         const remainingQueue = prevQueue.slice(1);
-        
+
         if (repeatMode === 'all') {
           const nextQueue = [...remainingQueue, currentSong];
           setTimeout(() => startPlayback(nextSong), 0);
@@ -484,8 +484,8 @@ export const PlayerProvider = ({ children }) => {
   // Play a song, optionally setting the queue to a list of songs
   const playSong = (song, songList = null) => {
     if (songList && Array.isArray(songList)) {
-      const idx = songList.findIndex(s => 
-        (s.song_id && song.song_id && s.song_id === song.song_id) || 
+      const idx = songList.findIndex(s =>
+        (s.song_id && song.song_id && s.song_id === song.song_id) ||
         (s.saavn_id && song.saavn_id && s.saavn_id === song.saavn_id)
       );
       setQueue(songList.slice(idx >= 0 ? idx + 1 : 1));
@@ -503,8 +503,8 @@ export const PlayerProvider = ({ children }) => {
     }
 
     if (songList && Array.isArray(songList)) {
-      const idx = songList.findIndex(s => 
-        (s.song_id && song.song_id && s.song_id === song.song_id) || 
+      const idx = songList.findIndex(s =>
+        (s.song_id && song.song_id && s.song_id === song.song_id) ||
         (s.saavn_id && song.saavn_id && s.saavn_id === song.saavn_id)
       );
       setQueue(songList.slice(idx >= 0 ? idx + 1 : 1));
@@ -520,10 +520,10 @@ export const PlayerProvider = ({ children }) => {
       if (currentSong) fetchAndPlaySimilar(currentSong);
       return;
     }
-    
+
     setQueue(prevQueue => {
       if (prevQueue.length === 0) return [];
-      
+
       const nextSong = prevQueue[0];
       const remainingQueue = prevQueue.slice(1);
 
@@ -551,7 +551,7 @@ export const PlayerProvider = ({ children }) => {
         recordStream(currentSong.song_id, finalDuration);
       }
       accumulatedDurationRef.current = 0;
-      
+
       audioRef.current.currentTime = 0;
       setProgress(0);
       return;
@@ -576,26 +576,26 @@ export const PlayerProvider = ({ children }) => {
     if (isPlaying) {
       audioRef.current.pause();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-      try { 
+      try {
         if (window.Capacitor?.isNativePlatform()) {
-          CapacitorMusicControls.updateIsPlaying({ isPlaying: false }); 
+          CapacitorMusicControls.updateIsPlaying({ isPlaying: false });
         }
-      } catch(e){}
+      } catch (e) { }
     } else {
       audioRef.current.play();
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-      try { 
+      try {
         if (window.Capacitor?.isNativePlatform()) {
-          CapacitorMusicControls.updateIsPlaying({ isPlaying: true }); 
+          CapacitorMusicControls.updateIsPlaying({ isPlaying: true });
         }
-      } catch(e){}
+      } catch (e) { }
     }
     setIsPlaying(!isPlaying);
   };
 
   const seek = (percentage) => {
     if (!currentSong || !audioRef.current.duration) return;
-    
+
     if (percentage === 0) {
       let finalDuration = accumulatedDurationRef.current;
       if (lastPlayTimeRef.current && !audioRef.current.paused) {
@@ -735,12 +735,12 @@ export const PlayerProvider = ({ children }) => {
     });
 
     return () => {
-      backButtonListener.then(listener => listener.remove()).catch(() => {});
+      backButtonListener.then(listener => listener.remove()).catch(() => { });
     };
   }, [isFullScreenPlayer]);
 
   return (
-    <PlayerContext.Provider value={{ 
+    <PlayerContext.Provider value={{
       currentSong, isPlaying, progress, duration, volume,
       likedSongs, toggleLike,
       playlists, createPlaylist, addSongToPlaylist,
