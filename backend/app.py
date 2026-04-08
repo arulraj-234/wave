@@ -155,5 +155,12 @@ def health_check():
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
     }), 200
 
+print("\n================================")
+print("   WAVE BACKEND STARTING UP")
+print(f"   Environment: {os.getenv('FLASK_ENV', 'development')}")
+print("================================\n")
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # When running locally, we bind to 0.0.0.0 so other devices on the network (Android) can connect
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=(os.getenv('FLASK_ENV') != 'production'))
