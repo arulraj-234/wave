@@ -13,6 +13,8 @@ import SongCard from '../components/SongCard';
 import MagicBento, { ParticleCard } from '../components/MagicBento';
 import WaveLogo from '../components/Logo';
 import ProfileSettingsModal from '../components/ProfileSettingsModal';
+import UserMenu from '../components/UserMenu';
+import { useToast } from '../context/ToastContext';
 
 import HorizontalCarousel from '../components/HorizontalCarousel';
 import SectionHeader from '../components/SectionHeader';
@@ -44,7 +46,9 @@ const Dashboard = ({ defaultView = 'home' }) => {
   const [followedArtists, setFollowedArtists] = useState([]);
   const [importingId, setImportingId] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+  const toast = useToast();
   // JioSaavn artist/album/playlist detail state
   const [saavnArtist, setSaavnArtist] = useState(null);
   const [saavnAlbum, setSaavnAlbum] = useState(null);
@@ -237,6 +241,15 @@ const Dashboard = ({ defaultView = 'home' }) => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await api.post('/api/auth/logout');
+    } catch {}
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
 
 
   // Play a JioSaavn song (import-on-play)
@@ -343,29 +356,24 @@ const Dashboard = ({ defaultView = 'home' }) => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-brand-dark relative">
         {/* Top Navigation Bar */}
-        <div className="min-h-[3.5rem] md:min-h-[4rem] py-2 md:py-3 pt-safe px-4 md:px-8 flex items-center justify-between sticky top-0 z-40 bg-brand-dark/90 backdrop-blur-2xl border-b border-white/[0.03] transition-all duration-500 shadow-sm">
-           {/* Left Logo (Visible mainly on Mobile since Sidebar is hidden) */}
-           <div className="flex-1 flex items-center justify-start gap-2.5">
+        <div className="min-h-[3.5rem] md:min-h-[4rem] py-2 md:py-3 pt-safe px-4 md:px-8 flex items-center sticky top-0 z-40 bg-brand-dark/90 backdrop-blur-2xl border-b border-white/[0.03] transition-all duration-500 shadow-sm">
+           {/* Left Section (Logo on Mobile) */}
+           <div className="flex-1 flex items-center">
               <div className="flex items-center gap-2 cursor-pointer group md:hidden" onClick={() => navigate('/dashboard')}>
                  <WaveLogo size={20} className="shrink-0 group-hover:scale-105 transition-transform" />
               </div>
            </div>
            
-           {/* Center Spacer */}
-           <div className="flex-[2] hidden md:block"></div>
-
-           {/* Right Section: Search & Profile */}
-           <div className="flex-[3] md:flex-[2] flex justify-end items-center gap-3 md:gap-6">
-
-              {/* Search Bar (Moved Next to Profile) */}
+           {/* Middle Section: Centered Search Bar */}
+           <div className="flex-[2] flex justify-center items-center">
               {currentView !== 'search' && (
-                <div className="relative w-full max-w-[200px] md:max-w-xs group transition-all duration-300">
+                <div className="relative w-full max-w-[200px] md:max-w-md group transition-all duration-300">
                   <SearchIcon className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-brand-muted w-3.5 h-3.5 opacity-50 group-focus-within:text-brand-primary transition-colors" />
                   <input 
                     id="global-search-input"
                     name="global-search-input"
                     type="text" 
-                    placeholder="Search..."
+                    placeholder="Search songs, artists, albums..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -374,15 +382,17 @@ const Dashboard = ({ defaultView = 'home' }) => {
                         setSearchQuery('');
                       }
                     }}
-                    className="w-full bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.05] rounded-full py-1.5 md:py-2 pl-9 md:pl-11 pr-3 md:pr-4 text-xs font-semibold text-brand-primary focus:outline-none focus:bg-white/[0.08] focus:border-brand-primary/20 placeholder-brand-muted/70 transition-all duration-300"
+                    className="w-full bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.05] rounded-full py-1.5 md:py-2.5 pl-9 md:pl-11 pr-3 md:pr-4 text-xs font-semibold text-brand-primary focus:outline-none focus:bg-white/[0.08] focus:border-brand-primary/20 placeholder-brand-muted/70 transition-all duration-300 shadow-inner"
                   />
                 </div>
               )}
+           </div>
 
-              {/* Profile Icon */}
+           {/* Right Section: Profile */}
+           <div className="flex-1 flex justify-end items-center gap-3 md:gap-6 relative">
               <div 
                 className="flex items-center gap-3 cursor-pointer group"
-                onClick={() => setIsProfileModalOpen(true)}
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               >
                 <div className="w-9 h-9 rounded-full bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center overflow-hidden group-hover:border-brand-primary/40 transition-all bg-gradient-to-tr from-brand-primary/20 to-brand-accent/20 shadow-lg">
                   {currentUser.avatar_url ? (
@@ -394,6 +404,15 @@ const Dashboard = ({ defaultView = 'home' }) => {
                   )}
                 </div>
               </div>
+
+              <UserMenu 
+                isOpen={isUserMenuOpen}
+                onClose={() => setIsUserMenuOpen(false)}
+                user={currentUser}
+                onOpenSettings={() => setIsProfileModalOpen(true)}
+                onLogout={handleLogout}
+                navigate={navigate}
+              />
            </div>
         </div>
 

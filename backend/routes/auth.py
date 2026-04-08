@@ -211,7 +211,7 @@ def check_username(username):
 def me():
     user_id = request.current_user.get('user_id')
     session_id = request.current_user.get('session_id')
-    user = fetch_one("SELECT user_id, username, email, role, avatar_url, first_name, last_name, onboarding_completed, active_session FROM users WHERE user_id = %s", (user_id,))
+    user = fetch_one("SELECT user_id, username, email, role, avatar_url, first_name, last_name, onboarding_completed, active_session, streaming_quality FROM users WHERE user_id = %s", (user_id,))
     if user:
         # Enforce concurrent session: if this token's session_id doesn't match, kick them out
         if session_id and user.get('active_session') and user['active_session'] != session_id:
@@ -227,7 +227,8 @@ def me():
                 "avatar_url": user['avatar_url'],
                 "first_name": user['first_name'],
                 "last_name": user['last_name'],
-                "onboarding_completed": is_onboarded
+                "onboarding_completed": is_onboarded,
+                "streaming_quality": user.get('streaming_quality', 'auto')
             }
         }), 200
     return jsonify({"error": "User not found"}), 404
@@ -270,6 +271,7 @@ def update_profile():
     first_name = data.get('first_name')
     last_name = data.get('last_name')
     avatar_url = data.get('avatar_url')
+    streaming_quality = data.get('streaming_quality')
 
     update_fields = []
     params = []
@@ -286,6 +288,9 @@ def update_profile():
     if avatar_url:
         update_fields.append("avatar_url = %s")
         params.append(avatar_url)
+    if streaming_quality:
+        update_fields.append("streaming_quality = %s")
+        params.append(streaming_quality)
 
     if not update_fields:
         return jsonify({"error": "No fields to update"}), 400
@@ -296,7 +301,7 @@ def update_profile():
     try:
         execute_query(query, tuple(params))
         # Fetch updated user
-        user = fetch_one("SELECT user_id, username, email, role, avatar_url, first_name, last_name FROM users WHERE user_id = %s", (user_id,))
+        user = fetch_one("SELECT user_id, username, email, role, avatar_url, first_name, last_name, streaming_quality FROM users WHERE user_id = %s", (user_id,))
         if user:
             # Normalize avatar_url for frontend if needed (though here we just return as is)
             return jsonify({"success": True, "message": "Profile updated", "user": {
@@ -306,7 +311,8 @@ def update_profile():
                 "role": user['role'],
                 "avatar_url": user['avatar_url'],
                 "first_name": user['first_name'],
-                "last_name": user['last_name']
+                "last_name": user['last_name'],
+                "streaming_quality": user.get('streaming_quality', 'auto')
             }}), 200
         return jsonify({"error": "User not found"}), 404
     except Exception as e:

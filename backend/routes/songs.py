@@ -660,12 +660,13 @@ def get_recommendations(user_id):
             )
             data = resp.json()
             if data.get('success'):
-                from routes.jiosaavn import _normalize_song
+                from routes.jiosaavn import _normalize_song, get_preferred_quality
                 raw_data = data.get('data', {})
                 results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
+                pq = get_preferred_quality(user_id)
                 for s in results:
                     if isinstance(s, dict):
-                        norm = _normalize_song(s)
+                        norm = _normalize_song(s, pq)
                         sid = norm.get('saavn_id', '')
                         if sid and sid not in seen_ids:
                             seen_ids.add(sid)

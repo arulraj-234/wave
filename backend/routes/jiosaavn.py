@@ -22,6 +22,16 @@ def log_error(msg, url=None, resp_text=None):
     print(error_msg)
 
 
+def get_preferred_quality(user_id=None):
+    if not user_id:
+        return 'high'
+    try:
+        user = fetch_one("SELECT streaming_quality FROM users WHERE user_id = %s", (user_id,))
+        return user.get('streaming_quality', 'high') if user else 'high'
+    except:
+        return 'high'
+
+
 @jiosaavn_bp.route('/search', methods=['GET'])
 def search_global():
     """Proxy search to the JioSaavn microservice and return results by type."""
@@ -81,7 +91,7 @@ def search_global():
                 return []
 
             results = {
-                'songs': [_normalize_song(s) for s in get_safe_results('songs') if isinstance(s, dict)],
+                'songs': [_normalize_song(s, pq) for s in get_safe_results('songs') if isinstance(s, dict)],
                 'artists': [_normalize_artist(a) for a in get_safe_results('artists') if isinstance(a, dict)],
                 'albums': [_normalize_album(al) for al in get_safe_results('albums') if isinstance(al, dict)],
                 'playlists': [_normalize_playlist(p) for p in get_safe_results('playlists') if isinstance(p, dict)]
@@ -101,11 +111,10 @@ def search_global():
         if not isinstance(raw_results, list):
             raw_results = []
             
-        results = []
         for item in raw_results:
             if not isinstance(item, dict): continue
             if search_type == 'song':
-                results.append(_normalize_song(item))
+                results.append(_normalize_song(item, pq))
             elif search_type == 'artist':
                 results.append(_normalize_artist(item))
             elif search_type == 'album':
@@ -148,34 +157,58 @@ def _get_high_res_image(image_data):
         return best_url.replace('150x150', '500x500').replace('50x50', '500x500').replace('1000x1000', '500x500')
     return ''
 
-def _normalize_song(song):
+def _normalize_song(song, preferred_quality='high'):
     if not isinstance(song, dict):
         return {}
         
-    # Get the best quality download URL (Priority logic: 320kbps > 160kbps)
+    # Quality weight map for selection
+    quality_map = {
+        '320kbps': 4,
+        '160kbps': 3,
+        '96kbps': 2,
+        '48kbps': 1,
+        '12kbps': 0
+    }
+    
+    # Preferred target weights
+    target_weights = {
+        'extreme': 4,
+        'high': 4,
+        'medium': 3,
+        'low': 2,
+        'auto': 4
+    }
+    
+    target_weight = target_weights.get(preferred_quality, 4)
+    
     download_urls = song.get('downloadUrl', [])
     if not isinstance(download_urls, list): download_urls = []
     
     audio_url = ''
+    best_match = None
+    closest_weight_diff = 99
+    
+    # Select audio URL based on preference
     for dl in download_urls:
-        if isinstance(dl, dict) and dl.get('quality') == '320kbps':
-            audio_url = dl.get('url', '')
-            break
-    if not audio_url:
-        for dl in download_urls:
-            if isinstance(dl, dict) and dl.get('quality') == '160kbps':
-                audio_url = dl.get('url', '')
-                break
-    if not audio_url and download_urls:
-        audio_url = download_urls[-1].get('url', '') if isinstance(download_urls[-1], dict) else ''
+        if not isinstance(dl, dict): continue
+        q_label = dl.get('quality', '')
+        q_weight = quality_map.get(q_label, -1)
+        if q_weight == -1: continue
+        
+        diff = abs(target_weight - q_weight)
+        if diff < closest_weight_diff:
+            closest_weight_diff = diff
+            best_match = dl.get('url', '')
+        # Prefer higher if weights are equally close (e.g. target 3.5 between 3 and 4)
+        elif diff == closest_weight_diff:
+            if q_weight > quality_map.get(song.get('quality', ''), -1):
+                best_match = dl.get('url', '')
 
-    # Force 320kbps high-quality stream to prevent audio stretching/breaking glitches
-    if audio_url and '_p.mp4' in audio_url:
-        import re
-        audio_url = re.sub(r'_\d+_p\.mp4', '_320.mp4', audio_url)
-    elif audio_url and '_p.m4a' in audio_url:
-        import re
-        audio_url = re.sub(r'_\d+_p\.m4a', '_320.m4a', audio_url)
+    audio_url = best_match or (download_urls[-1].get('url', '') if download_urls and isinstance(download_urls[-1], dict) else '')
+
+    # NO MORE blind regex replacement – it causes 404s and degradation if the bitrate doesn't exist.
+    # JioSaavn URLs are already correctly pointed to their respective quality tiers in download_urls.
+    
     # Get 500x500 cover image
     cover_url = _get_high_res_image(song.get('image'))
     
@@ -321,7 +354,8 @@ def import_song():
 
             if detail_data.get('success') and detail_data.get('data') and len(detail_data['data']) > 0:
                 full_song = detail_data['data'][0]
-                norm = _normalize_song(full_song)
+                user_id = data.get('user_id') or request.args.get('user_id')
+                norm = _normalize_song(full_song, get_preferred_quality(user_id))
                 audio_url = norm.get('audio_url')
                 duration = norm.get('duration', duration)
                 cover_image_url = norm.get('cover_image_url', cover_image_url)
@@ -443,7 +477,7 @@ def import_song():
                 'song_id': song_id,
                 'title': title,
                 'audio_url': audio_url,
-                'cover_image_url': cover_image_url,
+                'cover_image_url': cover_url,
                 'duration': duration,
                 'artist_id': artist_id,
                 'artists': fetch_all("SELECT ap.artist_id as id, u.username as name FROM song_artists sa JOIN artist_profiles ap ON sa.artist_id = ap.artist_id JOIN users u ON ap.user_id = u.user_id WHERE sa.song_id = %s", (song_id,)),
@@ -462,6 +496,8 @@ def import_song():
 def get_artist_detail(artist_id):
     """Fetch full artist profile from JioSaavn API: bio, image, songs, albums."""
     try:
+        user_id = request.args.get('user_id')
+        pq = get_preferred_quality(user_id)
         resp = requests.get(
             f"{SAAVN_API_BASE}/artists/{artist_id}",
             params={'songCount': 20, 'albumCount': 10, 'sortBy': 'popularity'},
@@ -496,7 +532,7 @@ def get_artist_detail(artist_id):
         top_songs_raw = raw.get('topSongs', [])
         if not isinstance(top_songs_raw, list):
             top_songs_raw = []
-        top_songs = [_normalize_song(s) for s in top_songs_raw if isinstance(s, dict)]
+        top_songs = [_normalize_song(s, pq) for s in top_songs_raw if isinstance(s, dict)]
 
         # Normalize top albums
         top_albums_raw = raw.get('topAlbums', [])
@@ -814,7 +850,8 @@ def get_home_content():
                 results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
                 if not results:
                     log_error(f"Empty results for trending query '{trending_query}'")
-                content['trending_songs'] = _dedup_songs([_normalize_song(s) for s in results if isinstance(s, dict)])
+                pq = get_preferred_quality(user_id)
+                content['trending_songs'] = _dedup_songs([_normalize_song(s, pq) for s in results if isinstance(s, dict)])
             else:
                 log_error(f"Upstream failure for trending query: {data.get('message', 'No details')}")
         except Exception as e:
