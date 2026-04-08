@@ -783,7 +783,7 @@ const IssuesTab = ({ token }) => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold mb-6">User Reported Issues</h2>
+      <h2 className="text-2xl font-bold mb-6">Reported Issues</h2>
       <div className="grid grid-cols-1 gap-4">
         {loading ? (
           <div className="p-12 text-center text-white/30 animate-pulse bg-white/[0.02] rounded-3xl border border-white/5">
