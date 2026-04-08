@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { resolveUrl } from '../api';
-import { X, Camera, User, Check, Loader2, LogOut, ChevronRight, BarChart3, Clock, Shield, Info, Edit2, CheckCircle, XCircle } from 'lucide-react';
+import { X, Camera, User, Check, Loader2, LogOut, ChevronRight, BarChart3, Clock, Shield, Info, Edit2, CheckCircle, XCircle, Download } from 'lucide-react';
 import api from '../api';
 import { useToast } from '../context/ToastContext';
 
@@ -326,6 +326,18 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
                   <ChevronRight className="w-4 h-4 text-brand-muted" />
                 </button>
 
+                <a
+                  href="/wave.apk"
+                  download="wave.apk"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/[0.04] transition-colors text-left group"
+                >
+                  <Download className="w-5 h-5 text-brand-primary" />
+                  <div className="flex-1">
+                    <span className="text-sm font-semibold text-brand-primary">Download App</span>
+                    <p className="text-[10px] text-brand-muted">Get the native Android experience</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-brand-muted group-hover:translate-x-1 transition-transform" />
+                </a>
                 <button
                   type="button"
                   onClick={() => setShowIssueForm(!showIssueForm)}

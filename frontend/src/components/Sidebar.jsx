@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search as SearchIcon, Library, LogOut, Music, Plus, Shield as ShieldIcon, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Search as SearchIcon, Library, LogOut, Music, Plus, Shield as ShieldIcon, BarChart3, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { PlayerContext } from '../context/PlayerContext';
 import WaveLogo from './Logo';
 
@@ -151,12 +151,25 @@ const Sidebar = () => {
         {user.role === 'admin' && (
           <Link 
             to="/admin" 
-            className="flex items-center gap-4 px-4 py-3 text-brand-muted hover:text-brand-primary rounded-lg font-medium transition-colors"
+            className={`flex items-center gap-4 py-3 text-brand-muted hover:text-brand-primary rounded-lg font-medium transition-colors ${isSidebarCollapsed ? 'justify-center px-0' : 'px-4'}`}
+            title={isSidebarCollapsed ? "Admin Access" : ""}
           >
-            <ShieldIcon className="w-5 h-5" />
-            Admin Access
+            <ShieldIcon className="w-5 h-5 shrink-0" />
+            {!isSidebarCollapsed && <span className="truncate">Admin Access</span>}
           </Link>
         )}
+
+        <div className="pt-6 pb-6">
+          <a
+            href="/wave.apk"
+            download="wave.apk"
+            className={`flex items-center gap-4 py-2 px-3 text-brand-muted hover:text-white rounded-lg font-medium transition-colors bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/20 ${isSidebarCollapsed ? 'justify-center mx-1' : ''}`}
+            title="Download Android App"
+          >
+            <Download className="w-5 h-5 shrink-0 text-brand-primary" />
+            {!isSidebarCollapsed && <span className="truncate text-sm font-semibold text-brand-primary">Get Android App</span>}
+          </a>
+        </div>
       </nav>
     </div>
 
