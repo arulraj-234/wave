@@ -11,7 +11,7 @@ const Admin = lazy(() => import('./pages/Admin'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 import { StatusBar, Style } from '@capacitor/status-bar';
 import ErrorBoundary from './components/ErrorBoundary';
-
+import UpdatePrompt from './components/UpdatePrompt';
 const ProtectedRoute = ({ children, allowedRoles, isAuthenticated }) => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -195,6 +195,7 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
+        <UpdatePrompt />
         <div className="min-h-screen flex flex-col">
           {/* Offline banner */}
           {isOffline && (
