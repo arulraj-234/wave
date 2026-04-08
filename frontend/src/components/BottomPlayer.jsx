@@ -248,8 +248,12 @@ const BottomPlayer = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
-                       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-7xl pb-48">
-                <div className="w-full max-w-[420px] lg:max-w-[480px] aspect-square relative transition-all duration-1000 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:scale-[1.03] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.6)]">
+                       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-7xl pb-40 lg:pb-48">
+                {/* Hero Artwork - Stays visible in both states, maybe subtle scaling */}
+                <motion.div 
+                  layout
+                  className="w-full max-w-[400px] lg:max-w-[460px] aspect-square relative transition-all duration-1000 ease-[cubic-bezier(0.2,0.8,0.2,1)] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.7)]"
+                >
                   <TiltedCard
                     imageSrc={resolveUrl(currentSong.cover_image_url) || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=2070'}
                     altText={currentSong.title}
@@ -263,22 +267,23 @@ const BottomPlayer = () => {
                     showTooltip={false}
                     displayOverlayContent={false}
                   />
-                </div>
+                </motion.div>
 
-                {/* Desktop Track Info */}
+                {/* Desktop Track Info - ONLY visible when IDLE (Spotify Style) */}
                 <AnimatePresence mode="wait">
-                  {!isIdle && (
+                  {isIdle && (
                     <motion.div 
-                      key="info"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 20 }}
-                      className="mt-12 text-center"
+                      key="idle-info"
+                      initial={{ opacity: 0, y: 10, filter: 'blur(10px)' }}
+                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                      exit={{ opacity: 0, y: -10, filter: 'blur(10px)' }}
+                      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                      className="mt-16 text-center pointer-events-none"
                     >
-                      <h1 className="text-5xl lg:text-6xl font-black text-white tracking-tighter mb-4 drop-shadow-2xl">
+                      <h1 className="text-3xl lg:text-4xl font-extrabold text-white/90 tracking-tight mb-2">
                         {currentSong.title}
                       </h1>
-                      <p className="text-2xl lg:text-3xl font-bold text-brand-muted tracking-tight">
+                      <p className="text-xl lg:text-2xl font-medium text-white/40 tracking-normal">
                         {currentSong.artist_name}
                       </p>
                     </motion.div>
@@ -290,29 +295,30 @@ const BottomPlayer = () => {
               <AnimatePresence>
                 {!isIdle && (
                   <motion.div 
-                    initial={{ opacity: 0, y: 100 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 100 }}
-                    className="w-full fixed bottom-0 left-0 bg-[#121212]/80 backdrop-blur-3xl border-t border-white/[0.05] z-[60] px-12 py-10 pb-safe"
+                    initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
+                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                    className="w-full fixed bottom-0 left-0 bg-[#121212]/60 backdrop-blur-3xl border-t border-white/[0.03] z-[60] px-12 py-10 pb-safe"
                   >
-                    {/* Entire Bar Layout matches Dashboard */}
+                    {/* Rest of the bar content remains identical to original reference */}
                     <div className="max-w-screen-2xl mx-auto flex items-center justify-between gap-12">
                       
                       {/* Left: Info & Like */}
                       <div className="flex items-center gap-6 w-1/4">
-                        <div className="w-20 h-20 bg-brand-dark rounded-xl shadow-2xl overflow-hidden shrink-0">
+                        <div className="w-16 h-16 bg-brand-dark rounded-lg shadow-2xl overflow-hidden shrink-0">
                           <img src={resolveUrl(currentSong.cover_image_url)} className="w-full h-full object-cover"/>
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-2xl font-bold text-white truncate">{currentSong.title}</h3>
-                          <p className="text-lg font-medium text-brand-muted truncate">{currentSong.artist_name}</p>
+                          <h3 className="text-xl font-bold text-white truncate">{currentSong.title}</h3>
+                          <p className="text-base font-medium text-brand-muted truncate">{currentSong.artist_name}</p>
                         </div>
                         <button 
                           onClick={() => toggleLike(currentSong.song_id)}
                           title={likedSongs.has(currentSong.song_id) ? "Unlike" : "Like"}
                           className={`ml-4 p-3 rounded-full transition-all ${likedSongs.has(currentSong.song_id) ? 'text-brand-primary' : 'text-white/40 hover:text-white'}`}
                         >
-                          <Heart className={`w-7 h-7 ${likedSongs.has(currentSong.song_id) ? 'fill-current' : ''}`} />
+                          <Heart className={`w-6 h-6 ${likedSongs.has(currentSong.song_id) ? 'fill-current' : ''}`} />
                         </button>
                       </div>
 
@@ -320,29 +326,29 @@ const BottomPlayer = () => {
                       <div className="flex flex-col items-center gap-6 flex-1 max-w-2xl px-8">
                         <div className="flex items-center gap-10">
                           <button onClick={toggleShuffle} className={`p-2 transition-colors ${shuffleMode ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`} title="Shuffle">
-                            <Shuffle className="w-6 h-6" />
+                            <Shuffle className="w-5 h-5" />
                           </button>
                           <button onClick={playPrevious} className="text-white hover:scale-110 active:scale-95 transition-transform" title="Previous">
-                            <SkipBack className="w-8 h-8 fill-current" />
+                            <SkipBack className="w-7 h-7 fill-current" />
                           </button>
                           <button 
                             onClick={togglePlay}
                             title={isPlaying ? "Pause" : "Play"}
-                            className="w-20 h-20 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                            className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
                           >
-                            {isPlaying ? <Pause className="w-10 h-10 fill-current" /> : <Play className="w-10 h-10 fill-current ml-2" />}
+                            {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current ml-1" />}
                           </button>
                           <button onClick={playNext} className="text-white hover:scale-110 active:scale-95 transition-transform" title="Next">
-                            <SkipForward className="w-8 h-8 fill-current" />
+                            <SkipForward className="w-7 h-7 fill-current" />
                           </button>
                           <button onClick={toggleRepeat} className={`p-2 transition-colors ${repeatMode !== 'off' ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`} title="Repeat">
-                            {repeatMode === 'one' ? <Repeat1 className="w-6 h-6" /> : <Repeat className="w-6 h-6" />}
+                            {repeatMode === 'one' ? <Repeat1 className="w-5 h-5" /> : <Repeat className="w-5 h-5" />}
                           </button>
                         </div>
 
                         {/* Progress Bar */}
-                        <div className="w-full flex items-center gap-6 text-sm font-black text-brand-muted tracking-widest">
-                          <span className="w-16 text-right leading-none">{formatTime((progress / 100) * duration)}</span>
+                        <div className="w-full flex items-center gap-6 text-[10px] font-bold text-brand-muted tracking-widest leading-none">
+                          <span className="w-12 text-right">{formatTime((progress / 100) * duration)}</span>
                           <div className="flex-1 relative group py-2">
                              <ElasticSlider
                               defaultValue={progress}
@@ -353,17 +359,17 @@ const BottomPlayer = () => {
                               rightIcon={null}
                             />
                           </div>
-                          <span className="w-16 leading-none">{formatTime(duration || currentSong.duration)}</span>
+                          <span className="w-12">{formatTime(duration || currentSong.duration)}</span>
                         </div>
                       </div>
 
                       {/* Right: Actions */}
                       <div className="flex items-center justify-end gap-6 w-1/4">
-                        <button onClick={() => setShowQueue(!showQueue)} title="Queue" className={`p-3 rounded-xl transition-all ${showQueue ? 'text-brand-primary bg-white/5' : 'text-brand-muted hover:text-white hover:bg-white/5'}`}>
-                          <ListMusic className="w-7 h-7" />
+                        <button onClick={() => setShowQueue(!showQueue)} title="Queue" className={`p-2 rounded-lg transition-all ${showQueue ? 'text-brand-primary bg-white/5' : 'text-brand-muted hover:text-white hover:bg-white/5'}`}>
+                          <ListMusic className="w-6 h-6" />
                         </button>
-                        <div className="flex items-center gap-4 w-40" title="Volume">
-                          <Volume2 className="w-5 h-5 text-brand-muted" />
+                        <div className="flex items-center gap-4 w-32" title="Volume">
+                          <Volume2 className="w-4 h-4 text-brand-muted" />
                           <ElasticSlider
                             defaultValue={Math.round(volume * 100)}
                             maxValue={100}
@@ -373,33 +379,14 @@ const BottomPlayer = () => {
                             rightIcon={null}
                           />
                         </div>
-                        <button onClick={() => setShowSleepMenu(!showSleepMenu)} className={`p-3 rounded-xl transition-all ${sleepTimer ? 'text-sky-400' : 'text-brand-muted hover:text-white hover:bg-white/5'}`} title="Sleep Timer">
-                          <Moon className="w-6 h-6" />
+                        <button onClick={() => setShowSleepMenu(!showSleepMenu)} className={`p-2 rounded-lg transition-all ${sleepTimer ? 'text-sky-400' : 'text-brand-muted hover:text-white hover:bg-white/5'}`} title="Sleep Timer">
+                          <Moon className="w-5 h-5" />
                         </button>
-                        <button onClick={() => setIsFullScreenPlayer(false)} title="Minimize" className="p-3 text-brand-muted hover:text-white">
-                          <ChevronDown className="w-8 h-8" />
+                        <button onClick={() => setIsFullScreenPlayer(false)} title="Minimize" className="p-2 text-brand-muted hover:text-white">
+                          <ChevronDown className="w-7 h-7" />
                         </button>
                       </div>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-
-              <AnimatePresence>
-                {isIdle && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
-                    className="absolute bottom-32 left-0 w-full text-center z-20 pointer-events-none"
-                  >
-                    <h2 className="text-7xl font-black tracking-tighter text-white drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] px-8 mb-4">
-                      {currentSong.title}
-                    </h2>
-                    <p className="text-3xl font-bold text-white/50 tracking-tight">
-                      {currentSong.artist_name}
-                    </p>
                   </motion.div>
                 )}
               </AnimatePresence>
