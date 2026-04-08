@@ -11,7 +11,7 @@ if ($BuildAPK) {
     Write-Host "==============================" -ForegroundColor Cyan
     Write-Host ""
 
-    $env:JAVA_HOME = "D:\apps\android studio\jbr"
+    $env:JAVA_HOME = "C:\Program Files\Java\jdk-24"
     $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 
     Write-Host "[1/3] Building Web Frontend..." -ForegroundColor Yellow

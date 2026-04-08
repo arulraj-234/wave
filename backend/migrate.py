@@ -114,8 +114,11 @@ def run_migration(cursor, migration, dry_run=False):
     """Execute a single migration file."""
     sql = migration['path'].read_text(encoding='utf-8')
     
-    # Split on semicolons, skip empty statements
-    statements = [s.strip() for s in sql.split(';') if s.strip() and not s.strip().startswith('--')]
+    # Remove line comments and split by semicolon
+    lines = sql.splitlines()
+    clean_lines = [l for l in lines if not l.strip().startswith('--')]
+    clean_sql = ' '.join(clean_lines)
+    statements = [s.strip() for s in clean_sql.split(';') if s.strip()]
     
     if dry_run:
         print(f"  [DRY RUN] Would execute {len(statements)} statement(s)")
@@ -128,7 +131,7 @@ def run_migration(cursor, migration, dry_run=False):
         try:
             cursor.execute(stmt)
         except Exception as e:
-            print(f"  ❌ Failed: {e}")
+            print(f"  FAILED: {e}")
             print(f"  Statement: {stmt[:200]}")
             return False
     
@@ -146,13 +149,13 @@ def main():
     parser.add_argument('--dry-run', action='store_true', help='Show pending migrations without applying')
     args = parser.parse_args()
 
-    target = "🌐 PRODUCTION (TiDB)" if args.prod else "💻 LOCAL (MySQL)"
+    target = "PRODUCTION (TiDB)" if args.prod else "LOCAL (MySQL)"
     print(f"\n{'='*50}")
-    print(f"  Wave Migration Runner — {target}")
+    print(f"  Wave Migration Runner - {target}")
     print(f"{'='*50}\n")
 
     if args.prod and not args.dry_run:
-        confirm = input("⚠️  You are about to modify PRODUCTION. Type 'yes' to continue: ")
+        confirm = input("!! You are about to modify PRODUCTION. Type 'yes' to continue: ")
         if confirm.lower() != 'yes':
             print("Aborted.")
             return
@@ -160,9 +163,9 @@ def main():
     try:
         conn = get_connection(production=args.prod)
         cursor = conn.cursor()
-        print(f"✅ Connected to {conn.server_host}:{conn.server_port}\n")
+        print(f"Connected to {conn.server_host}:{conn.server_port}\n")
     except Exception as e:
-        print(f"❌ Connection failed: {e}")
+        print(f"FAILED: Connection failed: {e}")
         sys.exit(1)
 
     ensure_migrations_table(cursor)
@@ -178,28 +181,28 @@ def main():
     pending = [m for m in migrations if m['version'] not in applied]
 
     if not pending:
-        print("✅ All migrations are up to date!")
+        print("All migrations are up to date!")
         print(f"   ({len(applied)} migration(s) applied)")
         return
 
-    print(f"📋 {len(pending)} pending migration(s):\n")
+    print(f"PENDING: {len(pending)} pending migration(s):\n")
 
     success_count = 0
     for m in pending:
-        print(f"  {'[DRY]' if args.dry_run else '▶'} {m['name']}")
+        print(f"  {'[DRY]' if args.dry_run else '>'} {m['name']}")
         if run_migration(cursor, m, dry_run=args.dry_run):
             success_count += 1
             if not args.dry_run:
-                print(f"    ✅ Applied")
+                print(f"    SUCCESS: Applied")
         else:
-            print(f"    ❌ Failed — stopping here")
+            print(f"    FAILED: stopping here")
             conn.rollback()
             break
 
     if not args.dry_run:
         conn.commit()
         print(f"\n{'='*50}")
-        print(f"  ✅ {success_count}/{len(pending)} migration(s) applied")
+        print(f"  SUCCESS: {success_count}/{len(pending)} migration(s) applied")
         print(f"{'='*50}\n")
     else:
         print(f"\n  Dry run complete. Use without --dry-run to apply.\n")
