@@ -16,7 +16,14 @@ class Config:
     DB_USER = os.getenv('DB_USER', 'root')
     DB_PASSWORD = os.getenv('DB_PASSWORD', '')
     DB_NAME = os.getenv('DB_NAME', 'test')
-    DB_PORT = int(os.getenv('DB_PORT', 3306))
+    
+    # Safely parse DB_PORT to avoid boot crashes on Render
+    try:
+        _port_str = os.getenv('DB_PORT', '3306')
+        DB_PORT = int(_port_str) if _port_str else 3306
+    except (ValueError, TypeError):
+        print(f"[ERROR] Invalid DB_PORT: '{os.getenv('DB_PORT')}'. Using default 3306.")
+        DB_PORT = 3306
     
     # TiDB Serverless requires SSL/TLS. We explicitly enable it if told to.
     DB_SSL_MODE = os.getenv('DB_SSL_MODE', 'false').lower() == 'true'

@@ -2,29 +2,41 @@ import mysql.connector
 from mysql.connector import pooling
 from config import Config
 
-# Create a dynamic connection args dictionary
-db_args = {
-    "host": Config.DB_HOST,
-    "user": Config.DB_USER,
-    "password": Config.DB_PASSWORD,
-    "database": Config.DB_NAME,
-    "port": Config.DB_PORT
-}
+_pool = None
 
-# TiDB and cloud providers strictly enforce SSL
-if Config.DB_SSL_MODE:
-    db_args["ssl_verify_cert"] = True
-    db_args["ssl_verify_identity"] = True
+def get_pool():
+    global _pool
+    if _pool is None:
+        try:
+            # Create a dynamic connection args dictionary
+            db_args = {
+                "host": Config.DB_HOST,
+                "user": Config.DB_USER,
+                "password": Config.DB_PASSWORD,
+                "database": Config.DB_NAME,
+                "port": Config.DB_PORT,
+                "connection_timeout": 5 # Short timeout for boot safety
+            }
 
-# Create a connection pool using Config class values
-pool = pooling.MySQLConnectionPool(
-    pool_name="wave_pool",
-    pool_size=10,
-    pool_reset_session=True,
-    **db_args
-)
+            # TiDB and cloud providers strictly enforce SSL
+            if Config.DB_SSL_MODE:
+                db_args["ssl_verify_cert"] = True
+                db_args["ssl_verify_identity"] = True
+
+            print(f"[DB] Initializing connection pool for {Config.DB_HOST}...")
+            _pool = pooling.MySQLConnectionPool(
+                pool_name="wave_pool",
+                pool_size=10,
+                pool_reset_session=True,
+                **db_args
+            )
+        except Exception as e:
+            print(f"[CRITICAL] Database Pool Initialization Failed: {e}")
+            raise e
+    return _pool
 
 def get_connection():
+    pool = get_pool()
     conn = pool.get_connection()
     # Disable ONLY_FULL_GROUP_BY for TiDB compatibility
     cursor = conn.cursor()

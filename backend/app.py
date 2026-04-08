@@ -26,9 +26,6 @@ limiter = Limiter(
 
 # Configure CORS to explicitly allow credentials and dynamically match the request origin
 # if it is in our allowed list, bypassing strict string-matching issues with Flask-Cors
-import re
-import os
-
 ALLOWED_ORIGINS_ENV = os.environ.get('ALLOWED_ORIGINS')
 if ALLOWED_ORIGINS_ENV:
     allowed_origins = [o.strip() for o in ALLOWED_ORIGINS_ENV.split(',')]
@@ -41,24 +38,22 @@ else:
         "http://localhost"
     ]
 
-# Build a list of exact strings and compiled regular expressions which is the
-# strictly typed format that Flask-Cors actually expects internally.
-cors_origins = [
-    *allowed_origins,
-    re.compile(r"^https?://(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?$")
-]
-
-CORS(app, supports_credentials=True, origins=cors_origins)
+CORS(app, 
+     supports_credentials=True, 
+     origins=allowed_origins,
+     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Capacitor Android WebView sometimes sends a null or missing Origin header.
-# Flask-CORS won't match those, so we handle it manually.
+# We handle these cases to ensure the app doesn't block legitimate native requests.
 @app.after_request
 def handle_capacitor_cors(response):
     origin = request.headers.get('Origin', '')
-    if not origin or origin == 'null':
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
-        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+    if not origin or origin == 'null' or origin == 'capacitor://localhost':
+        # If it's a known native origin or null, we ensure headers are explicitly set
+        # Flask-CORS should handle the rest for standard web origins
+        response.headers['Access-Control-Allow-Origin'] = origin if origin != 'null' else '*'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
     return response
 
 # Register Blueprints
