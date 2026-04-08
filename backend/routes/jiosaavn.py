@@ -663,6 +663,17 @@ import time
 # Memory cache to fix extreme latency on Home scraping
 _home_cache = {}
 
+def _dedup_songs(songs):
+    seen = set()
+    unique_songs = []
+    for s in songs:
+        if not isinstance(s, dict): continue
+        key = (str(s.get('title', '')).lower().strip(), str(s.get('artist_name', '')).lower().strip())
+        if key not in seen:
+            seen.add(key)
+            unique_songs.append(s)
+    return unique_songs
+
 @jiosaavn_bp.route('/home', methods=['GET'])
 def get_home_content():
     """
@@ -803,7 +814,7 @@ def get_home_content():
                 results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
                 if not results:
                     log_error(f"Empty results for trending query '{trending_query}'")
-                content['trending_songs'] = [_normalize_song(s) for s in results if isinstance(s, dict)]
+                content['trending_songs'] = _dedup_songs([_normalize_song(s) for s in results if isinstance(s, dict)])
             else:
                 log_error(f"Upstream failure for trending query: {data.get('message', 'No details')}")
         except Exception as e:
@@ -852,6 +863,7 @@ def get_home_content():
                                 if sid and sid not in seen_song_ids:
                                     seen_song_ids.add(sid)
                                     songs.append(norm)
+                        songs = _dedup_songs(songs)
                         if songs:
                             content['personalized_mixes'].append({
                                 'title': f"Because you like {genre}",
@@ -882,6 +894,7 @@ def get_home_content():
                                 if sid and sid not in seen_song_ids:
                                     seen_song_ids.add(sid)
                                     songs.append(norm)
+                        songs = _dedup_songs(songs)
                         if songs:
                             content['personalized_mixes'].append({
                                 'title': f"More of {artist}",

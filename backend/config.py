@@ -4,7 +4,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-here')
+    _secret = os.getenv('SECRET_KEY')
+    if not _secret:
+        if os.getenv('FLASK_ENV') == 'production':
+            raise RuntimeError("SECRET_KEY must be set in production! Generate one: python -c \"import secrets; print(secrets.token_hex(32))\"")
+        import secrets
+        _secret = secrets.token_hex(32)
+        print(f"[WARNING] No SECRET_KEY set — using auto-generated key (sessions won't survive restarts)")
+    SECRET_KEY = _secret
     DB_HOST = os.getenv('DB_HOST', 'localhost')
     DB_USER = os.getenv('DB_USER', 'root')
     DB_PASSWORD = os.getenv('DB_PASSWORD', '')

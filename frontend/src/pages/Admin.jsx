@@ -591,7 +591,7 @@ const SongsTab = ({ token }) => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-white/70">{song.artist_name}</td>
+                    <td className="px-6 py-4 text-white/70 whitespace-normal break-words max-w-xs md:max-w-md">{song.artist_name}</td>
                     <td className="px-6 py-4 text-white/50">{song.genre || '-'}</td>
                     <td className="px-6 py-4">
                       <span className="text-[10px] bg-teal-500/10 text-teal-300 px-2 py-1 rounded-full font-mono border border-teal-500/20">

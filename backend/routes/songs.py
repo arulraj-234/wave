@@ -32,29 +32,40 @@ def enrich_song_metadata(songs):
     """Enrich songs with full artist names and metadata list for player."""
     if not songs:
         return []
-        
-    enriched = []
+
+    # Batch fetch all artists for all songs in ONE query (fixes N+1)
+    song_ids = [s['song_id'] for s in songs if s.get('song_id')]
+    if not song_ids:
+        return songs
+
+    placeholders = ','.join(['%s'] * len(song_ids))
+    all_artists = fetch_all(f"""
+        SELECT sa.song_id, ap.artist_id as id, u.username as name
+        FROM song_artists sa
+        JOIN artist_profiles ap ON sa.artist_id = ap.artist_id
+        JOIN users u ON ap.user_id = u.user_id
+        WHERE sa.song_id IN ({placeholders})
+        ORDER BY sa.is_primary DESC
+    """, tuple(song_ids))
+
+    # Group artists by song_id
+    from collections import defaultdict
+    artists_by_song = defaultdict(list)
+    for a in all_artists:
+        artists_by_song[a['song_id']].append({'id': a['id'], 'name': a['name']})
+
+    # Attach to each song
     for s in songs:
-        # Get all artists for this song
-        artists = fetch_all("""
-            SELECT ap.artist_id as id, u.username as name
-            FROM song_artists sa
-            JOIN artist_profiles ap ON sa.artist_id = ap.artist_id
-            JOIN users u ON ap.user_id = u.user_id
-            WHERE sa.song_id = %s
-            ORDER BY sa.is_primary DESC
-        """, (s['song_id'],))
-        
-        # Format for frontend
+        artists = artists_by_song.get(s.get('song_id'), [])
         s['artist_name'] = ", ".join([a['name'] for a in artists])
         s['artists'] = artists
-        # Ensure artist_id is set to primary
         if artists:
             s['artist_id'] = artists[0]['id']
-        enriched.append(s)
-    return enriched
+
+    return songs
 
 @songs_bp.route('', methods=['POST'])
+@token_required
 def add_song():
     # Handle File Upload
     if 'audio_file' not in request.files:
@@ -64,7 +75,8 @@ def add_song():
     if file.filename == '':
         return jsonify({"error": "Empty filename"}), 400
         
-    user_id = request.form.get('user_id')
+    # Use authenticated user from JWT token
+    user_id = request.current_user.get('user_id')
     
     def log_error(msg):
         with open('upload_debug.log', 'a') as f:
@@ -178,25 +190,39 @@ def add_song():
             )
             artist_id = execute_query("INSERT INTO artist_profiles (user_id, bio, verified) VALUES (%s, %s, %s)", (new_u_id, "System Auto-Created Artist", False))
 
-    audio_url = f"/uploads/songs/{unique_filename}"
+    from storage import upload_file_to_supabase
+    s_audio_url = upload_file_to_supabase(filepath, f"songs/{unique_filename}")
+    audio_url = s_audio_url if s_audio_url else f"/uploads/songs/{unique_filename}"
     cover_image_url = request.form.get('cover_image_url', '')
 
     if 'cover_image_file' in request.files and request.files['cover_image_file'].filename != '':
         cover_file = request.files['cover_image_file']
         cover_filename = secure_filename(cover_file.filename)
         unique_cover_filename = f"cover_{user_id}_{cover_filename}"
-        cover_filepath = os.path.join(IMAGE_UPLOAD_FOLDER, unique_cover_filename)
-        cover_file.save(cover_filepath)
-        cover_image_url = f"/api/uploads/images/{unique_cover_filename}"
+        
+        from storage import upload_file_to_supabase
+        s_url = upload_file_to_supabase(cover_file, f"images/{unique_cover_filename}")
+        if s_url:
+            cover_image_url = s_url
+        else:
+            cover_filepath = os.path.join(IMAGE_UPLOAD_FOLDER, unique_cover_filename)
+            cover_file.seek(0)
+            cover_file.save(cover_filepath)
+            cover_image_url = f"/api/uploads/images/{unique_cover_filename}"
+            
     elif extracted_cover_data and not cover_image_url:
         # Save auto-extracted cover art
+        import hashlib
         cover_hash = hashlib.md5(extracted_cover_data).hexdigest()[:12]
         unique_cover_filename = f"auto_cover_{cover_hash}.jpg"
         cover_filepath = os.path.join(IMAGE_UPLOAD_FOLDER, unique_cover_filename)
         if not os.path.exists(cover_filepath):
             with open(cover_filepath, 'wb') as f:
                 f.write(extracted_cover_data)
-        cover_image_url = f"/api/uploads/images/{unique_cover_filename}"
+                
+        from storage import upload_file_to_supabase
+        s_url = upload_file_to_supabase(cover_filepath, f"images/{unique_cover_filename}")
+        cover_image_url = s_url if s_url else f"/api/uploads/images/{unique_cover_filename}"
 
     album_id = request.form.get('album_id')
 
@@ -234,7 +260,17 @@ def add_song():
         return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
 
 @songs_bp.route('/<int:song_id>', methods=['DELETE'])
+@token_required
 def delete_song(song_id):
+    # Only admin or the uploader can delete
+    current_role = request.current_user.get('role')
+    current_uid = request.current_user.get('user_id')
+    if current_role != 'admin':
+        song = fetch_one("SELECT uploaded_by FROM songs WHERE song_id = %s", (song_id,))
+        if not song:
+            return jsonify({"error": "Song not found"}), 404
+        if song.get('uploaded_by') != current_uid:
+            return jsonify({"error": "You can only delete your own songs"}), 403
     query = "DELETE FROM songs WHERE song_id = %s"
     if execute_query(query, (song_id,)):
         return jsonify({"message": "Song deleted successfully"}), 200
@@ -636,6 +672,10 @@ def get_recommendations(user_id):
                             recommendations.append(norm)
         except:
             continue
+
+    # Deduplicate across the queries
+    from routes.jiosaavn import _dedup_songs
+    recommendations = _dedup_songs(recommendations)
 
     # Shuffle to add variety
     import random

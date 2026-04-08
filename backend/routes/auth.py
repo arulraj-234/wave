@@ -92,7 +92,7 @@ def register():
             'email': email,
             'role': role,
             'session_id': session_id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30)
         }, Config.SECRET_KEY, algorithm="HS256")
             
         response = jsonify({
@@ -155,7 +155,7 @@ def login():
         'email': user['email'],
         'role': user['role'],
         'session_id': session_id,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30)
     }, Config.SECRET_KEY, algorithm="HS256")
     
     response = jsonify({
@@ -233,15 +233,13 @@ def me():
     return jsonify({"error": "User not found"}), 404
 
 @auth_bp.route('/onboarding', methods=['POST'])
+@token_required
 def complete_onboarding():
     data = request.json
-    user_id = data.get('user_id')
+    user_id = request.current_user.get('user_id')  # From JWT, not request body
     genres = data.get('genres', [])
     languages = data.get('languages', [])
     artists = data.get('artists', [])
-
-    if not user_id:
-        return jsonify({"error": "user_id is required"}), 400
 
     try:
         # Clear existing preferences just in case it's a retry
@@ -264,16 +262,14 @@ def complete_onboarding():
         return jsonify({"error": "Failed to save preferences"}), 500
 
 @auth_bp.route('/profile', methods=['POST'])
+@token_required
 def update_profile():
     data = request.json
-    user_id = data.get('user_id')
+    user_id = request.current_user.get('user_id')  # From JWT, not request body
     username = data.get('username')
     first_name = data.get('first_name')
     last_name = data.get('last_name')
     avatar_url = data.get('avatar_url')
-
-    if not user_id:
-        return jsonify({"error": "user_id is required"}), 400
 
     update_fields = []
     params = []
@@ -332,15 +328,17 @@ def upload_avatar():
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{timestamp}_{filename}"
         
-        upload_folder = os.path.join(current_app.root_path, 'uploads', 'avatars')
-        if not os.path.exists(upload_folder):
-            os.makedirs(upload_folder)
-            
-        file_path = os.path.join(upload_folder, filename)
-        file.save(file_path)
+        from storage import upload_file_to_supabase
+        public_url = upload_file_to_supabase(file, f"avatars/{filename}")
         
-        # Return the public URL
-        avatar_url = f"/api/uploads/avatars/{filename}"
+        if not public_url:
+            upload_folder = os.path.join(current_app.root_path, 'uploads', 'avatars')
+            os.makedirs(upload_folder, exist_ok=True)
+            file_path = os.path.join(upload_folder, filename)
+            file.save(file_path)
+            public_url = f"/api/uploads/avatars/{filename}"
+            
+        avatar_url = public_url
         return jsonify({"success": True, "avatar_url": avatar_url}), 200
     
     return jsonify({"error": "File type not allowed"}), 400

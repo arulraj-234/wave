@@ -8,13 +8,15 @@ import Plasma from '../components/Plasma';
 
 const LANGUAGES = [
   'English', 'Hindi', 'Punjabi', 'Tamil', 'Telugu', 
-  'Spanish', 'Korean', 'Japanese', 'French', 'Marathi', 'Bengali'
+  'Spanish', 'Korean', 'Japanese', 'French', 'Marathi', 'Bengali',
+  'Gujarati', 'Malayalam', 'Kannada', 'Bhojpuri', 'Arabic', 'German'
 ];
 
 const GENRES = [
   'Pop', 'Hip Hop', 'Lo-Fi', 'Bollywood', 'EDM', 
   'Rock', 'R&B', 'Classical', 'Jazz', 'Indie', 
-  'Phonk', 'K-Pop', 'Bhakti', 'Acoustic'
+  'Phonk', 'K-Pop', 'Bhakti', 'Acoustic',
+  'Devotional', 'Ghazal', 'Folk', 'Metal', 'Blues', 'Country'
 ];
 
 const POPULAR_ARTISTS = [
@@ -145,7 +147,7 @@ const Onboarding = () => {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative z-10 flex flex-col items-center pt-8 pb-32 px-8 max-w-5xl mx-auto w-full">
+      <main className="flex-1 relative z-10 flex flex-col items-center pt-8 pb-12 px-4 md:px-8 max-w-5xl mx-auto w-full overflow-y-auto custom-scrollbar">
         
         <AnimatePresence mode="wait" custom={1}>
           <motion.div
@@ -252,7 +254,7 @@ const Onboarding = () => {
       </main>
 
       {/* Footer / Controls */}
-      <footer className="relative z-10 p-4 md:p-8 pb-8 md:pb-8 border-t border-white/[0.05] bg-brand-dark/95 backdrop-blur-xl">
+      <footer className="sticky bottom-0 z-50 p-4 md:p-8 pb-safe border-t border-white/[0.05] bg-brand-dark/95 backdrop-blur-xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
           <div className="text-[10px] md:text-sm font-bold text-brand-muted uppercase tracking-widest flex items-center gap-1 md:gap-2">
             {!isStepValid() && <Sparkles className="w-4 h-4 opacity-50" />}

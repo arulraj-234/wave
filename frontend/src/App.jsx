@@ -10,6 +10,7 @@ const Artist = lazy(() => import('./pages/Artist'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 import { StatusBar, Style } from '@capacitor/status-bar';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const ProtectedRoute = ({ children, allowedRoles, isAuthenticated }) => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -192,19 +193,21 @@ function App() {
   }
 
   return (
-    <Router>
-      <div className="min-h-screen flex flex-col">
-        {/* Offline banner */}
-        {isOffline && (
-          <div className="bg-amber-500/90 text-black text-xs font-bold text-center py-2 px-4 z-[300] shrink-0">
-            You're offline — some features may not work
-          </div>
-        )}
-        <Suspense fallback={<div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center"><div className="w-8 h-8 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" /><p className="mt-4 text-gray-400 text-sm">Loading Wave...</p></div>}>
-          <AnimatedRoutes isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated} />
-        </Suspense>
-      </div>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <div className="min-h-screen flex flex-col">
+          {/* Offline banner */}
+          {isOffline && (
+            <div className="bg-amber-500/90 text-black text-xs font-bold text-center py-2 px-4 z-[300] shrink-0">
+              You're offline — some features may not work
+            </div>
+          )}
+          <Suspense fallback={<div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center"><div className="w-8 h-8 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" /><p className="mt-4 text-gray-400 text-sm">Loading Wave...</p></div>}>
+            <AnimatedRoutes isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated} />
+          </Suspense>
+        </div>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

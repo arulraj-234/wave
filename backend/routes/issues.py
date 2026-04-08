@@ -6,8 +6,9 @@ issues_bp = Blueprint('issues', __name__)
 
 @issues_bp.route('/', methods=['POST'])
 @token_required
-def report_issue(current_user):
+def report_issue():
     data = request.json
+    user_id = request.current_user.get('user_id')
     description = data.get('description')
     error_log = data.get('error_log', '')
     
@@ -16,7 +17,7 @@ def report_issue(current_user):
         
     success = execute_query(
         "INSERT INTO issues (user_id, description, error_log) VALUES (%s, %s, %s)",
-        (current_user['user_id'], description, error_log)
+        (user_id, description, error_log)
     )
     
     if success:
@@ -25,8 +26,8 @@ def report_issue(current_user):
 
 @issues_bp.route('/', methods=['GET'])
 @token_required
-def get_issues(current_user):
-    if current_user['role'] != 'admin':
+def get_issues():
+    if request.current_user.get('role') != 'admin':
         return jsonify({"error": "Unauthorized"}), 403
         
     issues = fetch_all("""
@@ -35,12 +36,16 @@ def get_issues(current_user):
         LEFT JOIN users u ON i.user_id = u.user_id 
         ORDER BY i.created_at DESC
     """)
+    # Serialize timestamps for JSON
+    for issue in issues:
+        if issue.get('created_at'):
+            issue['created_at'] = str(issue['created_at'])
     return jsonify({"success": True, "issues": issues})
 
 @issues_bp.route('/<int:issue_id>/resolve', methods=['PUT'])
 @token_required
-def toggle_resolve(current_user, issue_id):
-    if current_user['role'] != 'admin':
+def toggle_resolve(issue_id):
+    if request.current_user.get('role') != 'admin':
         return jsonify({"error": "Unauthorized"}), 403
         
     data = request.json

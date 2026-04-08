@@ -61,9 +61,15 @@ def create_album():
         if file.filename != '':
             filename = secure_filename(file.filename)
             unique_filename = f"album_{user_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
-            filepath = os.path.join(IMAGE_UPLOAD_FOLDER, unique_filename)
-            file.save(filepath)
-            cover_image_url = f"/uploads/images/{unique_filename}"
+            from storage import upload_file_to_supabase
+            s_url = upload_file_to_supabase(file, f"images/{unique_filename}")
+            if s_url:
+                cover_image_url = s_url
+            else:
+                filepath = os.path.join(IMAGE_UPLOAD_FOLDER, unique_filename)
+                file.seek(0)
+                file.save(filepath)
+                cover_image_url = f"/api/uploads/images/{unique_filename}"
             
     # Insert album
     album_id = execute_query(

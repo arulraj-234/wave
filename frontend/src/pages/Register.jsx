@@ -18,9 +18,7 @@ const Register = ({ setAuth }) => {
     gender: 'prefer_not_to_say'
   });
   
-  const [dobMonth, setDobMonth] = useState('');
-  const [dobDay, setDobDay] = useState('');
-  const [dobYear, setDobYear] = useState('');
+  const [dob, setDob] = useState('');
   const [dobError, setDobError] = useState('');
 
   const [error, setError] = useState('');
@@ -64,52 +62,22 @@ const Register = ({ setAuth }) => {
   };
 
   // DOB validation
-  const getDaysInMonth = (month, year) => {
-    if (!month) return 31;
-    return new Date(year || 2000, parseInt(month), 0).getDate();
-  };
-
   const validateDob = () => {
-    if (!dobMonth && !dobDay && !dobYear) return true; // All empty = optional
-    if (!dobMonth || !dobDay || !dobYear) {
-      setDobError('Please fill all date fields or leave all empty');
+    if (!dob) return true; // optional
+    const dobDate = new Date(dob);
+    if (dobDate.getFullYear() < 1900) {
+      setDobError('Year must be after 1900');
       return false;
     }
-    const day = parseInt(dobDay);
-    const year = parseInt(dobYear);
-    const maxDays = getDaysInMonth(dobMonth, year);
-    
-    if (day < 1 || day > maxDays) {
-      setDobError(`Day must be between 1 and ${maxDays}`);
-      return false;
-    }
-    if (year < 1900 || year > new Date().getFullYear()) {
-      setDobError(`Year must be between 1900 and ${new Date().getFullYear()}`);
-      return false;
-    }
-    // Must be at least 13 years old
-    const dob = new Date(year, parseInt(dobMonth) - 1, day);
     const today = new Date();
-    const age = today.getFullYear() - dob.getFullYear();
-    const monthDiff = today.getMonth() - dob.getMonth();
-    if (age < 13 || (age === 13 && monthDiff < 0) || (age === 13 && monthDiff === 0 && today.getDate() < dob.getDate())) {
+    const age = today.getFullYear() - dobDate.getFullYear();
+    const monthDiff = today.getMonth() - dobDate.getMonth();
+    if (age < 13 || (age === 13 && monthDiff < 0) || (age === 13 && monthDiff === 0 && today.getDate() < dobDate.getDate())) {
       setDobError('You must be at least 13 years old');
       return false;
     }
     setDobError('');
     return true;
-  };
-
-  const handleDayChange = (e) => {
-    const val = e.target.value.replace(/\D/g, '').slice(0, 2);
-    setDobDay(val);
-    setDobError('');
-  };
-
-  const handleYearChange = (e) => {
-    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-    setDobYear(val);
-    setDobError('');
   };
 
   const handleNext = (e) => {
@@ -141,10 +109,7 @@ const Register = ({ setAuth }) => {
     setIsLoading(true);
     setError('');
     
-    let formattedDob = null;
-    if (dobYear && dobMonth && dobDay) {
-      formattedDob = `${dobYear}-${dobMonth.padStart(2, '0')}-${dobDay.padStart(2, '0')}`;
-    }
+    let formattedDob = dob || null;
 
     try {
       const response = await api.post('/api/auth/register', { ...formData, dob: formattedDob });
@@ -346,36 +311,13 @@ const Register = ({ setAuth }) => {
                 
                 <div>
                   <label className="text-xs font-semibold text-brand-muted uppercase tracking-wider mb-2 block">Date of Birth</label>
-                  <div className="flex gap-2">
-                    <select 
-                      className="input-field cursor-pointer flex-[2] bg-zinc-900 border border-white/10"
-                      value={dobMonth}
-                      onChange={(e) => { setDobMonth(e.target.value); setDobError(''); }}
-                    >
-                      <option value="" disabled className="bg-zinc-900 text-white">Month</option>
-                      {['January','February','March','April','May','June','July','August','September','October','November','December'].map((m, i) => (
-                        <option key={i+1} value={String(i+1)} className="bg-zinc-900 text-white">{m}</option>
-                      ))}
-                    </select>
-                    <input 
-                      type="text"
-                      inputMode="numeric"
-                      maxLength="2"
-                      placeholder="DD" 
-                      className="input-field flex-1 text-center"
-                      value={dobDay}
-                      onChange={handleDayChange}
-                    />
-                    <input 
-                      type="text"
-                      inputMode="numeric"
-                      maxLength="4"
-                      placeholder="YYYY" 
-                      className="input-field flex-[1.2] text-center"
-                      value={dobYear}
-                      onChange={handleYearChange}
-                    />
-                  </div>
+                  <input 
+                    type="date"
+                    className="input-field cursor-pointer bg-zinc-900 border border-white/10 text-white w-full uppercase"
+                    value={dob}
+                    onChange={(e) => { setDob(e.target.value); setDobError(''); }}
+                    max={new Date().toISOString().split('T')[0]}
+                  />
                   {dobError && <p className="text-red-400 text-xs mt-1.5 font-medium">{dobError}</p>}
                 </div>
 
