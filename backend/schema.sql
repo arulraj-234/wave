@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
     last_name VARCHAR(50),
     avatar_url VARCHAR(2048),
     active_session VARCHAR(64) DEFAULT NULL,
+    streaming_quality ENUM('high', 'medium', 'low', 'extreme', 'auto') DEFAULT 'high',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -231,7 +231,9 @@ def me():
                 "streaming_quality": user.get('streaming_quality', 'auto')
             }
         }), 200
-    return jsonify({"error": "User not found"}), 404
+    
+    print(f"[Auth Error] '/me' check failed: User ID {user_id} not found in database.")
+    return jsonify({"error": "User session invalid or user deleted"}), 401
 
 @auth_bp.route('/onboarding', methods=['POST'])
 @token_required

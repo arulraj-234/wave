@@ -187,6 +187,10 @@ def _normalize_song(song, preferred_quality='high'):
     download_urls = song.get('downloadUrl', [])
     if not isinstance(download_urls, list): download_urls = []
     
+    audio_url = ''
+    best_match = None
+    closest_weight_diff = 99
+    
     # Select audio URL based on preference
     for dl in download_urls:
         if not isinstance(dl, dict): continue
