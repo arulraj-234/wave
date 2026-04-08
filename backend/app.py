@@ -49,11 +49,17 @@ CORS(app,
 @app.after_request
 def handle_capacitor_cors(response):
     origin = request.headers.get('Origin', '')
-    if not origin or origin == 'null' or origin == 'capacitor://localhost':
-        # If it's a known native origin or null, we ensure headers are explicitly set
-        # Flask-CORS should handle the rest for standard web origins
-        response.headers['Access-Control-Allow-Origin'] = origin if origin != 'null' else '*'
+    # Check if origin is in our allowed list or is a known mobile origin
+    is_allowed = origin in allowed_origins or origin == 'capacitor://localhost' or origin == 'http://localhost'
+    
+    if is_allowed or not origin or origin == 'null':
+        # Force set CORS headers manually as an insurance policy
+        target_origin = origin if (origin and origin != 'null') else '*'
+        response.headers['Access-Control-Allow-Origin'] = target_origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    
     return response
 
 # Register Blueprints
