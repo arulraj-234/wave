@@ -71,23 +71,34 @@ const ArtistOverview = ({ stats, songs }) => {
           <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-5">Last 30 Days</p>
           {dailyStreams.length > 0 ? (
             <div className="space-y-3">
-              <div className="flex items-end gap-[3px] h-40">
-                {dailyStreams.map((day, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 bg-gradient-to-t from-brand-primary/50 to-brand-primary/20 rounded-t-sm hover:from-brand-primary/70 hover:to-brand-primary/40 transition-all relative group cursor-pointer"
-                    style={{ height: `${Math.max(8, (day.daily_streams / maxDaily) * 100)}%` }}
-                  >
-                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black/90 text-white text-[10px] py-1.5 px-2.5 rounded-lg whitespace-nowrap pointer-events-none transition-opacity z-10 font-bold border border-white/10">
-                      <span className="text-brand-primary">{day.daily_streams}</span> streams
-                      <br /><span className="text-white/40">{day.stream_date}</span>
+              <div className="flex items-end gap-1.5 h-40 mt-6 group/chart border-b border-white/5 pb-2">
+                {dailyStreams.map((day, i) => {
+                  const pct = Math.max(8, (day.daily_streams / maxDaily) * 100);
+                  const hoverDate = new Date(day.stream_date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}) || day.stream_date;
+                  return (
+                    <div
+                      key={i}
+                      className="flex-1 relative group cursor-pointer h-full flex flex-col justify-end"
+                    >
+                      {/* Tooltip */}
+                      <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 -mb-1 bg-zinc-900 border border-white/10 text-white text-[10px] py-1.5 px-3 rounded-lg whitespace-nowrap pointer-events-none transition-all duration-200 z-10 font-bold shadow-xl drop-shadow-[0_0_15px_rgba(29,185,84,0.2)] scale-95 group-hover:scale-100 origin-bottom text-center">
+                        <span className="text-brand-primary text-sm tracking-tight">{day.daily_streams}</span> <span className="text-white/70">streams</span>
+                        <br /><span className="text-white/30 font-medium text-[9px]">{hoverDate}</span>
+                      </div>
+                      {/* The Bar */}
+                      <div 
+                        className="w-full bg-gradient-to-t from-brand-primary/10 to-brand-primary/30 rounded-t-md group-hover:from-brand-primary/30 group-hover:to-brand-primary transition-all duration-300 overflow-hidden group-hover:shadow-[0_0_15px_rgba(29,185,84,0.3)] group-hover:-translate-y-1"
+                        style={{ height: `${pct}%` }}
+                      >
+                        <div className="absolute inset-x-0 top-0 h-1 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-              <div className="flex justify-between text-[10px] text-white/20 font-bold">
-                <span>{dailyStreams[0]?.stream_date}</span>
-                <span>{dailyStreams[dailyStreams.length - 1]?.stream_date}</span>
+              <div className="flex justify-between text-[10px] text-white/30 font-bold px-1">
+                <span>{new Date(dailyStreams[0]?.stream_date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>
+                <span>{new Date(dailyStreams[dailyStreams.length - 1]?.stream_date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>
               </div>
             </div>
           ) : (
@@ -279,12 +290,12 @@ const ArtistOverview = ({ stats, songs }) => {
 };
 
 const StatCard = ({ icon, title, value, accent }) => (
-  <div className={`glass-panel p-5 bg-gradient-to-br ${accent} border-white/5 hover:border-white/15 transition-all group`}>
+  <div className={`glass-panel p-5 bg-gradient-to-br ${accent} border-white/5 hover:border-white/15 transition-all group overflow-hidden`}>
     <div className="flex items-center gap-2 mb-2">
-      <span className="text-white/20 group-hover:text-brand-primary/60 transition-colors w-4 h-4">{icon}</span>
-      <p className="text-white/40 font-bold uppercase tracking-widest text-[9px]">{title}</p>
+      <span className="text-white/20 group-hover:text-brand-primary/60 transition-colors w-4 h-4 shrink-0 flex items-center justify-center">{icon}</span>
+      <p className="text-white/40 font-bold uppercase tracking-wider text-[8px] truncate">{title}</p>
     </div>
-    <h2 className="text-3xl font-black text-white tabular-nums tracking-tighter group-hover:scale-105 origin-left transition-transform duration-300">
+    <h2 className="text-2xl lg:text-3xl font-black text-white tabular-nums tracking-tighter group-hover:scale-105 origin-left transition-transform duration-300 truncate">
       {value}
     </h2>
   </div>

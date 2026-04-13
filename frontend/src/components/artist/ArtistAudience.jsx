@@ -150,36 +150,7 @@ const ArtistAudience = ({ stats }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* ── Streaming Quality Preferences ────── */}
-            {qualityPrefs.length > 0 && (
-              <div className="glass-panel p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Headphones className="w-5 h-5 text-brand-primary/60" />
-                  <h3 className="text-lg font-bold tracking-tight">Quality Preferences</h3>
-                </div>
-                <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-4">How your listeners stream</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {qualityPrefs.map((q) => {
-                    const pct = Math.round((q.listener_count / totalQualityListeners) * 100);
-                    const qualityLabels = {
-                      extreme: { label: 'Extreme', desc: '320kbps+', color: 'text-purple-400' },
-                      high: { label: 'High', desc: '256kbps', color: 'text-blue-400' },
-                      medium: { label: 'Medium', desc: '160kbps', color: 'text-green-400' },
-                      low: { label: 'Low', desc: '96kbps', color: 'text-amber-400' },
-                      auto: { label: 'Auto', desc: 'Adaptive', color: 'text-white/60' }
-                    };
-                    const info = qualityLabels[q.quality] || { label: q.quality, desc: '', color: 'text-white/40' };
-                    return (
-                      <div key={q.quality} className="bg-white/[0.03] border border-white/5 rounded-xl p-3 text-center">
-                        <p className={`text-lg font-black ${info.color}`}>{pct}%</p>
-                        <p className="text-xs font-bold text-white/70 mt-0.5">{info.label}</p>
-                        <p className="text-[9px] text-white/25">{info.desc}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+
 
             {/* ── Recent Followers ──────────────────── */}
             {recentFollowers.length > 0 && (

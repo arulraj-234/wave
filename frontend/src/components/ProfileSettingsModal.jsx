@@ -193,7 +193,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-4xl h-[90vh] md:h-[700px] bg-brand-surface border border-white/10 rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col md:flex-row overflow-hidden"
+            className="font-sans relative w-full max-w-4xl h-[90vh] md:h-[700px] bg-brand-surface border border-white/10 rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col md:flex-row overflow-hidden"
           >
             {/* Sidebar Navigation */}
             <div className="w-full md:w-64 bg-black/20 border-r border-white/5 flex flex-col p-4 md:p-6">
@@ -209,12 +209,14 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
                   >
                     <User className="w-4 h-4" /> Profile
                   </button>
-                  <button 
-                    onClick={() => setActiveTab('streaming')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === 'streaming' ? 'bg-brand-primary text-brand-dark' : 'text-brand-muted hover:bg-white/5 hover:text-white'}`}
-                  >
-                    <Headphones className="w-4 h-4" /> Streaming
-                  </button>
+                  {user?.role !== 'artist' && (
+                    <button 
+                      onClick={() => setActiveTab('streaming')}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === 'streaming' ? 'bg-brand-primary text-brand-dark' : 'text-brand-muted hover:bg-white/5 hover:text-white'}`}
+                    >
+                      <Headphones className="w-4 h-4" /> Streaming
+                    </button>
+                  )}
                   <button 
                     onClick={() => setActiveTab('about')}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === 'about' ? 'bg-brand-primary text-brand-dark' : 'text-brand-muted hover:bg-white/5 hover:text-white'}`}
@@ -299,8 +301,8 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
                )}
 
                {/* Tab: Streaming */}
-               {activeTab === 'streaming' && (
-                 <div className="space-y-10 max-w-lg">
+               {activeTab === 'streaming' && user?.role !== 'artist' && (
+                 <div className="space-y-8 max-w-lg">
                     <section>
                        <h3 className="text-sm font-black text-brand-primary uppercase tracking-widest mb-2 flex items-center gap-2">
                           <Sliders className="w-4 h-4" /> Audio Quality
