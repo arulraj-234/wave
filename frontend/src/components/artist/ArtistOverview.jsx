@@ -1,8 +1,119 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TrendingUp, Users, Heart, Music, Clock, BarChart3, Headphones } from 'lucide-react';
 import { resolveUrl } from '../../api';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const StreamAnalyticsChart = ({ dailyStreams }) => {
+  const [hoverIdx, setHoverIdx] = useState(null);
+  
+  if (!dailyStreams || dailyStreams.length === 0) {
+    return (
+      <div className="h-40 flex items-center justify-center text-white/20 border border-dashed border-white/5 rounded-xl">
+        No stream data yet
+      </div>
+    );
+  }
+  
+  const maxDaily = Math.max(...dailyStreams.map(d => d.daily_streams), 1);
+  const minDaily = Math.min(...dailyStreams.map(d => d.daily_streams), 0);
+  const range = maxDaily === minDaily ? 1 : maxDaily - minDaily;
+  
+  const points = dailyStreams.map((day, i) => {
+    const x = dailyStreams.length > 1 ? (i / (dailyStreams.length - 1)) * 1000 : 500;
+    const y = 260 - ((day.daily_streams - minDaily) / range) * 220; // 40 top padding, 40 bottom padding
+    return { x, y, day };
+  });
+
+  let path = `M ${points[0].x},${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const cp1x = p1.x + (p2.x - p1.x) / 2;
+    const cp2x = p1.x + (p2.x - p1.x) / 2;
+    path += ` C ${cp1x},${p1.y} ${cp2x},${p2.y} ${p2.x},${p2.y}`;
+  }
+
+  const areaPath = `${path} L ${points[points.length - 1].x},300 L ${points[0].x},300 Z`;
+
+  const labelCount = Math.min(6, dailyStreams.length);
+  const labelIndices = Array.from({ length: labelCount }, (_, i) => Math.floor(i * (dailyStreams.length - 1) / (labelCount - 1)));
+
+  return (
+    <div className="relative h-56 w-full mt-4 group select-none fade-in zoom-in-95 animate-in duration-500" onMouseLeave={() => setHoverIdx(null)}>
+      <svg viewBox="0 0 1000 300" preserveAspectRatio="none" className="absolute inset-0 w-full h-[calc(100%-24px)] overflow-visible">
+        <defs>
+          <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#2DD4BF" stopOpacity="0.0" />
+          </linearGradient>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+        
+        {labelIndices.map(idx => (
+           <line key={`grid-${idx}`} x1={points[idx].x} y1="0" x2={points[idx].x} y2="300" stroke="rgba(255,255,255,0.05)" strokeWidth="1" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+        ))}
+
+        <path d={areaPath} fill="url(#chartFill)" className="transition-all duration-300" />
+        <path d={path} fill="none" stroke="#2DD4BF" strokeWidth="3" vectorEffect="non-scaling-stroke" filter="url(#glow)" />
+        <path d={path} fill="none" stroke="#ffffff" strokeWidth="1" strokeOpacity="0.6" vectorEffect="non-scaling-stroke" />
+
+        {hoverIdx !== null && (
+          <>
+            <line x1={points[hoverIdx].x} y1={points[hoverIdx].y} x2={points[hoverIdx].x} y2="300" stroke="#2DD4BF" strokeWidth="1.5" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+            <circle cx={points[hoverIdx].x} cy={points[hoverIdx].y} r="6" fill="#141414" stroke="#2DD4BF" strokeWidth="3" vectorEffect="non-scaling-stroke" className="pointer-events-none" />
+            <circle cx={points[hoverIdx].x} cy={points[hoverIdx].y} r="15" fill="#2DD4BF" fillOpacity="0.2" className="animate-pulse pointer-events-none" />
+          </>
+        )}
+      </svg>
+      
+      <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[10px] text-white/40 font-bold pointer-events-none">
+        {labelIndices.map((idx, index) => {
+           let alignClass = 'text-center';
+           let pushLeft = '0';
+           if (index === 0) alignClass = 'text-left';
+           else if (index === labelIndices.length - 1) alignClass = 'text-right';
+           else pushLeft = `calc(${(points[idx].x / 1000) * 100}% - 20px)`;
+           
+           return (
+             <div key={idx} className={`absolute w-10 ${alignClass}`} style={{ left: index !== 0 && index !== labelIndices.length - 1 ? pushLeft : index === 0 ? '0' : 'auto', right: index === labelIndices.length - 1 ? '0' : 'auto' }}>
+               {new Date(points[idx].day.stream_date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+             </div>
+           );
+        })}
+      </div>
+
+      {hoverIdx !== null && (
+        <div className="absolute inset-0 bottom-6 pointer-events-none transition-all z-30 flex items-center justify-center">
+            <div 
+               className="absolute -translate-x-1/2 -translate-y-[140%] drop-shadow-[0_0_15px_rgba(45,212,191,0.2)]"
+               style={{ left: `${(points[hoverIdx].x / 1000) * 100}%`, top: `${(points[hoverIdx].y / 300) * 100}%` }}
+            >
+               <div className="bg-zinc-900 border border-white/10 text-white rounded-lg px-3 py-1.5 whitespace-nowrap overflow-visible relative">
+                  <span className="text-brand-success font-black tracking-tighter text-sm">{points[hoverIdx].day.daily_streams}</span> <span className="text-white/60 text-[9px] uppercase font-bold tracking-widest leading-[0]">Plays</span>
+               </div>
+               <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-transparent border-t-zinc-900 absolute left-1/2 -translate-x-1/2 top-full"></div>
+            </div>
+        </div>
+      )}
+
+      {/* Hover Interaction Overlay */}
+      <div className="absolute inset-0 bottom-6 flex z-20">
+        {points.map((p, i) => (
+          <div 
+            key={i} 
+            className="flex-1 h-full cursor-crosshair"
+            onMouseEnter={() => setHoverIdx(i)}
+            onClick={() => setHoverIdx(i)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const ArtistOverview = ({ stats, songs }) => {
   const s = stats?.stats || {};
@@ -69,43 +180,7 @@ const ArtistOverview = ({ stats, songs }) => {
         <div className="lg:col-span-2 glass-panel p-6">
           <h3 className="text-lg font-bold mb-1 tracking-tight">Stream Analytics</h3>
           <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-5">Last 30 Days</p>
-          {dailyStreams.length > 0 ? (
-            <div className="space-y-3">
-              <div className="flex items-end gap-1.5 h-40 mt-6 group/chart border-b border-white/5 pb-2">
-                {dailyStreams.map((day, i) => {
-                  const pct = Math.max(8, (day.daily_streams / maxDaily) * 100);
-                  const hoverDate = new Date(day.stream_date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}) || day.stream_date;
-                  return (
-                    <div
-                      key={i}
-                      className="flex-1 relative group cursor-pointer h-full flex flex-col justify-end"
-                    >
-                      {/* Tooltip */}
-                      <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 -translate-x-1/2 -mb-1 bg-zinc-900 border border-white/10 text-white text-[10px] py-1.5 px-3 rounded-lg whitespace-nowrap pointer-events-none transition-all duration-200 z-10 font-bold shadow-xl drop-shadow-[0_0_15px_rgba(29,185,84,0.2)] scale-95 group-hover:scale-100 origin-bottom text-center">
-                        <span className="text-brand-primary text-sm tracking-tight">{day.daily_streams}</span> <span className="text-white/70">streams</span>
-                        <br /><span className="text-white/30 font-medium text-[9px]">{hoverDate}</span>
-                      </div>
-                      {/* The Bar */}
-                      <div 
-                        className="w-full bg-gradient-to-t from-brand-primary/10 to-brand-primary/30 rounded-t-md group-hover:from-brand-primary/30 group-hover:to-brand-primary transition-all duration-300 overflow-hidden group-hover:shadow-[0_0_15px_rgba(29,185,84,0.3)] group-hover:-translate-y-1"
-                        style={{ height: `${pct}%` }}
-                      >
-                        <div className="absolute inset-x-0 top-0 h-1 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="flex justify-between text-[10px] text-white/30 font-bold px-1">
-                <span>{new Date(dailyStreams[0]?.stream_date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>
-                <span>{new Date(dailyStreams[dailyStreams.length - 1]?.stream_date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="h-40 flex items-center justify-center text-white/20 border border-dashed border-white/5 rounded-xl">
-              No stream data yet
-            </div>
-          )}
+          <StreamAnalyticsChart dailyStreams={dailyStreams} />
         </div>
 
         {/* ── Top Song Card ──────────────────────── */}
