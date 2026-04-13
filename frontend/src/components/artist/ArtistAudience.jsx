@@ -66,31 +66,7 @@ const ArtistAudience = ({ stats }) => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* ── Superfan Card ────────────────────── */}
-            {superfan && (
-              <div className="glass-panel p-6 bg-gradient-to-br from-amber-500/5 to-transparent border-amber-500/10">
-                <div className="flex items-center gap-2 mb-4">
-                  <Crown className="w-5 h-5 text-amber-400" />
-                  <h3 className="text-lg font-bold tracking-tight">Your #1 Superfan</h3>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-brand-dark border-2 border-amber-400/20 overflow-hidden flex items-center justify-center shadow-lg">
-                    {superfan.avatar_url ? (
-                      <img src={resolveUrl(superfan.avatar_url)} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-2xl font-black text-amber-400">{superfan.username?.[0]?.toUpperCase()}</span>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xl font-black text-amber-400">{superfan.username}</p>
-                    <p className="text-xs text-white/40 font-bold mt-0.5">
-                      <span className="text-amber-400/80">{superfan.stream_count}</span> total streams
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
 
             {/* ── Gender Breakdown ─────────────────── */}
             {genderData.length > 0 && (
