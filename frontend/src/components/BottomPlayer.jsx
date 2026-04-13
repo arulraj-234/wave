@@ -248,7 +248,7 @@ const BottomPlayer = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
-                       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-7xl pb-40 lg:pb-48">
+                       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-7xl pt-12 md:pb-12">
                 {/* Hero Artwork - Stays visible in both states, maybe subtle scaling */}
                 <motion.div 
                   layout
@@ -290,106 +290,6 @@ const BottomPlayer = () => {
                   )}
                 </AnimatePresence>
               </div>
-
-              {/* Original-style Full-Width Fullscreen Desktop Controls */}
-              <AnimatePresence>
-                {!isIdle && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
-                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                    exit={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
-                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                    className="w-full fixed bottom-0 left-0 bg-[#121212]/60 backdrop-blur-3xl border-t border-white/[0.03] z-[60] px-12 py-10 pb-safe"
-                  >
-                    {/* Rest of the bar content remains identical to original reference */}
-                    <div className="max-w-screen-2xl mx-auto flex items-center justify-between gap-12">
-                      
-                      {/* Left: Info & Like */}
-                      <div className="flex items-center gap-6 w-1/4">
-                        <div className="w-16 h-16 bg-brand-dark rounded-lg shadow-2xl overflow-hidden shrink-0">
-                          <img src={resolveUrl(currentSong.cover_image_url)} className="w-full h-full object-cover"/>
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="text-xl font-bold text-white truncate">{currentSong.title}</h3>
-                          <p className="text-base font-medium text-brand-muted truncate">{currentSong.artist_name}</p>
-                        </div>
-                        <button 
-                          onClick={() => toggleLike(currentSong.song_id)}
-                          title={likedSongs.has(currentSong.song_id) ? "Unlike" : "Like"}
-                          className={`ml-4 p-3 rounded-full transition-all ${likedSongs.has(currentSong.song_id) ? 'text-brand-primary' : 'text-white/40 hover:text-white'}`}
-                        >
-                          <Heart className={`w-6 h-6 ${likedSongs.has(currentSong.song_id) ? 'fill-current' : ''}`} />
-                        </button>
-                      </div>
-
-                      {/* Center: Playback & Seek */}
-                      <div className="flex flex-col items-center gap-6 flex-1 max-w-2xl px-8">
-                        <div className="flex items-center gap-10">
-                          <button onClick={toggleShuffle} className={`p-2 transition-colors ${shuffleMode ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`} title="Shuffle">
-                            <Shuffle className="w-5 h-5" />
-                          </button>
-                          <button onClick={playPrevious} className="text-white hover:scale-110 active:scale-95 transition-transform" title="Previous">
-                            <SkipBack className="w-7 h-7 fill-current" />
-                          </button>
-                          <button 
-                            onClick={togglePlay}
-                            title={isPlaying ? "Pause" : "Play"}
-                            className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
-                          >
-                            {isPlaying ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current ml-1" />}
-                          </button>
-                          <button onClick={playNext} className="text-white hover:scale-110 active:scale-95 transition-transform" title="Next">
-                            <SkipForward className="w-7 h-7 fill-current" />
-                          </button>
-                          <button onClick={toggleRepeat} className={`p-2 transition-colors ${repeatMode !== 'off' ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`} title="Repeat">
-                            {repeatMode === 'one' ? <Repeat1 className="w-5 h-5" /> : <Repeat className="w-5 h-5" />}
-                          </button>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div className="w-full flex items-center gap-6 text-[10px] font-bold text-brand-muted tracking-widest leading-none">
-                          <span className="w-12 text-right">{formatTime((progress / 100) * duration)}</span>
-                          <div className="flex-1 relative group py-2">
-                             <ElasticSlider
-                              defaultValue={progress}
-                              maxValue={100}
-                              onChange={(val) => seek(val)}
-                              className="w-full !p-0"
-                              leftIcon={null}
-                              rightIcon={null}
-                            />
-                          </div>
-                          <span className="w-12">{formatTime(duration || currentSong.duration)}</span>
-                        </div>
-                      </div>
-
-                      {/* Right: Actions */}
-                      <div className="flex items-center justify-end gap-6 w-1/4">
-                        <button onClick={() => setShowQueue(!showQueue)} title="Queue" className={`p-2 rounded-lg transition-all ${showQueue ? 'text-brand-primary bg-white/5' : 'text-brand-muted hover:text-white hover:bg-white/5'}`}>
-                          <ListMusic className="w-6 h-6" />
-                        </button>
-                        <div className="flex items-center gap-4 w-32" title="Volume">
-                          <Volume2 className="w-4 h-4 text-brand-muted" />
-                          <ElasticSlider
-                            defaultValue={Math.round(volume * 100)}
-                            maxValue={100}
-                            onChange={(val) => setVolume(val / 100)}
-                            className="w-full !p-0"
-                            leftIcon={null}
-                            rightIcon={null}
-                          />
-                        </div>
-                        <button onClick={() => setShowSleepMenu(!showSleepMenu)} className={`p-2 rounded-lg transition-all ${sleepTimer ? 'text-sky-400' : 'text-brand-muted hover:text-white hover:bg-white/5'}`} title="Sleep Timer">
-                          <Moon className="w-5 h-5" />
-                        </button>
-                        <button onClick={() => setIsFullScreenPlayer(false)} title="Minimize" className="p-2 text-brand-muted hover:text-white">
-                          <ChevronDown className="w-7 h-7" />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
 
             {/* Mobile Fullscreen View (Spotify Style) */}
@@ -495,7 +395,7 @@ const BottomPlayer = () => {
             animate={{ y: 0 }}
             exit={{ y: 200 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-[4.5rem] md:h-24 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] z-[40] flex items-center px-4 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300 shadow-xl md:shadow-none pb-safe`}
+            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-[4.5rem] md:h-24 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] ${isFullScreenPlayer ? 'z-[50]' : 'z-[40]'} flex items-center px-4 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300 shadow-xl md:shadow-none pb-safe`}
             onTouchStart={handleCompactTouchStart}
             onTouchEnd={handleCompactTouchEnd}
             style={{ 
