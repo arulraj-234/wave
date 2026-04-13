@@ -13,7 +13,7 @@ os.environ['DB_USER'] = os.environ.get('PROD_DB_USER', '29PhucQrPwvzbKy.root')
 os.environ['DB_PASSWORD'] = os.environ.get('PROD_DB_PASSWORD', 'TJUoSvkVCyZJ0GFx')
 os.environ['DB_NAME'] = os.environ.get('PROD_DB_NAME', 'test')
 os.environ['DB_PORT'] = os.environ.get('PROD_DB_PORT', '4000')
-os.environ['DB_SSL_MODE'] = 'true'
+os.environ['DB_SSL_MODE'] = ''  # Disable strict verify locally (TiDB will still force TLS)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -45,7 +45,7 @@ result = execute_query(
 )
 
 if result:
-    print(f"\n✅ Password set successfully!")
+    print(f"\n[SUCCESS] Password set successfully!")
     print(f"   Username: {TARGET_USERNAME}")
     print(f"   Password: {NEW_PASSWORD}")
     print(f"   Role: artist")
