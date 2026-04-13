@@ -2,6 +2,7 @@ from functools import wraps
 from flask import request, jsonify
 import jwt
 from config import Config
+from db import fetch_one
 
 def token_required(f):
     """Decorator to verify JWT token on protected routes"""
@@ -28,6 +29,18 @@ def token_required(f):
             return jsonify({"error": "Token has expired"}), 401
         except jwt.InvalidTokenError:
             return jsonify({"error": "Invalid token"}), 401
+        
+        # Enforce single-session: check that this token's session_id
+        # matches the active_session in the database. If not, another
+        # device has logged in and this session is stale.
+        session_id = data.get('session_id')
+        if session_id:
+            user = fetch_one(
+                "SELECT active_session FROM users WHERE user_id = %s",
+                (data.get('user_id'),)
+            )
+            if user and user.get('active_session') and user['active_session'] != session_id:
+                return jsonify({"error": "Session expired — you logged in on another device"}), 401
         
         return f(*args, **kwargs)
     

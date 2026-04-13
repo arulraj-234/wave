@@ -142,7 +142,12 @@ def login():
     if not check_password_hash(user['hashed_password'], password):
         return jsonify({"error": "Incorrect password"}), 401
 
-    # We skip session_conflict check and allow force_login silently
+    # Enforce single-session: if user already has an active session, warn them
+    if user.get('active_session') and not force_login:
+        return jsonify({
+            "error": "session_conflict",
+            "message": "You're already logged in on another device. Continue to log out the other session."
+        }), 409
 
     # Extract onboarding state directly from dict (1/0 to true/false)
     is_onboarded = bool(user.get('onboarding_completed', False))
@@ -210,12 +215,9 @@ def check_username(username):
 @token_required
 def me():
     user_id = request.current_user.get('user_id')
-    session_id = request.current_user.get('session_id')
-    user = fetch_one("SELECT user_id, username, email, role, avatar_url, first_name, last_name, onboarding_completed, active_session, streaming_quality FROM users WHERE user_id = %s", (user_id,))
+    user = fetch_one("SELECT user_id, username, email, role, avatar_url, first_name, last_name, onboarding_completed, streaming_quality FROM users WHERE user_id = %s", (user_id,))
     if user:
-        # Enforce concurrent session: if this token's session_id doesn't match, kick them out
-        if session_id and user.get('active_session') and user['active_session'] != session_id:
-            return jsonify({"error": "Session expired — you logged in on another device"}), 401
+        # Session validation is already handled by the token_required middleware
         is_onboarded = bool(user.get('onboarding_completed', False))
         return jsonify({
             "success": True,
