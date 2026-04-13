@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Star, Headphones, UserPlus, ArrowUpRight, Crown } from 'lucide-react';
+import { Users, Star, Headphones, UserPlus, ArrowUpRight, Crown, Lock, TrendingUp } from 'lucide-react';
 import { resolveUrl } from '../../api';
 
 const GENDER_ICONS = {
@@ -150,12 +150,26 @@ const ArtistAudience = ({ stats }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
+            {/* ── Top Regions (Coming Soon / Locked) ── */}
+            <div className="glass-panel p-6 relative overflow-hidden group border border-white/5">
+               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-20" />
+               <div className="flex items-center justify-between mb-1 relative z-10">
+                 <h3 className="text-lg font-bold tracking-tight">Top Regions</h3>
+                 <span className="text-[8px] font-black uppercase tracking-widest text-brand-primary/40 bg-white/5 px-2 py-1 rounded-full border border-white/10">Coming Soon</span>
+               </div>
+               <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-4 relative z-10">Where your fans are</p>
+               <div className="h-[140px] flex flex-col items-center justify-center border border-dashed border-white/10 rounded-xl bg-black/20 relative z-10">
+                 <div className="flex items-center gap-2 text-white/40 mb-2 bg-white/5 px-3 py-1.5 rounded-full backdrop-blur-md">
+                   <span className="text-xs font-bold uppercase tracking-widest">Unlocks at 50 Streams</span>
+                 </div>
+                 <p className="text-[10px] text-white/25 text-center px-4">Keep growing your audience to unlock geographic heatmaps.</p>
+               </div>
+            </div>
 
             {/* ── Recent Followers ──────────────────── */}
-            {recentFollowers.length > 0 && (
-              <div className="glass-panel p-6">
-                <h3 className="text-lg font-bold mb-4 tracking-tight">Recent Followers</h3>
+            <div className="glass-panel p-6 border border-white/5">
+              <h3 className="text-lg font-bold mb-4 tracking-tight">Recent Followers</h3>
+              {recentFollowers.length > 0 ? (
                 <div className="space-y-3">
                   {recentFollowers.map((f, i) => (
                     <div key={f.user_id || i} className="flex items-center gap-3 group">
@@ -173,35 +187,46 @@ const ArtistAudience = ({ stats }) => {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="h-[160px] flex flex-col items-center justify-center text-center border border-dashed border-white/5 rounded-xl bg-white/[0.01]">
+                  <UserPlus className="w-8 h-8 text-white/10 mb-3" />
+                  <p className="text-[11px] font-bold text-white/30 uppercase tracking-widest">No followers yet</p>
+                  <p className="text-[10px] text-white/20 mt-1 max-w-[200px]">When listeners follow your profile, they will appear here.</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ── Follower Growth Timeline ─────────────── */}
-          {followerGrowth.length > 1 && (
-            <div className="glass-panel p-6">
-              <h3 className="text-lg font-bold mb-1 tracking-tight">Follower Growth</h3>
-              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-5">Monthly new followers</p>
-              <div className="flex items-end gap-1 h-28">
+          <div className="glass-panel p-6 border border-white/5">
+            <h3 className="text-lg font-bold mb-1 tracking-tight">Follower Growth</h3>
+            <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-5">Monthly new followers</p>
+            {followerGrowth.length > 1 ? (
+              <div className="flex items-end gap-1 h-32">
                 {followerGrowth.map((m, i) => {
                   const maxFollowers = Math.max(...followerGrowth.map(f => f.new_followers), 1);
                   const pct = Math.max(8, (m.new_followers / maxFollowers) * 100);
                   return (
                     <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group">
-                      <div className="opacity-0 group-hover:opacity-100 text-[9px] font-bold text-white/50 transition-opacity">
+                      <div className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-white/50 transition-opacity mb-1">
                         +{m.new_followers}
                       </div>
                       <div
                         className="w-full bg-gradient-to-t from-pink-500/40 to-pink-400/20 rounded-t-sm hover:from-pink-500/60 hover:to-pink-400/40 transition-all cursor-pointer"
                         style={{ height: `${pct}%` }}
                       />
-                      <span className="text-[8px] font-bold text-white/15 truncate w-full text-center">{m.month?.slice(5)}</span>
+                      <span className="text-[9px] font-bold text-white/25 truncate w-full text-center mt-1">{m.month?.slice(5)}</span>
                     </div>
                   );
                 })}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="h-32 flex flex-col items-center justify-center border border-dashed border-white/5 rounded-xl bg-white/[0.01]">
+                <p className="text-[11px] font-bold text-white/30 uppercase tracking-widest">Not enough history</p>
+                <p className="text-[10px] text-white/20 mt-1">Check back next month for historical growth insights.</p>
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>
