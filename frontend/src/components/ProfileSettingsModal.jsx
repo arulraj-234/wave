@@ -110,6 +110,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
     }
   };
 
+  const handleSave = async (e) => {
     if (e) e.preventDefault();
     if (usernameStatus === 'taken' || usernameFormatError) {
       toast.error('Please fix username formatting or availability issues');
