@@ -395,7 +395,7 @@ const BottomPlayer = () => {
             animate={{ y: 0 }}
             exit={{ y: 200 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-[3.75rem] md:h-20 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] ${isFullScreenPlayer ? 'z-[50]' : 'z-[40]'} flex items-center px-3 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300 shadow-xl md:shadow-none pb-safe`}
+            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-[4.5rem] md:h-24 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] ${isFullScreenPlayer ? 'z-[50]' : 'z-[40]'} flex items-center px-4 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300 shadow-xl md:shadow-none`}
             onTouchStart={handleCompactTouchStart}
             onTouchEnd={handleCompactTouchEnd}
             style={{ 
@@ -411,7 +411,7 @@ const BottomPlayer = () => {
           >
             {/* Song Info */}
             <div className="flex items-center gap-3 flex-1 md:w-1/3 overflow-hidden cursor-pointer md:cursor-default min-w-0">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-brand-dark rounded-md shadow-sm overflow-hidden flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 md:w-14 md:h-14 bg-brand-dark rounded-md shadow-sm overflow-hidden flex items-center justify-center shrink-0">
                 {currentSong.cover_image_url ? 
                   <img src={resolveUrl(currentSong.cover_image_url)} className="w-full h-full object-cover"/> : 
                   <Music className="w-6 h-6 text-brand-muted" />
@@ -443,7 +443,7 @@ const BottomPlayer = () => {
             </div>
             
             {/* Controls (Desktop) & Mobile Play/Pause */}
-            <div className="flex-none md:flex-1 flex items-center justify-end md:justify-center md:flex-col gap-1 ml-1 md:ml-0 shrink-0 md:pl-0">
+            <div className="flex-none md:flex-1 flex items-center justify-end md:justify-center md:flex-col gap-2 ml-1 md:ml-0 shrink-0 md:pl-0">
                <div className="flex items-center gap-3 md:gap-4">
                 <button onClick={toggleShuffle} className={`hidden md:block transition-colors ${shuffleMode ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`} title="Shuffle">
                   <Shuffle className="w-4 h-4" />
