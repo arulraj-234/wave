@@ -21,7 +21,7 @@ from werkzeug.security import generate_password_hash
 from db import execute_query, fetch_one
 
 # Set password for the top artist
-TARGET_USERNAME = "Arijit Singh"
+TARGET_USERNAME = "Pritam"
 NEW_PASSWORD = "artist123"
 
 hashed = generate_password_hash(NEW_PASSWORD)
