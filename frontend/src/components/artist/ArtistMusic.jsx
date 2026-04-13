@@ -1,16 +1,26 @@
 import React from 'react';
-import { Music as MusicIcon, ListMusic, Play } from 'lucide-react';
+import { Music as MusicIcon, ListMusic, Play, Upload, TrendingUp } from 'lucide-react';
 import { resolveUrl } from '../../api';
 
 const ArtistMusic = ({ albums, songs, onCreateRelease }) => {
+  // Sort songs by play count descending
+  const sortedSongs = [...songs].sort((a, b) => (b.play_count || 0) - (a.play_count || 0));
+  const totalPlays = sortedSongs.reduce((sum, s) => sum + (s.play_count || 0), 0);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-black tracking-tight">Your Discography</h2>
+        <div>
+          <h2 className="text-2xl font-black tracking-tight">Your Discography</h2>
+          <p className="text-xs text-white/30 font-bold mt-1">
+            {songs.length} tracks • {albums.length} albums • {totalPlays.toLocaleString()} total plays
+          </p>
+        </div>
         <button 
           onClick={onCreateRelease}
-          className="btn-primary py-2 px-6 flex items-center gap-2 font-bold shadow-lg"
+          className="btn-primary py-2.5 px-6 flex items-center gap-2 font-bold shadow-lg hover:scale-105 transition-transform"
         >
+          <Upload className="w-4 h-4" />
           Create Release
         </button>
       </div>
@@ -46,19 +56,32 @@ const ArtistMusic = ({ albums, songs, onCreateRelease }) => {
 
         {/* Singles Section */}
         <div>
-           <h3 className="text-lg font-bold mb-4 text-white/60 tracking-tight hover:text-white transition-colors">All Tracks</h3>
+           <h3 className="text-lg font-bold mb-4 text-white/60 tracking-tight hover:text-white transition-colors flex items-center gap-2">
+             <TrendingUp className="w-5 h-5" /> All Tracks
+             <span className="text-[10px] text-white/20 font-bold uppercase ml-2">Sorted by streams</span>
+           </h3>
            <div className="space-y-2">
-            {songs.map((song, index) => (
+            {sortedSongs.map((song, index) => (
               <div 
                 key={song.song_id} 
                 className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/[0.01] rounded-2xl hover:bg-white/[0.06] hover:border-white/10 transition-all duration-300 group"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-brand-dark rounded-xl flex items-center justify-center overflow-hidden shadow-md">
+                  {/* Rank number */}
+                  <span className={`w-6 text-center text-sm font-black tabular-nums hidden md:block ${index < 3 ? 'text-brand-primary' : 'text-white/15'}`}>
+                    {index + 1}
+                  </span>
+                  <div className="w-12 h-12 bg-brand-dark rounded-xl flex items-center justify-center overflow-hidden shadow-md relative group/play">
                     {song.cover_image_url ? (
                       <img src={resolveUrl(song.cover_image_url)} alt="cover" className="w-full h-full object-cover"/>
                     ) : (
                       <MusicIcon className="w-5 h-5 text-white/10" />
+                    )}
+                    {/* Play overlay */}
+                    {song.audio_url && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover/play:opacity-100 transition-opacity rounded-xl cursor-pointer">
+                        <Play className="w-5 h-5 text-white fill-white" />
+                      </div>
                     )}
                   </div>
                   <div>
@@ -70,6 +93,11 @@ const ArtistMusic = ({ albums, songs, onCreateRelease }) => {
                       <span className="text-xs text-brand-success/70 font-bold uppercase tracking-wider bg-brand-success/10 px-2 rounded-sm">
                         {song.genre || 'Single'}
                       </span>
+                      {song.artist_name && (
+                        <span className="text-xs text-white/20 hidden md:inline">
+                          {song.artist_name}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -90,6 +118,12 @@ const ArtistMusic = ({ albums, songs, onCreateRelease }) => {
                 </div>
                 <h3 className="text-lg font-bold text-white/50">No music released yet</h3>
                 <p className="text-sm text-white/30 mt-1 max-w-sm">Use the "Create Release" button above to publish your first track.</p>
+                <button 
+                  onClick={onCreateRelease}
+                  className="mt-6 btn-primary py-2.5 px-6 flex items-center gap-2 font-bold"
+                >
+                  <Upload className="w-4 h-4" /> Upload Your First Song
+                </button>
               </div>
             )}
            </div>

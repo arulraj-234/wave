@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, BarChart2, ListMusic, Users } from 'lucide-react';
+import { Upload, BarChart2, ListMusic, Users, LogOut, LayoutDashboard } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api, { resolveUrl } from '../api';
 import WaveLogo from '../components/Logo';
 import ArtistOverview from '../components/artist/ArtistOverview';
 import ArtistMusic from '../components/artist/ArtistMusic';
+import ArtistAudience from '../components/artist/ArtistAudience';
 import CreateReleaseModal from '../components/artist/CreateReleaseModal';
 import ProfileSettingsModal from '../components/ProfileSettingsModal';
 
 const Artist = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [songs, setSongs] = useState([]);
   const [albums, setAlbums] = useState([]);
@@ -49,6 +52,16 @@ const Artist = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await api.post('/api/auth/logout');
+    } catch {}
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    window.location.href = '/#/login';
+    window.location.reload();
+  };
+
   const totalPlays = songs.reduce((sum, song) => sum + (song.play_count || 0), 0);
   
   const tabs = [
@@ -85,6 +98,18 @@ const Artist = () => {
           </nav>
           
           <div className="flex items-center gap-3">
+             {/* Listener mode shortcut (for admin/dual-role) */}
+             {currentUser?.role === 'admin' && (
+               <button
+                 onClick={() => navigate('/admin')}
+                 className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5 transition-all"
+                 title="Admin Panel"
+               >
+                 <LayoutDashboard className="w-5 h-5" />
+               </button>
+             )}
+             
+             {/* Avatar / Profile */}
              <div 
                className="w-9 h-9 rounded-full bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center overflow-hidden cursor-pointer hover:border-brand-primary/40 transition-all bg-gradient-to-tr from-brand-primary/20 to-brand-accent/20 shadow-lg"
                onClick={() => setIsProfileModalOpen(true)}
@@ -97,9 +122,32 @@ const Artist = () => {
                   </span>
                 )}
              </div>
+
+             {/* Logout */}
+             <button
+               onClick={handleLogout}
+               className="p-2 rounded-full text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-all"
+               title="Logout"
+             >
+               <LogOut className="w-5 h-5" />
+             </button>
           </div>
         </div>
       </header>
+
+      {/* Mobile Tab Bar */}
+      <div className="md:hidden flex items-center gap-1 px-4 py-2 bg-brand-dark border-b border-white/5 overflow-x-auto">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${activeTab === tab.id ? 'bg-brand-primary text-brand-dark' : 'text-white/40'}`}
+          >
+            <tab.icon className="w-3.5 h-3.5" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto custom-scrollbar relative">
@@ -120,19 +168,13 @@ const Artist = () => {
            ) : (
              <div className="transition-all duration-300">
                {activeTab === 'overview' && (
-                 <ArtistOverview stats={artistStats} totalPlays={totalPlays} />
+                 <ArtistOverview stats={artistStats} totalPlays={totalPlays} songs={songs} />
                )}
                {activeTab === 'music' && (
                  <ArtistMusic albums={albums} songs={songs} onCreateRelease={() => setIsModalOpen(true)} />
                )}
                {activeTab === 'audience' && (
-                 <div className="flex-1 flex flex-col items-center justify-center py-32 text-center animate-in fade-in zoom-in-95 duration-500">
-                    <div className="w-24 h-24 bg-white/[0.01] rounded-full border border-dashed border-white/10 flex items-center justify-center mb-6">
-                        <Users className="w-10 h-10 text-white/10" />
-                    </div>
-                    <h3 className="text-2xl font-black">Detailed Audience insights coming soon</h3>
-                    <p className="text-white/40 max-w-md mx-auto mt-2 font-medium">We're collecting more data about your listeners. Keep releasing music to build your audience profile.</p>
-                 </div>
+                 <ArtistAudience stats={artistStats} />
                )}
              </div>
            )}
