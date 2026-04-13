@@ -715,15 +715,37 @@ import time
 # Memory cache to fix extreme latency on Home scraping
 _home_cache = {}
 
+import re
+
 def _dedup_songs(songs):
     seen = set()
     unique_songs = []
+    
     for s in songs:
         if not isinstance(s, dict): continue
-        key = (str(s.get('title', '')).lower().strip(), str(s.get('artist_name', '')).lower().strip())
+        
+        # Strip out anything inside parentheses/brackets: e.g. "Chaleya (From "Jawan")" -> "Chaleya"
+        raw_title = str(s.get('title', ''))
+        clean_title = re.sub(r'\(.*?\)|\[.*?\]', '', raw_title)
+        
+        # Flatten string: remove non-alphanumeric and spaces
+        clean_title = re.sub(r'[^a-zA-Z0-9]', '', clean_title).lower()
+        
+        # Get just the single primary artist to avoid "Arijit Singh, Shilpa Rao" vs "Arijit Singh" mismatches
+        artists = s.get('artists', [])
+        primary_artist = ''
+        if artists and isinstance(artists, list) and len(artists) > 0 and isinstance(artists[0], dict):
+            primary_artist = str(artists[0].get('name', ''))
+        else:
+            primary_artist = str(s.get('artist_name', ''))
+            
+        clean_artist = re.sub(r'[^a-zA-Z0-9]', '', primary_artist.split(',')[0]).lower()
+        
+        key = f"{clean_title}||{clean_artist}"
         if key not in seen:
             seen.add(key)
             unique_songs.append(s)
+            
     return unique_songs
 
 @jiosaavn_bp.route('/home', methods=['GET'])
@@ -837,7 +859,9 @@ def get_home_content():
                         log_error(f"Empty results for featured playlist query '{query}'")
                     for p in results:
                         if isinstance(p, dict):
-                            content['featured_playlists'].append(_normalize_playlist(p))
+                            norm = _normalize_playlist(p)
+                            if norm.get('song_count', 0) > 0:
+                                content['featured_playlists'].append(norm)
                 else:
                     log_error(f"Upstream failure for playlist query '{query}': {data.get('message', 'No details')}", f"{SAAVN_API_BASE}/search/playlists", str(data))
             except Exception as e:
