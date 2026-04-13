@@ -824,15 +824,6 @@ const IssuesTab = ({ token }) => {
                        <Users className="w-3 h-3" /> Reported by @{issue.username} ({issue.email})
                     </p>
                   </div>
-
-                  {issue.error_log && issue.error_log !== 'Manual report' && (
-                    <div className="mt-4 p-4 bg-black/40 rounded-2xl border border-white/5 overflow-x-auto">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 mb-2">Technical Logs</p>
-                      <pre className="text-[10px] font-mono text-rose-400/80 leading-relaxed">
-                        {issue.error_log}
-                      </pre>
-                    </div>
-                  )}
                 </div>
 
                 <div className="flex flex-row md:flex-col justify-end gap-2 shrink-0">
