@@ -54,6 +54,10 @@ def register():
     if not username or not email or not password:
         return jsonify({"error": "Missing required fields: username, email, password"}), 400
 
+    import re
+    if not re.match(r'^[A-Za-z0-9_]{3,30}$', username):
+        return jsonify({"error": "Username can only contain letters, numbers, and underscores (no spaces)"}), 400
+
     if not first_name or not first_name.strip():
         return jsonify({"error": "First name is required"}), 400
 
@@ -291,6 +295,9 @@ def update_profile():
     params = []
 
     if username:
+        import re
+        if not re.match(r'^[A-Za-z0-9_]{3,30}$', username):
+            return jsonify({"error": "Username can only contain letters, numbers, and underscores (no spaces)"}), 400
         update_fields.append("username = %s")
         params.append(username)
     if first_name is not None:

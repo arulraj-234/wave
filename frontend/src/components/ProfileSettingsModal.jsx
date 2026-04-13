@@ -24,8 +24,9 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState(null);
+  const [usernameFormatError, setUsernameFormatError] = useState('');
+  const usernameTimerRef = useRef(null);
   const usernameTimerRef = useRef(null);
   const fileInputRef = useRef(null);
   const [issueDescription, setIssueDescription] = useState('');
@@ -73,9 +74,23 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
   }, [user]);
 
   const handleUsernameChange = (val) => {
-    const cleaned = val.toLowerCase().replace(/[^a-z0-9_]/g, '');
-    setFormData({ ...formData, username: cleaned });
-    checkUsername(cleaned);
+    const rawVal = val.toLowerCase();
+    
+    if (rawVal && !/^[a-z0-9_]+$/.test(rawVal)) {
+      setUsernameFormatError('Username can only contain letters, numbers, and underscores (no spaces)');
+    } else {
+      setUsernameFormatError('');
+    }
+
+    setFormData({ ...formData, username: rawVal });
+    
+    if (rawVal.length >= 3 && /^[a-z0-9_]+$/.test(rawVal)) {
+      checkUsername(rawVal);
+    } else {
+      if (usernameTimerRef.current) clearTimeout(usernameTimerRef.current);
+      setUsernameStatus(null);
+    }
+    
     setStatus('dirty');
   };
 
@@ -95,10 +110,9 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
     }
   };
 
-  const handleSave = async (e) => {
     if (e) e.preventDefault();
-    if (usernameStatus === 'taken') {
-      toast.error('Username is taken');
+    if (usernameStatus === 'taken' || usernameFormatError) {
+      toast.error('Please fix username formatting or availability issues');
       return;
     }
     setIsLoading(true);
@@ -214,7 +228,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
                    initial={{ opacity: 0, y: 10 }}
                    animate={{ opacity: 1, y: 0 }}
                    onClick={handleSave}
-                   disabled={isLoading || usernameStatus === 'taken'}
+                   disabled={isLoading || usernameStatus === 'taken' || !!usernameFormatError}
                    className="mt-4 w-full py-3 bg-brand-primary text-brand-dark rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
                  >
                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Save Changes'}
@@ -273,12 +287,13 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
                             className={`w-full bg-white/[0.03] border rounded-xl px-4 py-2.5 pr-10 text-sm text-white focus:outline-none transition-all ${usernameStatus === 'taken' ? 'border-red-500/50' : usernameStatus === 'available' ? 'border-emerald-500/50' : 'border-white/10 focus:border-brand-primary/40'}`}
                           />
                           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                             {usernameStatus === 'available' && <CheckCircle className="w-4 h-4 text-emerald-400" />}
-                             {usernameStatus === 'taken' && <XCircle className="w-4 h-4 text-red-400" />}
-                             {usernameStatus === 'checking' && <div className="w-4 h-4 border-2 border-brand-muted/30 border-t-brand-muted rounded-full animate-spin" />}
+                             {usernameStatus === 'available' && !usernameFormatError && <CheckCircle className="w-4 h-4 text-emerald-400" />}
+                             {(usernameStatus === 'taken' || usernameFormatError) && <XCircle className="w-4 h-4 text-red-400" />}
+                             {usernameStatus === 'checking' && !usernameFormatError && <div className="w-4 h-4 border-2 border-brand-muted/30 border-t-brand-muted rounded-full animate-spin" />}
                           </div>
                        </div>
-                       <p className="text-[10px] text-brand-muted italic">Your unique handle on Wave. Changing this may affect shared links.</p>
+                       {usernameFormatError && <p className="text-[10px] text-amber-400 font-bold mt-1.5">{usernameFormatError}</p>}
+                       <p className="text-[10px] text-brand-muted italic mt-1.5">Your unique handle on Wave. Changing this may affect shared links.</p>
                     </section>
                  </div>
                )}

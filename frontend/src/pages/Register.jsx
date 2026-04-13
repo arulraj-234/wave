@@ -25,6 +25,7 @@ const Register = ({ setAuth }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState(null); // null, 'checking', 'available', 'taken'
+  const [usernameFormatError, setUsernameFormatError] = useState('');
   const usernameTimerRef = useRef(null);
   const navigate = useNavigate();
   const toast = useToast();
@@ -56,9 +57,22 @@ const Register = ({ setAuth }) => {
   }, []);
 
   const handleUsernameChange = (e) => {
-    const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const val = e.target.value.toLowerCase();
+    
+    if (val && !/^[a-z0-9_]+$/.test(val)) {
+      setUsernameFormatError('Username can only contain letters, numbers, and underscores (no spaces)');
+    } else {
+      setUsernameFormatError('');
+    }
+
     setFormData({ ...formData, username: val });
-    checkUsername(val);
+    
+    if (val.length >= 3 && /^[a-z0-9_]+$/.test(val)) {
+      checkUsername(val);
+    } else {
+      if (usernameTimerRef.current) clearTimeout(usernameTimerRef.current);
+      setUsernameStatus(null);
+    }
   };
 
   // DOB validation
@@ -92,6 +106,10 @@ const Register = ({ setAuth }) => {
     }
     if (usernameStatus === 'taken') {
       setError('That username is taken. Please choose another.');
+      return;
+    }
+    if (usernameFormatError) {
+      setError('Please fix the username format issues.');
       return;
     }
     setError('');
@@ -219,6 +237,7 @@ const Register = ({ setAuth }) => {
                     {usernameStatus === 'checking' && <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-brand-muted/30 border-t-brand-muted rounded-full animate-spin" />}
                   </div>
                   {usernameStatus === 'taken' && <p className="text-red-400 text-xs mt-1.5 font-medium">Username is already taken</p>}
+                  {usernameFormatError && <p className="text-amber-400 text-xs mt-1.5 font-medium">{usernameFormatError}</p>}
                 </div>
 
                 <div>
