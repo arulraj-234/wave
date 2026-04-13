@@ -27,7 +27,6 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
   const [usernameStatus, setUsernameStatus] = useState(null);
   const [usernameFormatError, setUsernameFormatError] = useState('');
   const usernameTimerRef = useRef(null);
-  const usernameTimerRef = useRef(null);
   const fileInputRef = useRef(null);
   const [issueDescription, setIssueDescription] = useState('');
   const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
