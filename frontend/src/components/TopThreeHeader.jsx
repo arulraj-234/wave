@@ -8,7 +8,7 @@ const TopThreeHeader = ({ trendingSongs, resolveUrl, onPlay }) => {
       <div className="hidden md:block pt-6 pb-10 px-8 max-w-[1400px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[280px]">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/5 bg-white/5 animate-pulse" />
+            <div key={`skeleton-top-three-${i}`} className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/5 bg-white/5 animate-pulse" />
           ))}
         </div>
       </div>
@@ -19,9 +19,9 @@ const TopThreeHeader = ({ trendingSongs, resolveUrl, onPlay }) => {
   return (
     <div className="hidden md:block animate-fade-in pt-6 pb-10 px-8 max-w-[1400px] mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[280px]">
-        {topThree.map((song, i) => (
+        {topThree.slice(0, 3).map((song, i) => (
           <div 
-            key={song.saavn_id || i}
+            key={`top-three-song-${song.saavn_id || song.song_id || i}-${i}`}
             onClick={() => onPlay(song)}
             className="relative rounded-3xl overflow-hidden group cursor-pointer shadow-2xl border border-white/5 bg-brand-surface"
           >
