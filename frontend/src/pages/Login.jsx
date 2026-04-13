@@ -28,14 +28,30 @@ const Login = ({ setAuth }) => {
         force_login: forceLogin
       });
       localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
 
-      const role = response.data.user.role;
+      // Fetch the FULL user profile (with avatar_url, streaming_quality, etc.)
+      // The login response only returns a minimal subset.
+      try {
+        const meResponse = await api.get('/api/auth/me');
+        if (meResponse.data.success) {
+          localStorage.setItem('user', JSON.stringify(meResponse.data.user));
+        } else {
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+        }
+      } catch {
+        // Fallback to the login response's minimal user data
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const role = user.role || response.data.user.role;
+
+      setAuth(true);
+
       if (role === 'admin') navigate('/admin', { replace: true });
       else if (role === 'artist') navigate('/artist', { replace: true });
       else navigate('/dashboard', { replace: true });
 
-      setTimeout(() => setAuth(true), 0);
       toast.success('Welcome back!');
 
     } catch (err) {
