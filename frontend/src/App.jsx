@@ -169,23 +169,34 @@ function App() {
     checkAuth();
   }, []);
 
-  // Global 401 interceptor
+  // Global 401 interceptor — any 401 (including stale session) triggers logout
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       (error) => {
         if (error.response && error.response.status === 401) {
-           if (!error.config.url.endsWith('/api/auth/me')) {
-              setIsAuthenticated(false);
-              localStorage.removeItem('user');
-              localStorage.removeItem('token');
-           }
+          setIsAuthenticated(false);
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
         }
         return Promise.reject(error);
       }
     );
     return () => api.interceptors.response.eject(interceptor);
   }, []);
+
+  // Session heartbeat — periodically validate that this session is still active
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(async () => {
+      try {
+        await api.get('/api/auth/me');
+      } catch {
+        // 401 will be caught by the interceptor above and trigger logout
+      }
+    }, 30000); // every 30 seconds
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
 
   if (isInitializing) {
