@@ -1,6 +1,6 @@
 # 🌊 Wave — Music Streaming Platform
 
-A full-stack music streaming platform with a Python/Flask REST API backend, React (Vite) frontend, JioSaavn content integration, and a native Android app via Capacitor — all from a single codebase.
+A full-stack music streaming platform built with a **Python/Flask** REST API backend and a **React (Vite)** frontend, powered by **JioSaavn** for content discovery and streaming.
 
 **Live:** [wavemusic-six.vercel.app](https://wavemusic-six.vercel.app) (Frontend) | [wave-1-plq6.onrender.com](https://wave-1-plq6.onrender.com) (API)
 
@@ -15,36 +15,37 @@ A full-stack music streaming platform with a Python/Flask REST API backend, Reac
 - [Database](#database)
 - [API Reference](#api-reference)
 - [Frontend Architecture](#frontend-architecture)
-- [Android App](#android-app)
 - [Audio Engine](#audio-engine)
 - [JioSaavn Integration](#jiosaavn-integration)
 - [Authentication](#authentication)
 - [Deployment](#deployment)
+- [Testing](#testing)
 - [Key Design Decisions](#key-design-decisions)
 - [Known Limitations](#known-limitations)
+- [Future Improvements](#future-improvements)
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     CLIENTS                                  │
-│  ┌──────────┐  ┌──────────────┐  ┌───────────────────────┐  │
-│  │ Web (PC) │  │ Web (Mobile) │  │ Android APK           │  │
-│  │ Browser  │  │ Browser      │  │ Capacitor WebView     │  │
-│  └────┬─────┘  └──────┬───────┘  └───────────┬───────────┘  │
-│       │               │                      │               │
-│       └───────────────┼──────────────────────┘               │
-│                       │ Same React codebase                  │
-│              ┌────────▼────────┐                             │
-│              │  React Frontend │                             │
-│              │  Vite + Tailwind│                             │
-│              └────────┬────────┘                             │
-└───────────────────────┼─────────────────────────────────────┘
-                        │ HTTPS / REST
-        ┌───────────────┼───────────────┐
-        ▼                               ▼
+┌─────────────────────────────────────────────────────┐
+│                      CLIENTS                        │
+│  ┌──────────────┐        ┌──────────────────────┐   │
+│  │  Web (PC)    │        │  Web (Mobile)        │   │
+│  │  Browser     │        │  Responsive Browser  │   │
+│  └──────┬───────┘        └──────────┬───────────┘   │
+│         │                           │               │
+│         └───────────┬───────────────┘               │
+│                     │  Same React codebase          │
+│            ┌────────▼────────┐                      │
+│            │  React Frontend │                      │
+│            │  Vite + Tailwind│                      │
+│            └────────┬────────┘                      │
+└─────────────────────┼──────────────────────────────┘
+                      │ HTTPS / REST
+      ┌───────────────┼───────────────┐
+      ▼                               ▼
 ┌───────────────┐              ┌────────────────┐
 │ Flask Backend │              │ JioSaavn API   │
 │ REST API      │              │ Node.js Proxy  │
@@ -54,11 +55,11 @@ A full-stack music streaming platform with a Python/Flask REST API backend, Reac
         ▼                               ▼
 ┌───────────────┐              ┌────────────────┐
 │ MySQL / TiDB  │              │ JioSaavn CDN   │
-│ Database      │              │ Audio Streams   │
+│ Database      │              │ Audio Streams  │
 └───────────────┘              └────────────────┘
 ```
 
-All three client platforms (desktop web, mobile web, Android APK) share the **exact same React codebase**. The Android app is the compiled `dist/` folder wrapped in a Capacitor WebView — there is no separate mobile codebase.
+The desktop and mobile web clients share the **exact same React codebase** — responsive design handles layout differences automatically.
 
 ---
 
@@ -71,11 +72,10 @@ All three client platforms (desktop web, mobile web, Android APK) share the **ex
 | **Animations** | Motion (Framer Motion) + GSAP | — |
 | **Icons** | Lucide React | — |
 | **HTTP Client** | Axios | — |
-| **Mobile** | Capacitor | v6 |
 | **Backend** | Flask + Gunicorn | Flask 3.0 |
 | **Database** | MySQL (local) / TiDB Serverless (prod) | MySQL 8 / TiDB |
+| **Cloud Storage** | Supabase Storage (S3 API) | — |
 | **Auth** | PyJWT (HS256) | — |
-| **Audio Metadata** | Mutagen (Python) | — |
 | **Rate Limiting** | Flask-Limiter | — |
 | **Content API** | Self-hosted JioSaavn API (Node.js) | — |
 
@@ -89,11 +89,13 @@ wave/
 │   ├── app.py                      # Entry point, CORS, blueprint registration
 │   ├── config.py                   # Env-based configuration (DB, JWT, Saavn URL)
 │   ├── db.py                       # MySQL connection pool + query helpers
+│   ├── db_init.py                  # Database initialization from schema.sql
 │   ├── middleware.py               # JWT auth decorators (@token_required, @admin_required)
 │   ├── migrate.py                  # Migration runner (local + TiDB production)
+│   ├── storage.py                  # Supabase S3 storage integration
+│   ├── wsgi.py                     # WSGI entry point for Gunicorn
 │   ├── schema.sql                  # Universal schema (MySQL + TiDB compatible)
 │   ├── requirements.txt            # Python dependencies
-│   ├── .env                        # Local secrets (git-ignored)
 │   ├── .env.example                # Template for environment setup
 │   ├── routes/
 │   │   ├── auth.py                 # Login, register, sessions, profile, onboarding
@@ -105,18 +107,27 @@ wave/
 │   │   ├── admin.py                # Admin-only endpoints (user/song management)
 │   │   └── issues.py               # Error reporting from frontend
 │   ├── migrations/                 # Numbered SQL migration files
+│   │   ├── 001_expand_url_columns.sql
+│   │   ├── 002_add_active_session.sql
+│   │   └── 003_add_streaming_quality.sql
 │   ├── tests/                      # Pytest automation suite
 │   │   ├── conftest.py             # Mock DB fixtures
 │   │   ├── test_auth.py            # JWT and identity validation
 │   │   └── test_songs.py           # Deduplication mechanics
-│   └── uploads/                    # Local dev file fallback (Prod uses Supabase)
+│   ├── scripts/                    # One-off maintenance scripts
+│   │   ├── delete_invalid_users.py
+│   │   ├── find_top_artist.py
+│   │   ├── migrate_language.py
+│   │   └── set_artist_password.py
+│   └── uploads/                    # Local dev file storage (prod uses Supabase)
 │
-├── frontend/                       # React + Vite (serves ALL platforms)
+├── frontend/                       # React + Vite
 │   ├── index.html                  # HTML shell
 │   ├── package.json                # Dependencies
 │   ├── vite.config.js              # Vite build config
-│   ├── capacitor.config.json       # Android WebView config
 │   ├── vercel.json                 # Vercel SPA rewrite rules
+│   ├── eslint.config.js            # ESLint configuration
+│   ├── postcss.config.js           # PostCSS configuration
 │   ├── .env.production             # Production API URL
 │   ├── src/
 │   │   ├── main.jsx                # React entry + PlayerProvider
@@ -129,39 +140,53 @@ wave/
 │   │   │   ├── Onboarding.jsx      # Genre/language/artist preference picker
 │   │   │   ├── Dashboard.jsx       # Main listener UI (Home/Library/Search)
 │   │   │   ├── Search.jsx          # Global search with tabs
-│   │   │   ├── ListenerStats.jsx   # "Spotify Wrapped" analytics
+│   │   │   ├── ListenerStats.jsx   # "Spotify Wrapped" style analytics
 │   │   │   ├── Artist.jsx          # Artist portal
 │   │   │   └── Admin.jsx           # Admin dashboard
 │   │   ├── components/
-│   │   │   ├── ErrorBoundary.jsx   # Global crash protection
-│   │   │   ├── HorizontalCarousel.jsx
-│   │   │   ├── VinylExpansionHeader.jsx  # Responsive spinning record hero
-│   │   │   ├── ContentCard.jsx, QuickPickCard.jsx, TopThreeHeader.jsx
-│   │   │   ├── SectionHeader.jsx
 │   │   │   ├── BottomPlayer.jsx    # Now-playing bar + fullscreen player
 │   │   │   ├── Sidebar.jsx         # Desktop navigation
 │   │   │   ├── QueuePanel.jsx      # Play queue management
 │   │   │   ├── SongCard.jsx        # Song list item
-│   │   │   ├── SongContextMenu.jsx # Right-click/long-press menu
-│   │   │   ├── ProfileSettingsModal.jsx
-│   │   │   ├── MagicBento.jsx      # Animated bento grid component
-│   │   │   ├── Logo.jsx, Plasma.jsx, TiltedCard.jsx, CountUp.jsx
+│   │   │   ├── SongContextMenu.jsx # Right-click / long-press menu
+│   │   │   ├── ProfileSettingsModal.jsx  # User settings
+│   │   │   ├── UserMenu.jsx        # User dropdown menu
+│   │   │   ├── ErrorBoundary.jsx   # Global crash protection
+│   │   │   ├── HorizontalCarousel.jsx
+│   │   │   ├── VinylExpansionHeader.jsx  # Spinning record hero banner
+│   │   │   ├── ContentCard.jsx     # Generic content display card
+│   │   │   ├── QuickPickCard.jsx   # Quick pick suggestion card
+│   │   │   ├── TopThreeHeader.jsx  # Top 3 display component
+│   │   │   ├── SectionHeader.jsx   # Section title component
+│   │   │   ├── Skeleton.jsx        # Loading skeleton placeholder
+│   │   │   ├── UpdatePrompt.jsx    # Update notification prompt
+│   │   │   ├── MagicBento.jsx      # Animated bento grid
+│   │   │   ├── ElasticSlider.jsx   # Elastic slider control
+│   │   │   ├── Logo.jsx            # Animated Wave logo
+│   │   │   ├── Plasma.jsx          # Plasma background effect
+│   │   │   ├── Plasma.css          # Plasma effect styles
+│   │   │   ├── TiltedCard.jsx      # 3D tilt effect card
+│   │   │   ├── CountUp.jsx         # Animated counter
 │   │   │   └── artist/             # Artist portal components
+│   │   │       ├── ArtistOverview.jsx    # Artist dashboard overview
+│   │   │       ├── ArtistMusic.jsx       # Music management tab
+│   │   │       ├── ArtistAudience.jsx    # Audience analytics tab
+│   │   │       └── CreateReleaseModal.jsx # Song/album upload modal
 │   │   └── context/
 │   │       ├── PlayerContext.jsx    # Audio engine, queue, media controls
 │   │       └── ToastContext.jsx     # Notification system
-│   ├── android/                    # Capacitor-generated Android project
 │   ├── public/                     # Static assets (favicon, manifest)
 │   ├── icons/                      # PWA icons (various sizes)
-│   └── assets/                     # Capacitor branding (icon, splash)
+│   └── assets/                     # Branding assets (icon, splash)
 │
 ├── jiosaavn-api/                   # Self-hosted JioSaavn API proxy
 │   ├── serve.mjs                   # Entry point
 │   ├── src/                        # API source
 │   └── package.json
 │
-├── start.ps1                       # One-click startup (all services)
-├── kill.ps1                        # Stop all services
+├── Procfile                        # Render deployment process file
+├── start.ps1                       # One-click local startup (all services)
+├── kill.ps1                        # Stop all local services
 └── .gitignore
 ```
 
@@ -174,13 +199,12 @@ wave/
 - **Node.js** ≥ 18
 - **Python** ≥ 3.10
 - **MySQL** 8.0 (local development)
-- **Android SDK** (optional, for APK builds)
 
 ### Quick Start
 
 ```powershell
 # 1. Clone
-git clone https://github.com/your-repo/wave.git
+git clone https://github.com/arulraj-234/wave.git
 cd wave
 
 # 2. Backend setup
@@ -189,7 +213,6 @@ python -m venv venv
 .\venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env          # Edit with your DB credentials
-python db_init.py               # Initialize database + schema
 
 # 3. Frontend setup
 cd ..\frontend
@@ -204,7 +227,7 @@ cd ..
 .\start.ps1
 ```
 
-The `start.ps1` script launches all 4 services:
+The `start.ps1` script launches all services:
 1. Database initialization → `python db_init.py`
 2. Flask backend → `http://localhost:5000`
 3. JioSaavn API → `http://localhost:3001`
@@ -242,12 +265,12 @@ VITE_API_URL=https://wave-1-plq6.onrender.com
 
 ## Database
 
-### Schema (14 tables)
+### Schema (14 Tables)
 
 | Table | Purpose |
 |-------|---------|
-| `users` | User accounts with roles (listener/artist/admin) |
-| `user_preferences` | Onboarding selections (genre/language/artist) |
+| `users` | User accounts with roles (listener / artist / admin) |
+| `user_preferences` | Onboarding selections (genre / language / artist) |
 | `artist_profiles` | Artist metadata, verification status, banner |
 | `albums` | Album containers with cover art |
 | `songs` | Song metadata (local uploads + JioSaavn imports via `saavn_id`) |
@@ -257,13 +280,13 @@ VITE_API_URL=https://wave-1-plq6.onrender.com
 | `streams` | Play history with `listen_duration` for analytics |
 | `user_liked_songs` | Liked songs library |
 | `liked_playlists` | Liked JioSaavn playlists (stored by `saavn_playlist_id`) |
-| `follows` | User→Artist following relationship |
+| `follows` | User → Artist following relationship |
 | `subscriptions` | Subscription tiers (schema exists, not fully wired) |
 | `issues` | Error/issue reports from frontend |
 
 ### Views
 
-- `platform_stats_view` — Admin overview aggregating total users, songs, streams, most popular song, etc.
+- `platform_stats_view` — Admin overview aggregating total users, songs, streams, and the most popular song.
 
 ### Migrations
 
@@ -275,13 +298,13 @@ python migrate.py --prod       # Apply to production TiDB
 python migrate.py --dry-run    # Preview without applying
 ```
 
-Migration files are numbered: `backend/migrations/001_name.sql`, `002_name.sql`, etc.
+Migration files are numbered sequentially: `backend/migrations/001_name.sql`, `002_name.sql`, etc.
 
 ### Connection Layer (`db.py`)
 
 - Uses `mysql-connector-python` with a **connection pool** (`pool_size=10`)
 - Disables `ONLY_FULL_GROUP_BY` for TiDB compatibility
-- Three helpers: `fetch_one()`, `fetch_all()`, `execute_query()`
+- Three query helpers: `fetch_one()`, `fetch_all()`, `execute_query()`
 
 ---
 
@@ -383,8 +406,8 @@ Migration files are numbered: `backend/migrations/001_name.sql`, `002_name.sql`,
 
 ```
 /login          → Login page
-/register       → Registration (listener/artist)
-/onboarding     → Genre/language/artist picker (first-time listener)
+/register       → Registration (listener / artist)
+/onboarding     → Genre / language / artist picker (first-time listener)
 /dashboard/*    → Main listener UI (Home, Library, Search tabs)
 /search         → Global search
 /artist         → Artist portal (artists + admins)
@@ -401,78 +424,31 @@ Migration files are numbered: `backend/migrations/001_name.sql`, `002_name.sql`,
 
 ### Key Components
 
-| Component | Size | Responsibility |
-|-----------|------|----------------|
-| `Dashboard.jsx` | 20KB | Main listener UI — Uses extracted modular components to show trending, recommendations, and recents |
-| `VinylExpansionHeader.jsx`| Mobile-adaptive 3D spinning record Hero Banner |
+| Component | Responsibility |
+|-----------|----------------|
+| `Dashboard.jsx` | Main listener UI — trending, recommendations, recents, library |
+| `BottomPlayer.jsx` | Persistent now-playing bar with fullscreen mode, cover art, progress, volume, sleep timer |
+| `PlayerContext.jsx` | Global audio engine — playback, queue, shuffle, preload, stream config |
+| `Sidebar.jsx` | Desktop navigation with search, now-playing indicator |
+| `Search.jsx` | Multi-tab search (Songs, Artists, Albums, Playlists) with JioSaavn integration |
+| `Admin.jsx` | Admin dashboard with tabs: Overview, Songs, Upload, Users, Issues |
+| `Artist.jsx` | Artist portal with overview, music management, and audience analytics |
+| `VinylExpansionHeader.jsx` | Mobile-adaptive 3D spinning record hero banner |
+| `MagicBento.jsx` | Animated bento grid for stats display |
 | `ErrorBoundary.jsx` | Global catch-all wrapper to prevent white-screens of death |
-| `BottomPlayer.jsx` | 25KB | Persistent now-playing bar. Expands to fullscreen with cover art, progress bar, volume. Sleep timer UI |
-| `PlayerContext.jsx` | 26KB | Global audio engine — playback, queue, shuffle, preload, stream config |
-| `Admin.jsx` | 41KB | Admin dashboard with tabs: Overview, Songs, Upload, Users, Issues |
-| `Search.jsx` | 18KB | Multi-tab search (Songs, Artists, Albums, Playlists) with JioSaavn integration |
-| `Sidebar.jsx` | 10KB | Desktop navigation with search, now-playing indicator |
 
 ### State Management
 
 - **PlayerContext** — Global React Context for audio state (current song, queue, playback controls, liked songs, playlists)
+- **ToastContext** — Global notification/toast system
 - **localStorage** — Persisted: `token`, `user`, `wave_volume`, `wave_shuffle`, `wave_repeat`
-- No Redux/Zustand — all state is in Context or component-local
-
----
-
-## Android App
-
-The Android app is the same React frontend compiled and wrapped in a Capacitor WebView.
-
-### Build Process
-
-```powershell
-.\start.ps1 -BuildAPK
-
-# Or manually:
-cd frontend
-npm run build           # Compile React → dist/
-npx cap sync android    # Copy dist/ into Android project
-cd android
-./gradlew assembleDebug # Build APK
-```
-
-Output: `frontend/android/app/build/outputs/apk/debug/app-debug.apk`
-
-### Capacitor Config
-
-```json
-{
-  "appId": "com.wave.app",
-  "appName": "Wave",
-  "webDir": "dist",
-  "server": { "cleartext": true, "androidScheme": "https" },
-  "android": { "backgroundColor": "#0a0a0a", "allowMixedContent": true }
-}
-```
-
-### Native Features
-
-| Feature | Plugin | Usage |
-|---------|--------|-------|
-| Media controls (notification + lock screen) | `capacitor-music-controls-plugin` | Play/pause/next/prev from notification bar |
-| Status bar | `@capacitor/status-bar` | Transparent overlay, dark style |
-| Hardware back button | `@capacitor/app` | Prevents app exit, minimizes player |
-| ADB port forwarding | Built-in | `start.ps1` auto-maps ports 5000 + 3001 for emulator |
-
-### Platform Detection
-
-```javascript
-const isCapacitor = typeof window !== 'undefined' && window.Capacitor !== undefined;
-```
-
-Used for: toggling `withCredentials` on Axios, loading native plugins in try/catch, adjusting bottom padding for mobile nav.
+- No Redux/Zustand — all state lives in Context or component-local state
 
 ---
 
 ## Audio Engine
 
-The audio engine lives in `PlayerContext.jsx` and handles:
+The audio engine lives in `PlayerContext.jsx` and handles all playback logic.
 
 ### Playback Pipeline
 
@@ -492,26 +468,17 @@ The audio engine lives in `PlayerContext.jsx` and handles:
 
 ### Sleep Timer
 
-Countdown timer (15/30/45/60 min) that pauses playback when it hits zero.
-
-### Native Media Controls (Android)
-
-When a song plays, `CapacitorMusicControls.create()` is called with:
-- Track title, artist name, cover art URL
-- Notification buttons: prev, play/pause, next, close
-- Lock screen controls
-
-Events are captured via `CapacitorMusicControls.addListener()` and mapped to player actions.
+Countdown timer (15 / 30 / 45 / 60 min) that pauses playback when it hits zero.
 
 ---
 
 ## JioSaavn Integration
 
-The self-hosted JioSaavn API proxy (`jiosaavn-api/`) provides access to JioSaavn's music catalog.
+The self-hosted JioSaavn API proxy (`jiosaavn-api/`) provides access to JioSaavn's entire music catalog.
 
 ### How It Works
 
-1. **Search/Browse** — Frontend calls `/api/jiosaavn/search?q=...` → Backend proxies to local JioSaavn API → Normalizes response
+1. **Search / Browse** — Frontend calls `/api/jiosaavn/search?q=...` → Backend proxies to local JioSaavn API → Normalizes response
 2. **Play** — When user plays a JioSaavn song, `PlayerContext` calls `POST /api/jiosaavn/import` → Backend:
    - Resolves the artist (creates `user` + `artist_profile` if needed)
    - Saves song metadata to `songs` table with `saavn_id`
@@ -537,16 +504,6 @@ The `/api/jiosaavn/home` endpoint caches JioSaavn home data for **5 minutes** (`
 4. **Validation** — `@token_required` decorator decodes JWT → Sets `request.current_user`
 5. **Concurrent Sessions** — `active_session` column tracks current session ID; `/me` endpoint checks if session matches
 
-### Dual Token Strategy
-
-- **Web browsers** — `withCredentials: true` (cookie-based fallback)
-- **Capacitor Android** — `withCredentials: false` (Bearer token only, avoids CORS issues)
-- `api.js` auto-detects platform:
-  ```javascript
-  const isCapacitor = window.Capacitor !== undefined;
-  withCredentials: !isCapacitor
-  ```
-
 ### Role Decorators
 
 ```python
@@ -568,9 +525,9 @@ The `/api/jiosaavn/home` endpoint caches JioSaavn home data for **5 minutes** (`
 
 ### Backend → Render
 
-- **Start command:** `gunicorn app:app --bind 0.0.0.0:$PORT`
+- **Start command:** `gunicorn --chdir backend app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 2` (via `Procfile`)
 - **Env vars:** All `DB_*`, `SECRET_KEY`, `SAAVN_API_URL`, `FLASK_ENV=production`
-- **⚠️ Ephemeral filesystem:** Uploaded files in `uploads/` are lost on each deploy
+- **⚠️ Ephemeral filesystem:** Uploaded files in `uploads/` are lost on each deploy — Supabase Storage handles production media
 
 ### Database → TiDB Serverless
 
@@ -579,7 +536,24 @@ The `/api/jiosaavn/home` endpoint caches JioSaavn home data for **5 minutes** (`
 - Schema avoids MySQL-specific features (no partitioning, no FULLTEXT, no triggers)
 
 ### Cloud Storage → Supabase Storage (S3 API)
-- Uploaded media (`songs/`, `albums/`, `avatars/`) is piped over purely decoupled REST endpoints to a Supabase bucket (`wave-uploads`) via `backend/storage.py` to circumvent Render's volatile ephemeral disks.
+
+- Uploaded media (`songs/`, `albums/`, `avatars/`) is stored in a Supabase bucket (`wave-uploads`)
+- Managed via `backend/storage.py` — decoupled REST integration to avoid Render's ephemeral disk limitations
+
+---
+
+## Testing
+
+The backend has an automated **pytest** suite in `backend/tests/`:
+
+- **`test_auth.py`** — Validates JWT generation lifecycle and identity verification
+- **`test_songs.py`** — Tests algorithmic components like `_dedup_songs` for deduplication correctness
+- **`conftest.py`** — Mock DB fixtures using `unittest.mock` patch targets (zero data-loss paradigm)
+
+```bash
+cd backend
+python -m pytest tests/ -v
+```
 
 ---
 
@@ -587,29 +561,42 @@ The `/api/jiosaavn/home` endpoint caches JioSaavn home data for **5 minutes** (`
 
 | Decision | Rationale |
 |----------|-----------|
-| **Single codebase for 3 platforms** | Capacitor wraps the same React build, avoiding code duplication |
 | **JioSaavn lazy-import** | Saves songs to local DB on first play, enabling likes/playlists/analytics on external content |
 | **No ORM (raw SQL)** | Direct control over queries, TiDB compatibility, simpler for MySQL-specific optimizations |
-| **HashRouter** | Avoids server-side routing conflicts on Vercel and Capacitor |
-| **Connection pool** | Reuses DB connections across requests (pool_size=10) |
-| **JWT over sessions** | Stateless auth works across web + native without cookie headaches |
+| **HashRouter** | Avoids server-side routing conflicts on Vercel's static hosting |
+| **Connection pool** | Reuses DB connections across requests (`pool_size=10`) |
+| **JWT over sessions** | Stateless auth works across all platforms without cookie headaches |
 | **Batch artist enrichment** | Single JOIN query for all songs' artists instead of N+1 queries |
+| **Supabase for storage** | Decouples file storage from Render's volatile ephemeral filesystem |
 
 ---
 
 ## Known Limitations
 
-1. **Home cache has no size limit.** The `_home_cache` dict in `jiosaavn.py` can grow unbounded.
-2. **Subscriptions table exists but isn't wired** to any feature or paywall logic.
+1. **Home cache has no size limit** — The `_home_cache` dict in `jiosaavn.py` can grow unbounded in long-running processes.
+2. **Subscriptions table exists but isn't wired** — Schema is in place, but no paywall/tier logic is implemented yet.
+3. **Cold starts on Render** — Free-tier backend spins down after inactivity; first request after idle may take 30–60 seconds.
 
 ---
 
-## Testing
+## Future Improvements
 
-The backend is backed by an automated **`pytest`** suite. The testing engine (`backend/tests/`) ensures regressions don't slip into deployment:
-- Validates the `bcrypt` JWT generation lifecycle cleanly (`test_auth.py`)
-- Employs `unittest.mock` patch targets to simulate database queries dynamically (Zero Data-Loss paradigm)
-- Checks programmatic algorithm components like `_dedup_songs` (`test_songs.py`) 
+- **Native Android App** — Wrap the React frontend in a Capacitor WebView to ship as a standalone APK with native media controls (notification bar play/pause/skip), lock-screen integration, and hardware back-button handling. The `capacitor.config.json` and initial Android project scaffolding already exist in `frontend/`.
+- **Subscription & Paywall System** — Wire up the existing `subscriptions` table to enable tiered access (e.g., higher audio quality, ad-free experience).
+- **Social Features** — User-to-user song sharing, collaborative playlists, and activity feeds.
+- **Offline Mode** — Service worker caching for previously played tracks (PWA offline support).
+- **Audio Quality Selection** — Let users choose between streaming tiers (128kbps / 320kbps) based on network conditions or preference.
+
+---
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `start.ps1` | Start all services (DB init + backend + JioSaavn + frontend) |
+| `kill.ps1` | Stop all spawned processes |
+| `backend/migrate.py` | Database migration runner |
+| `backend/db_init.py` | Initialize database from `schema.sql` |
 
 ---
 
@@ -619,20 +606,8 @@ The backend is backed by an automated **`pytest`** suite. The testing engine (`b
 |---------|-------|----------|------|
 | Admin | admin@wave.com | admin123 | admin |
 
-⚠️ Change this immediately in production.
+⚠️ **Change these immediately in production.**
 
 ---
 
-## Scripts
-
-| Script | Description |
-|--------|-------------|
-| `start.ps1` | Start all services (DB init + backend + JioSaavn + frontend) |
-| `start.ps1 -BuildAPK` | Build Android debug APK |
-| `kill.ps1` | Stop all spawned processes |
-| `backend/migrate.py` | Database migration runner |
-| `backend/db_init.py` | Initialize database from schema.sql |
-
----
-
-*Built with Flask, React, TailwindCSS, Capacitor, and too much coffee ☕*
+*Built with Flask, React, TailwindCSS, and too much coffee ☕*
