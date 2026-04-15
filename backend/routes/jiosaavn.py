@@ -113,7 +113,8 @@ def search_global():
             
         if not isinstance(raw_results, list):
             raw_results = []
-            
+        
+        results = []
         for item in raw_results:
             if not isinstance(item, dict): continue
             if search_type == 'song':
