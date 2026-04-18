@@ -187,6 +187,8 @@ def get_home_recommendations(user_id, count=15):
     5. Enforce diversity
     6. Return top N with metadata
     """
+    profile = get_dynamic_taste_profile(user_id)
+    
     # Check stream count
     stream_count = fetch_one(
         "SELECT COUNT(*) as cnt FROM streams WHERE user_id = %s", (user_id,)
@@ -280,7 +282,8 @@ def get_home_recommendations(user_id, count=15):
         try:
              langs = ",".join(profile.get('languages', ['hindi']))
              url = f"{SAAVN_API_BASE}/search/songs"
-             resp = requests.get(url, params={'query': 'trending', 'limit': count}, timeout=5)
+             # Use localized trending for a "Smart" fallback
+             resp = requests.get(url, params={'query': 'trending', 'languages': langs, 'limit': count}, timeout=5)
              data = resp.json()
              if data.get('success'):
                  from routes.jiosaavn import _normalize_song
