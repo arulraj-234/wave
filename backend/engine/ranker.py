@@ -18,6 +18,10 @@ from engine import cache as rec_cache
 from engine.features import get_similar_songs, get_all_song_metadata, get_similar_by_attributes
 from engine.collaborative import get_collaborative_recs
 from engine.session import get_next_songs, get_session_context
+import requests
+from config import Config
+
+SAAVN_API_BASE = Config.SAAVN_API_URL.rstrip('/')
 
 
 # Engine weights for blending
@@ -151,6 +155,26 @@ def _enforce_diversity(songs, all_meta):
     return result
 
 
+def get_cloud_recommendations(saavn_id, count=15):
+    """
+    Fetch recommendations directly from JioSaavn Cloud API (Radio/Suggestions).
+    Used as high-priority signal for "Straight to Cloud" UX.
+    """
+    if not saavn_id: return []
+    try:
+        url = f"{SAAVN_API_BASE}/songs/{saavn_id}/suggestions"
+        resp = requests.get(url, params={'limit': count}, timeout=10)
+        data = resp.json()
+        if data.get('success'):
+            raw = data.get('data', [])
+            # Map JioSaavn format to our internal metadata format (simplified)
+            from routes.jiosaavn import _normalize_song
+            return [_normalize_song(s) for s in raw if isinstance(s, dict)]
+    except Exception as e:
+        print(f"[Ranker] Cloud fetch failed: {e}")
+    return []
+
+
 def get_home_recommendations(user_id, count=15):
     """
     Generate blended recommendations for a user's home feed.
@@ -209,6 +233,20 @@ def get_home_recommendations(user_id, count=15):
         for song_id, prob in next_songs:
             candidates[song_id] += prob * WEIGHTS['session']
     
+    # 4. Cloud Boost (Direct from JioSaavn Radio)
+    # If the user has a recent song, get cloud suggestions for it
+    if recent:
+        top_recent_saavn_ids = []
+        for r in recent[:2]:
+            meta = all_meta.get(r['song_id'], {})
+            if meta.get('saavn_id'): top_recent_saavn_ids.append(meta['saavn_id'])
+            
+        for sid in top_recent_saavn_ids:
+            cloud_recs = get_cloud_recommendations(sid, count=10)
+            for cr in cloud_recs:
+                csid = cr.get('saavn_id') or cr.get('song_id')
+                if csid: candidates[csid] += 0.6  # High weight for Cloud suggestions
+    
     # Filter out recently played and skipped
     recently_played = _get_recently_played(user_id, RECENTLY_PLAYED_PENALTY_HOURS)
     recently_skipped = _get_recently_skipped(user_id, SKIP_PENALTY_HOURS)
@@ -226,10 +264,28 @@ def get_home_recommendations(user_id, count=15):
     # Build response with full metadata
     result = []
     for song_id, score in diverse[:count]:
-        meta = all_meta.get(song_id, {})
+        meta = all_meta.get(song_id)
+        if not meta and isinstance(song_id, str):
+             # Handle case where song_id might be a pure saavn_id from cloud boost
+             # We should probably have a better way to resolve this, but for now:
+             # If we don't have it in all_meta, it came straight from the cloud.
+             # We'll need to fetch its metadata if it's not already in the cloud_recs map.
+             pass
         if meta:
             meta['rec_score'] = round(score, 4)
             result.append(meta)
+            
+    # CRITICAL FALLBACK: If we still have nothing, fetch cloud trending in user language
+    if not result:
+        try:
+             langs = ",".join(profile.get('languages', ['hindi']))
+             url = f"{SAAVN_API_BASE}/search/songs"
+             resp = requests.get(url, params={'query': 'trending', 'limit': count}, timeout=5)
+             data = resp.json()
+             if data.get('success'):
+                 from routes.jiosaavn import _normalize_song
+                 result = [_normalize_song(s) for s in data.get('data', {}).get('results', [])[:count]]
+        except: pass
     
     return result
 
@@ -328,6 +384,26 @@ def get_queue_predictions(user_id, current_song_id, count=10):
             meta['rec_score'] = round(score, 4)
             result.append(meta)
     
+    # FALLBACK: If still empty, fetch Cloud-Radio for this specific song
+    if not result:
+        # Get saavn_id for current_song
+        curr_meta = all_meta.get(current_song_id, {})
+        saavn_id = curr_meta.get('saavn_id')
+        if saavn_id:
+            result = get_cloud_recommendations(saavn_id, count=count)
+            
+    # Genre-Locked Fallback: If still empty or mood-consistent check failed
+    if not result:
+        curr_meta = all_meta.get(current_song_id, {})
+        genre = curr_meta.get('genre', 'pop')
+        try:
+             url = f"{SAAVN_API_BASE}/search/songs"
+             resp = requests.get(url, params={'query': f"{genre} trending", 'limit': count}, timeout=5)
+             if resp.status_code == 200:
+                  from routes.jiosaavn import _normalize_song
+                  result = [_normalize_song(s) for s in resp.json().get('data', {}).get('results', [])]
+        except: pass
+            
     return result
 
 

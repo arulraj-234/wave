@@ -863,17 +863,44 @@ def get_home_content():
     pq = get_preferred_quality(user_id)
 
     # ── Parallel Task Execution Engine ──
+    def _resolve_artist_id(artist_name):
+        """Quickly resolve a name like 'Bad Bunny' to a JioSaavn ID."""
+        try:
+            resp = requests.get(f"{SAAVN_API_BASE}/search/artists", params={'query': artist_name, 'limit': 1}, timeout=5)
+            data = resp.json()
+            if data.get('success'):
+                results = data.get('data', {}).get('results', [])
+                if results: return results[0].get('id')
+        except: pass
+        return None
+
     def fetch_api_task(category, type, query, limit=10):
         try:
-            baseUrl = f"{SAAVN_API_BASE}/search/{type}"
-            resp = requests.get(baseUrl, params={'query': query, 'limit': limit}, timeout=15)
+            if type == 'artists_top':
+                # Official Top Songs for a resolved ID
+                url = f"{SAAVN_API_BASE}/artists/{query}/songs"
+                params = {'limit': limit, 'page': 1, 'sortBy': 'popularity'}
+            elif type == 'artists_albums':
+                # Official New Releases for a resolved ID
+                url = f"{SAAVN_API_BASE}/artists/{query}/albums"
+                params = {'limit': limit, 'page': 1, 'sortBy': 'latest'}
+            else:
+                # Standard Keyword Search
+                url = f"{SAAVN_API_BASE}/search/{type}"
+                params = {'query': query, 'limit': limit}
+                
+            resp = requests.get(url, params=params, timeout=15)
             if resp.status_code == 200:
                 data = resp.json()
                 if data.get('success'):
-                    results = data.get('data', {}).get('results', []) if isinstance(data.get('data'), dict) else []
+                    raw_res = data.get('data', [])
+                    if isinstance(raw_res, dict):
+                        results = raw_res.get('results') or raw_res.get('data') or []
+                    else:
+                        results = raw_res
                     return {'category': category, 'results': results, 'query': query}
         except Exception as e:
-            print(f"[ParallelHome] Task failed for {category} ({query}): {e}")
+            print(f"[ParallelHome] Task failed for {category} ({type}/{query}): {e}")
         return {'category': category, 'results': [], 'query': query}
 
     tasks = []
@@ -919,10 +946,28 @@ def get_home_content():
                 tasks.append((f'mix_genre_{genre}', 'songs', sq, 8))
             mix_configs.append({'id': f'mix_genre_{genre}', 'title': f"Because you like {genre}", 'lang': expected_lang, 'type': 'genre'})
 
+        # Resolve Artists in parallel before task allocation (keep it fast)
+        resolved_artists = []
+        with ThreadPoolExecutor(max_workers=5) as resolver_exec:
+            artist_futures = {resolver_exec.submit(_resolve_artist_id, name): name for name in artist_names[:3]}
+            for fut in as_completed(artist_futures):
+                aid = fut.result()
+                if aid: resolved_artists.append((artist_futures[fut], aid))
+
+        for name, aid in resolved_artists:
+            # Task A: All-time Top Hits
+            tasks.append((f'mix_artist_{name}', 'artists_top', aid, 8))
+            # Task B: New Releases from this artist
+            tasks.append(('new_releases', 'artists_albums', aid, 5))
+            
+            mix_configs.append({'id': f'mix_artist_{name}', 'title': f"Best of {name}", 'lang': None, 'type': 'artist'})
+
+        # Fallback for unresolved artists
+        found_names = {ra[0] for ra in resolved_artists}
         for artist in artist_names[:3]:
-            if not artist or artist.endswith('.local'): continue
-            tasks.append((f'mix_artist_{artist}', 'songs', artist, 8))
-            mix_configs.append({'id': f'mix_artist_{artist}', 'title': f"More of {artist}", 'lang': None, 'type': 'artist'})
+            if artist not in found_names and not artist.endswith('.local'):
+                tasks.append((f'mix_artist_{artist}', 'songs', f"{artist} hits", 8))
+                mix_configs.append({'id': f'mix_artist_{artist}', 'title': f"More of {artist}", 'lang': None, 'type': 'artist'})
 
     # Execute all tasks in parallel (max 15 workers to stay safe on free tier clusters)
     results_map = {}
@@ -993,9 +1038,6 @@ def get_home_content():
         'timestamp': time.time(),
         'data': response_data
     }
-
-    return jsonify(response_data)
-
 
     return jsonify(response_data)
 
