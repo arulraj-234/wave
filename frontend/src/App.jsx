@@ -159,9 +159,13 @@ function App() {
           setIsAuthenticated(true);
         }
       } catch (error) {
+        // Only explicitly remove the token if the server explicitly rejected the token (401/403)
+        // This prevents users from being randomly logged out if the server is just offline/cold-starting
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+        }
         setIsAuthenticated(false);
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
       } finally {
         setIsInitializing(false);
       }

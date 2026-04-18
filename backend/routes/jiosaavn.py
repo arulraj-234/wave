@@ -210,20 +210,6 @@ def _normalize_song(song, preferred_quality='high'):
 
     final_audio_url = best_match or (download_urls[-1].get('url', '') if download_urls and isinstance(download_urls[-1], dict) else '')
 
-    # EXTREME QUALITY UPGRADE:
-    # If user wants Extreme (320kbps) but the best URL we found is lower, 
-    # we attempt to reconstruct the 320kbps link using the JioSaavn CDN naming pattern.
-    if preferred_quality == 'extreme' and final_audio_url:
-        import re
-        # Check if the current match is not already 320
-        is_320 = '_320.' in final_audio_url or '320kbps' in str(song.get('quality', ''))
-        if not is_320:
-            # Reconstruct: swap _96, _160, etc. for _320
-            # Most JioSaavn URLs follow the pattern ending in _bitrate.mp4
-            upgraded_url = re.sub(r'(_[0-9]+)\.(mp4|m4a)', '_320.mp4', final_audio_url)
-            if upgraded_url != final_audio_url:
-                final_audio_url = upgraded_url
-
     audio_url = final_audio_url
     
     # Get 500x500 cover image
