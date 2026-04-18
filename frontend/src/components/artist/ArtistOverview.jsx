@@ -185,7 +185,7 @@ const ArtistOverview = ({ stats, songs }) => {
 
         {/* ── Top Song Card ──────────────────────── */}
         <div className="glass-panel p-6 flex flex-col">
-          <h3 className="text-lg font-bold mb-4 tracking-tight">🏆 Top Song</h3>
+          <h3 className="text-lg font-bold mb-4 tracking-tight">Top Song</h3>
           {s.top_song_title ? (
             <div className="flex-1 flex flex-col">
               <div className="bg-white/[0.02] border border-white/5 p-5 rounded-2xl group hover:bg-white/[0.04] transition-colors flex-1">

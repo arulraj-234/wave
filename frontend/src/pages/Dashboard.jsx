@@ -462,7 +462,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
                     transition={{ duration: 0.5, ease: "easeOut" }}
                   >
                     <TopThreeHeader 
-                      trendingSongs={trendingSongs?.length >= 3 ? trendingSongs : recommendations} 
+                      trendingSongs={homeContent?.trending_songs?.length >= 3 ? homeContent.trending_songs : recommendations} 
                       resolveUrl={resolveUrl} 
                       onPlay={handleGlobalPlay} 
                     />
