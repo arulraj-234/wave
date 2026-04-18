@@ -164,6 +164,15 @@ CREATE TABLE IF NOT EXISTS issues (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS roadmap_features (
+    feature_id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    status ENUM('planned', 'in_progress', 'completed') DEFAULT 'planned',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
 -- =====================================================
 -- SEED DATA
 -- =====================================================

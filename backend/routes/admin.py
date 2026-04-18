@@ -37,3 +37,55 @@ def get_stats():
 def get_all_songs():
     songs = fetch_all("SELECT * FROM songs")
     return jsonify({"songs": songs}), 200
+
+# ==================== [ ROADMAP FEATURES ] ====================
+
+@admin_bp.route('/roadmap', methods=['GET'])
+def get_roadmap():
+    features = fetch_all("SELECT * FROM roadmap_features ORDER BY created_at DESC")
+    return jsonify({"features": features}), 200
+
+@admin_bp.route('/roadmap', methods=['POST'])
+@admin_required
+def create_roadmap_feature():
+    data = request.json
+    title = data.get('title')
+    description = data.get('description', '')
+    status = data.get('status', 'planned')
+    
+    if not title:
+        return jsonify({"error": "Title is required"}), 400
+        
+    feature_id = execute_query(
+        "INSERT INTO roadmap_features (title, description, status) VALUES (%s, %s, %s)",
+        (title, description, status)
+    )
+    return jsonify({"message": "Feature added", "feature_id": feature_id}), 201
+
+@admin_bp.route('/roadmap/<int:feature_id>', methods=['PUT', 'PATCH'])
+@admin_required
+def update_roadmap_feature(feature_id):
+    data = request.json
+    title = data.get('title')
+    description = data.get('description')
+    status = data.get('status')
+    
+    feature = fetch_all("SELECT * FROM roadmap_features WHERE feature_id = %s", (feature_id,))
+    if not feature:
+         return jsonify({"error": "Feature not found"}), 404
+         
+    new_title = title if title is not None else feature[0]['title']
+    new_desc = description if description is not None else feature[0]['description']
+    new_status = status if status is not None else feature[0]['status']
+    
+    execute_query(
+        "UPDATE roadmap_features SET title = %s, description = %s, status = %s WHERE feature_id = %s",
+        (new_title, new_desc, new_status, feature_id)
+    )
+    return jsonify({"message": "Feature updated successfully"}), 200
+
+@admin_bp.route('/roadmap/<int:feature_id>', methods=['DELETE'])
+@admin_required
+def delete_roadmap_feature(feature_id):
+    execute_query("DELETE FROM roadmap_features WHERE feature_id = %s", (feature_id,))
+    return jsonify({"message": "Feature deleted successfully"}), 200

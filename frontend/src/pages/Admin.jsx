@@ -4,7 +4,7 @@ import {
   Users, Music as MusicIcon, Activity, Trash2, Upload, Plus, 
   TrendingUp, BarChart2, CheckCircle, XCircle, LayoutDashboard, 
   Settings, Image as ImageIcon, Edit, X, Save, FileAudio, LogOut,
-  MessageSquare, AlertCircle, Check
+  MessageSquare, AlertCircle, Check, Target, PlusCircle, PenLine
 } from 'lucide-react';
 import api, { resolveUrl } from '../api';
 import WaveLogo from '../components/Logo';
@@ -90,6 +90,7 @@ const Admin = () => {
             { id: 'upload', icon: Upload, label: 'Upload Tracks' },
             { id: 'users', icon: Users, label: 'Manage Users' },
             { id: 'issues', icon: MessageSquare, label: 'User Issues' },
+            { id: 'roadmap', icon: Target, label: 'Platform Roadmap' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -149,6 +150,7 @@ const Admin = () => {
               {activeTab === 'songs' && <SongsTab token={token} />}
               {activeTab === 'users' && <UsersTab token={token} />}
               {activeTab === 'issues' && <IssuesTab token={token} />}
+              {activeTab === 'roadmap' && <RoadmapTab token={token} />}
             </ErrorBoundary>
           </div>
         </div>
@@ -161,6 +163,7 @@ const Admin = () => {
             { id: 'upload', icon: Upload, label: 'Upload' },
             { id: 'users', icon: Users, label: 'Users' },
             { id: 'issues', icon: MessageSquare, label: 'Issues' },
+            { id: 'roadmap', icon: Target, label: 'Roadmap' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -856,6 +859,144 @@ const IssuesTab = ({ token }) => {
           ))
         )}
       </div>
+    </div>
+  );
+};
+
+// ==================== [ ROADMAP TAB ] ====================
+
+const RoadmapTab = ({ token }) => {
+  const [features, setFeatures] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({ title: '', description: '', status: 'planned', feature_id: null });
+
+  const fetchRoadmap = async () => {
+    try {
+      const res = await api.get('/api/admin/roadmap');
+      setFeatures(res.data.features || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRoadmap();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (formData.feature_id) {
+        await api.put(`/api/admin/roadmap/${formData.feature_id}`, formData, { headers: { Authorization: `Bearer ${token}` } });
+      } else {
+        await api.post('/api/admin/roadmap', formData, { headers: { Authorization: `Bearer ${token}` } });
+      }
+      setFormData({ title: '', description: '', status: 'planned', feature_id: null });
+      setIsEditing(false);
+      fetchRoadmap();
+    } catch (error) {
+      alert("Failed to save feature");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this feature?")) return;
+    try {
+      await api.delete(`/api/admin/roadmap/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      fetchRoadmap();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    if (status === 'completed') return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+    if (status === 'in_progress') return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+    return 'bg-brand-primary/20 text-white border-brand-primary/30';
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center bg-white/5 p-6 rounded-3xl border border-white/10 shadow-lg mb-6">
+        <div>
+          <h2 className="text-2xl font-bold">Platform Roadmap</h2>
+          <p className="text-white/50 text-sm mt-1">Manage future features and track development progress</p>
+        </div>
+        <button 
+          onClick={() => {
+            setFormData({ title: '', description: '', status: 'planned', feature_id: null });
+            setIsEditing(true);
+          }}
+          className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-400 text-white px-4 py-2 rounded-xl transition-all font-bold text-sm"
+        >
+          <PlusCircle className="w-4 h-4" /> Add Feature
+        </button>
+      </div>
+
+      {isEditing && (
+        <form onSubmit={handleSubmit} className="bg-white/5 p-6 rounded-3xl border border-white/10 mb-6 space-y-4 shadow-xl relative animate-slide-up z-10">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-lg">{formData.feature_id ? 'Edit Feature' : 'New Feature'}</h3>
+            <button type="button" onClick={() => setIsEditing(false)} className="text-white/40 hover:text-white rounded-full p-1 bg-white/5 hover:bg-white/10 transition-colors">
+              <X className="w-5 h-5"/>
+            </button>
+          </div>
+          <div>
+            <label className="text-xs text-white/50 font-bold uppercase tracking-widest block mb-2">Feature Title <span className="text-rose-500">*</span></label>
+            <input required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500 text-white" placeholder="e.g. Synced Lyrics Integration" />
+          </div>
+          <div>
+             <label className="text-xs text-white/50 font-bold uppercase tracking-widest block mb-2">Description</label>
+             <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500 text-white" placeholder="Detailed feature description..."></textarea>
+          </div>
+          <div>
+            <label className="text-xs text-white/50 font-bold uppercase tracking-widest block mb-2">Status</label>
+            <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm focus:outline-none text-white appearance-none">
+              <option value="planned" className="bg-brand-dark text-white">Planned</option>
+              <option value="in_progress" className="bg-brand-dark text-white">In Progress</option>
+              <option value="completed" className="bg-brand-dark text-white">Completed</option>
+            </select>
+          </div>
+          <div className="pt-2">
+            <button type="submit" className="w-full py-3 bg-indigo-500 hover:bg-indigo-400 rounded-xl font-bold text-sm transition-colors text-white">
+              {formData.feature_id ? 'Save Changes' : 'Create Feature'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {isLoading ? (
+        <div className="text-center text-white/40 py-10">Loading roadmap features...</div>
+      ) : features.length === 0 ? (
+        <div className="text-center text-white/40 border border-dashed border-white/10 rounded-3xl p-10 font-bold text-lg">No roadmap features plotted yet.</div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {features.map(f => (
+            <div key={f.feature_id} className="bg-white/5 border border-white/10 rounded-3xl p-6 hover:bg-white/10 transition-colors flex flex-col h-full relative group">
+               <div className="absolute top-4 right-4 opacity-0 flex gap-2 group-hover:opacity-100 transition-opacity">
+                 <button onClick={() => { setFormData(f); setIsEditing(true); }} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-indigo-500/40 hover:text-indigo-300 text-white transition-all shadow-lg"><PenLine className="w-4 h-4"/></button>
+                 <button onClick={() => handleDelete(f.feature_id)} className="w-8 h-8 rounded-full bg-rose-500/20 flex items-center justify-center hover:bg-rose-500 hover:text-white text-rose-300 transition-all shadow-lg"><Trash2 className="w-4 h-4"/></button>
+               </div>
+               <span className={`inline-block px-3 py-1 text-[10px] font-black uppercase tracking-widest border rounded-full self-start mb-4 ${getStatusColor(f.status)}`}>
+                 {f.status.replace('_', ' ')}
+               </span>
+               <h3 className="font-bold text-lg leading-tight mb-2 pr-16">{f.title}</h3>
+               <p className="text-sm text-white/60 mb-6 flex-1 pr-2 leading-relaxed">{f.description}</p>
+               <div className="pt-4 mt-auto border-t border-white/5 flex items-center justify-between">
+                 <span className="text-xs font-mono text-white/30 truncate">
+                   ID: {f.feature_id}
+                 </span>
+                 <span className="text-xs font-medium text-white/40">
+                   {new Date(f.created_at).toLocaleDateString()}
+                 </span>
+               </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
