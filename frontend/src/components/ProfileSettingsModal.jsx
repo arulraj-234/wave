@@ -193,33 +193,39 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="font-sans relative w-full max-w-4xl h-[90vh] md:h-[700px] bg-brand-surface border border-white/10 rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col md:flex-row overflow-hidden"
+            className="font-sans relative w-full h-[100dvh] md:max-w-4xl md:h-[700px] bg-brand-surface/95 md:bg-brand-surface border-t border-white/10 md:border md:rounded-3xl shadow-2xl flex flex-col md:flex-row overflow-hidden backdrop-blur-3xl"
           >
+            {/* Mobile Animated Glowing Background Layer */}
+            <div className="absolute inset-0 z-0 md:hidden pointer-events-none opacity-50">
+              <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-brand-primary/20 blur-[80px] rounded-full mix-blend-screen animate-pulse" style={{ animationDuration: '4s' }} />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-blue-500/20 blur-[80px] rounded-full mix-blend-screen animate-pulse" style={{ animationDuration: '6s' }} />
+            </div>
+
             {/* Sidebar Navigation */}
-            <div className="w-full md:w-64 bg-black/20 border-r border-white/5 flex flex-col p-4 md:p-6">
-               <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-xl font-black text-white italic tracking-tighter">Settings</h2>
-                  <button onClick={onClose} className="md:hidden text-brand-muted"><X /></button>
+            <div className="relative z-10 w-full md:w-64 bg-black/40 md:bg-black/20 border-b md:border-b-0 md:border-r border-white/5 flex flex-col p-4 md:p-6 shrink-0">
+               <div className="flex items-center justify-between mb-4 md:mb-8">
+                  <h2 className="text-xl md:text-2xl font-black text-white italic tracking-tighter">Settings</h2>
+                  <button onClick={onClose} className="md:hidden text-white/60 hover:text-white bg-white/5 p-2 rounded-full"><X className="w-5 h-5" /></button>
                </div>
                
-               <div className="space-y-1 flex-1">
+               <div className="flex md:flex-col overflow-x-auto hide-scrollbar md:space-y-1 gap-2 pb-2 md:pb-0 md:flex-1">
                   <button 
                     onClick={() => setActiveTab('profile')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === 'profile' ? 'bg-brand-primary text-brand-dark' : 'text-brand-muted hover:bg-white/5 hover:text-white'}`}
+                    className={`shrink-0 flex items-center justify-center md:justify-start gap-2 md:gap-3 px-4 py-2.5 md:py-3 rounded-full md:rounded-xl transition-all font-bold text-xs md:text-sm ${activeTab === 'profile' ? 'bg-brand-primary text-brand-dark' : 'bg-white/5 md:bg-transparent text-brand-muted hover:bg-white/10 hover:text-white'}`}
                   >
                     <User className="w-4 h-4" /> Profile
                   </button>
                   {user?.role !== 'artist' && (
                     <button 
                       onClick={() => setActiveTab('streaming')}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === 'streaming' ? 'bg-brand-primary text-brand-dark' : 'text-brand-muted hover:bg-white/5 hover:text-white'}`}
+                      className={`shrink-0 flex items-center justify-center md:justify-start gap-2 md:gap-3 px-4 py-2.5 md:py-3 rounded-full md:rounded-xl transition-all font-bold text-xs md:text-sm ${activeTab === 'streaming' ? 'bg-brand-primary text-brand-dark' : 'bg-white/5 md:bg-transparent text-brand-muted hover:bg-white/10 hover:text-white'}`}
                     >
                       <Headphones className="w-4 h-4" /> Streaming
                     </button>
                   )}
                   <button 
                     onClick={() => setActiveTab('about')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === 'about' ? 'bg-brand-primary text-brand-dark' : 'text-brand-muted hover:bg-white/5 hover:text-white'}`}
+                    className={`shrink-0 flex items-center justify-center md:justify-start gap-2 md:gap-3 px-4 py-2.5 md:py-3 rounded-full md:rounded-xl transition-all font-bold text-xs md:text-sm ${activeTab === 'about' ? 'bg-brand-primary text-brand-dark' : 'bg-white/5 md:bg-transparent text-brand-muted hover:bg-white/10 hover:text-white'}`}
                   >
                     <Info className="w-4 h-4" /> About & Help
                   </button>
@@ -231,7 +237,7 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
                    animate={{ opacity: 1, y: 0 }}
                    onClick={handleSave}
                    disabled={isLoading || usernameStatus === 'taken' || !!usernameFormatError}
-                   className="mt-4 w-full py-3 bg-brand-primary text-brand-dark rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                   className="hidden md:block mt-4 w-full py-3 bg-brand-primary text-brand-dark rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
                  >
                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Save Changes'}
                  </motion.button>
@@ -239,7 +245,8 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10">
+            <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 pb-24 md:pb-10">
                {/* Tab: Profile */}
                {activeTab === 'profile' && (
                  <div className="space-y-8 max-w-lg">
@@ -383,9 +390,25 @@ const ProfileSettingsModal = ({ isOpen, onClose, user, onUpdate }) => {
                            </motion.div>
                          )}
                        </AnimatePresence>
-                    </section>
-                 </div>
+                     </section>
+                  </div>
                )}
+              </div>
+              
+              {/* Sticky Save Button for Mobile */}
+              {isDirty && (
+                 <div className="md:hidden absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-brand-surface via-brand-surface to-transparent pt-12">
+                   <motion.button
+                     initial={{ opacity: 0, y: 20 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     onClick={handleSave}
+                     disabled={isLoading || usernameStatus === 'taken' || !!usernameFormatError}
+                     className="w-full py-3.5 bg-brand-primary text-brand-dark rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(var(--brand-primary-rgb),0.3)] active:scale-[0.98] transition-all disabled:opacity-50"
+                   >
+                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Save Changes'}
+                   </motion.button>
+                 </div>
+              )}
             </div>
           </motion.div>
         </div>
