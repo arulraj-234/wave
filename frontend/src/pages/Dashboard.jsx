@@ -43,6 +43,15 @@ const Dashboard = ({ defaultView = 'home' }) => {
   const [homeContent, setHomeContent] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [followedArtists, setFollowedArtists] = useState([]);
+  
+  // Individual loading states for progressive hydration
+  const [loadingStates, setLoadingStates] = useState({
+    recent: true,
+    home: true,
+    recommendations: true,
+    followed: true
+  });
+
   const [importingId, setImportingId] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -80,41 +89,36 @@ const Dashboard = ({ defaultView = 'home' }) => {
   useEffect(() => {
     const loadContent = async () => {
       if (currentView === 'home') {
-        if (hasLoadedHome.current) {
-          // Data already loaded, don't show loading state or re-fetch  
-          return;
-        }
-        setIsLoading(true);
-        await Promise.all([
-          fetchRecentSongs(),
-          fetchHomeContent(),
-          fetchRecommendations(),
-          fetchFollowedArtists(),
-        ]);
+        if (hasLoadedHome.current) return;
+        
+        // Fire all requests concurrently without Promise.all blocking
+        fetchRecentSongs().finally(() => setLoadingStates(prev => ({ ...prev, recent: false })));
+        fetchHomeContent().finally(() => setLoadingStates(prev => ({ ...prev, home: false })));
+        fetchRecommendations().finally(() => setLoadingStates(prev => ({ ...prev, recommendations: false })));
+        fetchFollowedArtists().finally(() => setLoadingStates(prev => ({ ...prev, followed: false })));
+        
         hasLoadedHome.current = true;
-      } else if (currentView === 'library') {
+        setIsLoading(false); // Global loader is for the layout, components handle their own data
+      } else {
         setIsLoading(true);
-        await fetchLikedSongs();
-      } else if (currentView === 'playlist' && location.pathname.split('/').pop()) {
-        setIsLoading(true);
-        await fetchPlaylistSongs(location.pathname.split('/').pop());
-      } else if (currentView === 'artist-profile' && location.pathname.split('/').pop()) {
-        setIsLoading(true);
-        await fetchArtistProfile(location.pathname.split('/').pop());
-      } else if (currentView === 'saavn-artist') {
-        setIsLoading(true);
-        const saavnId = location.pathname.split('saavn_')[1];
-        if (saavnId) await fetchSaavnArtist(saavnId);
-      } else if (currentView === 'saavn-album') {
-        setIsLoading(true);
-        const saavnId = location.pathname.split('saavn_')[1];
-        if (saavnId) await fetchSaavnAlbum(saavnId);
-      } else if (currentView === 'saavn-playlist') {
-        setIsLoading(true);
-        const saavnId = location.pathname.split('/').pop();
-        if (saavnId) await fetchSaavnPlaylist(saavnId);
+        if (currentView === 'library') {
+          await fetchLikedSongs();
+        } else if (currentView === 'playlist' && location.pathname.split('/').pop()) {
+          await fetchPlaylistSongs(location.pathname.split('/').pop());
+        } else if (currentView === 'artist-profile' && location.pathname.split('/').pop()) {
+          await fetchArtistProfile(location.pathname.split('/').pop());
+        } else if (currentView === 'saavn-artist') {
+          const saavnId = location.pathname.split('saavn_')[1];
+          if (saavnId) await fetchSaavnArtist(saavnId);
+        } else if (currentView === 'saavn-album') {
+          const saavnId = location.pathname.split('saavn_')[1];
+          if (saavnId) await fetchSaavnAlbum(saavnId);
+        } else if (currentView === 'saavn-playlist') {
+          const saavnId = location.pathname.split('/').pop();
+          if (saavnId) await fetchSaavnPlaylist(saavnId);
+        }
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     loadContent();
@@ -461,11 +465,15 @@ const Dashboard = ({ defaultView = 'home' }) => {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
                   >
-                    <TopThreeHeader 
-                      trendingSongs={homeContent?.trending_songs?.length >= 3 ? homeContent.trending_songs : recommendations} 
-                      resolveUrl={resolveUrl} 
-                      onPlay={handleGlobalPlay} 
-                    />
+                    {loadingStates.home && loadingStates.recommendations ? (
+                      <div className="w-full h-[300px] bg-white/[0.02] rounded-3xl animate-pulse" />
+                    ) : (
+                      <TopThreeHeader 
+                        trendingSongs={homeContent?.trending_songs?.length >= 3 ? homeContent.trending_songs : (recommendations || [])} 
+                        resolveUrl={resolveUrl} 
+                        onPlay={handleGlobalPlay} 
+                      />
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -490,11 +498,11 @@ const Dashboard = ({ defaultView = 'home' }) => {
               </div>
 
               {/* ── Featured Playlists (from JioSaavn) ── */}
-              {(isLoading || homeContent?.featured_playlists?.length > 0) && (
+              {(loadingStates.home || homeContent?.featured_playlists?.length > 0) && (
                 <div className="animate-slide-up" style={{ animationDelay: '0.05s' }}>
                   <SectionHeader title="Featured Playlists" icon={Sparkles} subtitle="Curated playlists just for you" />
                   <HorizontalCarousel>
-                    {isLoading ? (
+                    {loadingStates.home ? (
                       [...Array(6)].map((_, i) => <div key={i} className="w-44 shrink-0"><CardSkeleton /></div>)
                     ) : (
                       homeContent?.featured_playlists?.map((pl) => (
@@ -512,11 +520,11 @@ const Dashboard = ({ defaultView = 'home' }) => {
               )}
 
               {/* ── Recently Played ── */}
-              {(isLoading || recentSongs.length > 0) && (
+              {(loadingStates.recent || recentSongs.length > 0) && (
                 <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
                   <SectionHeader title="Recently Played" icon={Clock} />
                   <HorizontalCarousel>
-                    {isLoading ? (
+                    {loadingStates.recent ? (
                       [...Array(5)].map((_, i) => <div key={i} className="w-44 shrink-0"><CardSkeleton /></div>)
                     ) : (
                       recentSongs.slice(0, 10).map(song => (
@@ -536,11 +544,11 @@ const Dashboard = ({ defaultView = 'home' }) => {
 
 
               {/* ── Made For You (Recommendations) ── */}
-              {(isLoading || recommendations.length > 0) && (
+              {(loadingStates.recommendations || recommendations.length > 0) && (
                 <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
                   <SectionHeader title={`Made For ${currentUser.username}`} icon={Headphones} subtitle="Based on your listening taste" />
                   <HorizontalCarousel>
-                    {isLoading ? (
+                    {loadingStates.recommendations ? (
                       [...Array(5)].map((_, i) => <div key={i} className="w-44 shrink-0"><CardSkeleton /></div>)
                     ) : (
                       recommendations.map((song, i) => (
@@ -558,11 +566,11 @@ const Dashboard = ({ defaultView = 'home' }) => {
               )}
 
               {/* ── New Releases (Albums from JioSaavn) ── */}
-              {(isLoading || homeContent?.new_releases?.length > 0) && (
+              {(loadingStates.home || homeContent?.new_releases?.length > 0) && (
                 <div className="animate-slide-up" style={{ animationDelay: '0.25s' }}>
                   <SectionHeader title="New Releases" icon={Disc3} subtitle="Latest albums to explore" />
                   <HorizontalCarousel>
-                    {isLoading ? (
+                    {loadingStates.home ? (
                       [...Array(5)].map((_, i) => <div key={i} className="w-44 shrink-0"><CardSkeleton /></div>)
                     ) : (
                       homeContent?.new_releases?.map((album) => (
@@ -580,11 +588,11 @@ const Dashboard = ({ defaultView = 'home' }) => {
               )}
 
               {/* ── Trending from JioSaavn ── */}
-              {(isLoading || homeContent?.trending_songs?.length > 0) && (
+              {(loadingStates.home || homeContent?.trending_songs?.length > 0) && (
                 <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
                   <SectionHeader title="Popular Right Now" icon={TrendingUp} subtitle="From millions of listeners" />
                   <HorizontalCarousel>
-                    {isLoading ? (
+                    {loadingStates.home ? (
                       [...Array(5)].map((_, i) => <div key={i} className="w-44 shrink-0"><CardSkeleton /></div>)
                     ) : (
                       homeContent?.trending_songs?.map((song) => (

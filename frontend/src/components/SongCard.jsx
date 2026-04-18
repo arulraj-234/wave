@@ -90,48 +90,13 @@ const SongCard = ({ song }) => {
             <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
           </button>
 
-          <div className="relative">
-            <button 
-              onClick={(e) => { e.stopPropagation(); setShowPlaylistMenu(!showPlaylistMenu); }}
-              className="w-10 h-10 flex items-center justify-center rounded-full text-brand-muted opacity-0 group-hover:opacity-100 hover:text-brand-primary transition-all duration-200"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-
-            {showPlaylistMenu && (
-              <div 
-                className="absolute bottom-full right-0 mb-2 w-48 bg-brand-surface border border-white/[0.05] shadow-2xl rounded-xl z-50 py-2 animate-in fade-in"
-                onMouseLeave={() => setShowPlaylistMenu(false)}
-              >
-                <button
-                  className="w-full text-left px-4 py-2.5 text-sm text-brand-primary/80 hover:bg-white/[0.03] hover:text-brand-primary transition-colors flex items-center gap-2"
-                  onClick={handleAddToQueue}
-                >
-                  <ListPlus className="w-3.5 h-3.5" />
-                  Add to Queue
-                </button>
-                <div className="border-t border-white/[0.04] my-1" />
-                <div className="px-4 py-2 text-xs font-semibold text-brand-muted uppercase tracking-wider">Add to Playlist</div>
-                {playlists.map(pl => (
-                  <button
-                    key={pl.playlist_id}
-                    className="w-full text-left px-4 py-2.5 text-sm text-brand-primary/80 hover:bg-white/[0.03] hover:text-brand-primary transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      addSongToPlaylist(pl.playlist_id, song.song_id);
-                      toast.success(`Added to "${pl.title}"`);
-                      setShowPlaylistMenu(false);
-                    }}
-                  >
-                    {pl.title}
-                  </button>
-                ))}
-                {playlists.length === 0 && (
-                  <div className="px-4 py-2 text-xs text-brand-muted italic">No playlists</div>
-                )}
-              </div>
-            )}
-          </div>
+          <button 
+            onClick={handleAddToQueue}
+            title="Add to Queue"
+            className="w-10 h-10 flex items-center justify-center rounded-full text-brand-muted hover:text-brand-primary opacity-0 group-hover:opacity-100 transition-all duration-200"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
           
           {/* Play/Pause button — 44px touch target */}
           <div className={`transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} onClick={() => playSong(song)}>
