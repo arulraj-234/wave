@@ -43,7 +43,7 @@ const LyricsPanel = ({ currentSong, currentTime, dominantColor, onClose }) => {
 
       try {
         const id = currentSong.saavn_id ? `saavn_${currentSong.saavn_id}` : currentSong.song_id;
-        const res = await api.get(`/songs/${id}/lyrics`);
+        const res = await api.get(`/api/songs/${id}/lyrics`);
         if (active && res.data?.success) {
           if (res.data.syncedLyrics) {
             setLyrics(parseLRC(res.data.syncedLyrics));
