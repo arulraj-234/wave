@@ -75,6 +75,7 @@ const BottomPlayer = () => {
   } = useContext(PlayerContext);
 
   const [showQueue, setShowQueue] = useState(false);
+  const [showLyrics, setShowLyrics] = useState(false);
   const [showSleepMenu, setShowSleepMenu] = useState(false);
   const [isIdle, setIsIdle] = useState(false);
   const location = useLocation();
@@ -116,6 +117,7 @@ const BottomPlayer = () => {
   }, [isFullScreenPlayer]);
 
   const dominantColor = useDominantColor(currentSong?.cover_image_url ? resolveUrl(currentSong.cover_image_url) : null);
+  const currentTime = (progress / 100) * (duration || currentSong?.duration || 0);
 
   // Auto-minimize full screen player when navigating
   useEffect(() => {
