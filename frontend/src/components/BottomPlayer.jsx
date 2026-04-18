@@ -293,8 +293,13 @@ const BottomPlayer = () => {
                       transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                       className="mt-16 text-center pointer-events-none"
                     >
-                      <h1 className="text-3xl lg:text-4xl font-extrabold text-white/90 tracking-tight mb-2">
+                      <h1 className="text-3xl lg:text-4xl font-extrabold text-white/90 tracking-tight mb-2 flex items-center justify-center gap-2">
                         {currentSong.title}
+                        {currentSong.explicit_content && (
+                          <span className="shrink-0 px-1.5 py-0.5 rounded-[3px] bg-white/10 text-[10px] font-bold text-white/40 leading-none border border-white/5 uppercase">
+                            E
+                          </span>
+                        )}
                       </h1>
                       <p className="text-xl lg:text-2xl font-medium text-white/40 tracking-normal">
                         {currentSong.artist_name}
@@ -330,7 +335,14 @@ const BottomPlayer = () => {
               {/* Track Info & Like */}
               <div className="flex items-center justify-between mb-8 shrink-0">
                 <div className="flex-1 min-w-0 pr-4">
-                  <h1 className="text-2xl font-bold text-white truncate mb-1">{currentSong.title}</h1>
+                  <h1 className="text-2xl font-bold text-white truncate mb-1 flex items-center gap-2">
+                    {currentSong.title}
+                    {currentSong.explicit_content && (
+                      <span className="shrink-0 px-1 py-0.5 rounded-[2px] bg-white/10 text-[10px] font-bold text-white/40 leading-none border border-white/5 uppercase">
+                        E
+                      </span>
+                    )}
+                  </h1>
                   <p className="text-brand-muted font-medium text-lg truncate">{currentSong.artist_name}</p>
                 </div>
                 <button 
@@ -412,7 +424,7 @@ const BottomPlayer = () => {
             animate={{ y: 0 }}
             exit={{ y: 200 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-[4.5rem] md:h-24 bg-brand-surface/95 md:bg-brand-surface/90 backdrop-blur-xl border-t border-white/[0.02] ${isFullScreenPlayer ? 'z-[50]' : 'z-[40]'} flex items-center px-4 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300 shadow-xl md:shadow-none`}
+            className={`fixed bottom-[4rem] md:bottom-0 ${sidebarOffset} right-0 h-[4.5rem] md:h-24 bg-brand-surface md:bg-brand-surface/90 md:backdrop-blur-xl border-t border-white/[0.02] ${isFullScreenPlayer ? 'z-[50]' : 'z-[40]'} flex items-center px-4 md:px-8 mx-2 md:mx-0 rounded-xl md:rounded-none mb-1 md:mb-0 transition-all duration-300 shadow-xl md:shadow-none`}
             onTouchStart={handleCompactTouchStart}
             onTouchEnd={handleCompactTouchEnd}
             style={{ 
@@ -435,7 +447,14 @@ const BottomPlayer = () => {
                 }
               </div>
               <div className="overflow-hidden min-w-0 flex-1">
-                <div className="text-sm font-semibold text-white truncate">{currentSong.title}</div>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">{currentSong.title}</div>
+                  {currentSong.explicit_content && (
+                    <span className="shrink-0 px-1 py-0.5 rounded-[2px] bg-white/10 text-[8px] font-bold text-white/40 leading-none border border-white/5 uppercase">
+                      E
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1 text-[10px] md:text-xs text-brand-muted truncate mt-0.5">
                   {currentSong.artists && currentSong.artists.length > 0 ? (
                     currentSong.artists.map((artist, idx) => (

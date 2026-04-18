@@ -97,21 +97,19 @@ def get_dynamic_taste_profile(user_id):
             profile['genres'].append(g['genre'])
     
     stream_artists = fetch_all("""
-        SELECT u.username AS artist_name, COUNT(*) AS cnt
+        SELECT s.artist_name, COUNT(*) AS cnt
         FROM streams st
         JOIN songs s ON st.song_id = s.song_id
-        JOIN artist_profiles ap ON s.artist_id = ap.artist_id
-        JOIN users u ON ap.user_id = u.user_id
         WHERE st.user_id = %s
-        GROUP BY u.username ORDER BY cnt DESC LIMIT 8
+        GROUP BY s.artist_name ORDER BY cnt DESC LIMIT 8
     """, (user_id,))
     for a in stream_artists:
         name = a['artist_name']
         if name and not name.endswith('@wave.local') and name not in profile['artists']:
             profile['artists'].append(name)
             
-    # Cache for 6 hours
-    rec_cache.set(cache_key, profile, ttl_seconds=21600)
+    # Cache for 10 minutes (responsive but efficient)
+    rec_cache.set(cache_key, profile, ttl_seconds=600)
     
     return profile
 
@@ -369,6 +367,18 @@ def get_queue_predictions(user_id, current_song_id, count=10):
         collab = get_collaborative_recs(user_id, top_k=10)
         for song_id, collab_score in collab:
             candidates[song_id] += collab_score * 0.15
+            
+    # 4. Cloud Professional Suggestions (Now a primary signal!)
+    # We pull suggestions for the current song ID's saavn_id
+    curr_meta = all_meta.get(current_song_id, {})
+    saavn_id = curr_meta.get('saavn_id')
+    if saavn_id:
+        cloud_recs = get_cloud_recommendations(saavn_id, count=15)
+        for rec in cloud_recs:
+            # If the cloud song is already in our DB, we give it a huge boost
+            # If not, we still keep it as a candidate for on-the-fly streaming
+            sid = rec.get('song_id') or rec.get('saavn_id')
+            candidates[sid] += 0.6
     
     # Filter out current song and recently played
     recently_played = _get_recently_played(user_id, 2) if user_id else set()
@@ -389,9 +399,8 @@ def get_queue_predictions(user_id, current_song_id, count=10):
     
     # FALLBACK: If still empty, fetch Cloud-Radio for this specific song
     if not result:
-        # Get saavn_id for current_song
-        curr_meta = all_meta.get(current_song_id, {})
-        saavn_id = curr_meta.get('saavn_id')
+        # Since we already tried cloud suggestions as a primary signal, 
+        # this fallback is now for very niche cases where everything else failed.
         if saavn_id:
             result = get_cloud_recommendations(saavn_id, count=count)
             

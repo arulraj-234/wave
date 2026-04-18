@@ -38,7 +38,7 @@ const ProtectedRoute = ({ children, allowedRoles, isAuthenticated }) => {
 const AnimatedRoutes = ({ isAuthenticated, setIsAuthenticated }) => {
   const location = useLocation();
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       <motion.div
         key={location.pathname}
         initial={{ opacity: 0 }}

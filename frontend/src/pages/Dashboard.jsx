@@ -446,7 +446,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
 
             {/* ── Dynamic Layout: Top 3 Trending vs Vinyl expansion (with Animaton) ── */}
             <div className="relative md:min-h-[300px] hidden md:block">
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 {currentSong ? (
                   <motion.div
                     key="vinyl-header"

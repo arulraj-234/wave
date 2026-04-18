@@ -64,9 +64,16 @@ const SongCard = ({ song }) => {
             )}
           </div>
           <div className="flex flex-col min-w-0">
-            <span className={`text-sm font-semibold truncate ${isActive ? 'text-brand-primary' : 'text-brand-primary/90'}`}>
-              {song.title}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={`text-sm font-semibold truncate ${isActive ? 'text-brand-primary' : 'text-brand-primary/90'}`}>
+                {song.title}
+              </span>
+              {song.explicit_content && (
+                <span className="shrink-0 px-1 py-0.5 rounded-[2px] bg-white/10 text-[8px] font-bold text-brand-muted/80 leading-none">
+                  E
+                </span>
+              )}
+            </div>
             <Link 
               to={`/dashboard/artist/${song.artist_id}`}
               onClick={(e) => e.stopPropagation()}

@@ -267,7 +267,13 @@ def _normalize_song(song, preferred_quality='high'):
         'audio_url': audio_url,
         'language': song.get('language', ''),
         'saavn_play_count': song.get('playCount', 0),
+        'play_count': song.get('playCount', 0),
         'year': song.get('year', ''),
+        'release_date': song.get('releaseDate', ''),
+        'label': html.unescape(str(song.get('label', ''))),
+        'explicit_content': song.get('explicitContent', False),
+        'has_lyrics': song.get('hasLyrics', False),
+        'lyrics_id': song.get('lyricsId', ''),
         'type': 'song',
         'source': 'jiosaavn'
     }
@@ -755,7 +761,7 @@ def get_home_content():
     user_id = request.args.get('user_id', type=int)
     
     cache_key = f"home_{user_id if user_id else 'guest'}"
-    if cache_key in _home_cache and time.time() - _home_cache[cache_key]['timestamp'] < 300:
+    if cache_key in _home_cache and time.time() - _home_cache[cache_key]['timestamp'] < 30:
         return jsonify(_home_cache[cache_key]['data'])
 
     content = {
@@ -946,28 +952,28 @@ def get_home_content():
                 tasks.append((f'mix_genre_{genre}', 'songs', sq, 8))
             mix_configs.append({'id': f'mix_genre_{genre}', 'title': f"Because you like {genre}", 'lang': expected_lang, 'type': 'genre'})
 
-        # Resolve Artists in parallel before task allocation (keep it fast)
+        # Resolve Artists in parallel (increase to 5 to respect user preferences)
         resolved_artists = []
         with ThreadPoolExecutor(max_workers=5) as resolver_exec:
-            artist_futures = {resolver_exec.submit(_resolve_artist_id, name): name for name in artist_names[:3]}
+            artist_futures = {resolver_exec.submit(_resolve_artist_id, name): name for name in artist_names[:5]}
             for fut in as_completed(artist_futures):
                 aid = fut.result()
                 if aid: resolved_artists.append((artist_futures[fut], aid))
 
         for name, aid in resolved_artists:
-            # Task A: All-time Top Hits
-            tasks.append((f'mix_artist_{name}', 'artists_top', aid, 8))
-            # Task B: New Releases from this artist
+            # Task A: Official Top Hits
+            tasks.append((f'mix_artist_{name}', 'artists_top', aid, 12))
+            # Task B: Recent Albums
             tasks.append(('new_releases', 'artists_albums', aid, 5))
             
-            mix_configs.append({'id': f'mix_artist_{name}', 'title': f"Best of {name}", 'lang': None, 'type': 'artist'})
+            mix_configs.append({'id': f'mix_artist_{name}', 'title': f"Best of {name}", 'type': 'artist'})
 
-        # Fallback for unresolved artists
+        # Fallback for unresolved artists — use smart keyword hits
         found_names = {ra[0] for ra in resolved_artists}
-        for artist in artist_names[:3]:
+        for artist in artist_names[:5]:
             if artist not in found_names and not artist.endswith('.local'):
-                tasks.append((f'mix_artist_{artist}', 'songs', f"{artist} hits", 8))
-                mix_configs.append({'id': f'mix_artist_{artist}', 'title': f"More of {artist}", 'lang': None, 'type': 'artist'})
+                tasks.append((f'mix_artist_{artist}', 'songs', f"{artist} best hits", 10))
+                mix_configs.append({'id': f'mix_artist_{artist}', 'title': f"More of {artist}", 'type': 'artist'})
 
     # Execute all tasks in parallel (max 15 workers to stay safe on free tier clusters)
     results_map = {}
