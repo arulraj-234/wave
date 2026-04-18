@@ -775,10 +775,19 @@ def get_home_content():
     _seen_song_ids = set()
     _seen_playlist_ids = set()
 
-    def _add_song_if_new(song, target_list):
+    def _add_song_if_new(song, target_list, bypass_global_dedup=False):
         sid = song.get('saavn_id', '')
-        if sid and sid not in _seen_song_ids and song.get('audio_url'):
-            _seen_song_ids.add(sid)
+        if not sid or not song.get('audio_url'):
+            return False
+        
+        # Internal slab dedup (always required)
+        slab_ids = {s.get('saavn_id') for s in target_list}
+        if sid in slab_ids:
+            return False
+
+        if bypass_global_dedup or sid not in _seen_song_ids:
+            if not bypass_global_dedup:
+                _seen_song_ids.add(sid)
             target_list.append(song)
             return True
         return False
@@ -944,14 +953,7 @@ def get_home_content():
     # Task 4: Mixed Genre/Artist specific tasks
     mix_configs = []
     if genre_names or artist_names:
-        for genre in genre_names[:3]:
-            genre_lower = genre.lower()
-            expected_lang = GENRE_LANGUAGE_MAP.get(genre_lower)
-            smart_queries = GENRE_QUERIES.get(genre_lower, [f"{genre} popular"])
-            for sq in smart_queries[:2]:
-                tasks.append((f'mix_genre_{genre}', 'songs', sq, 8))
-            mix_configs.append({'id': f'mix_genre_{genre}', 'title': f"Because you like {genre}", 'lang': expected_lang, 'type': 'genre'})
-
+        # ── PRIORITY A: Artist Mixes (Highly specific) ──
         # Resolve Artists in parallel (increase to 5 to respect user preferences)
         resolved_artists = []
         with ThreadPoolExecutor(max_workers=5) as resolver_exec:
@@ -961,10 +963,10 @@ def get_home_content():
                 if aid: resolved_artists.append((artist_futures[fut], aid))
 
         for name, aid in resolved_artists:
-            # Task A: Official Top Hits
-            tasks.append((f'mix_artist_{name}', 'artists_top', aid, 12))
+            # Task A: Official Top Hits (Fetch more for better dedup quality)
+            tasks.append((f'mix_artist_{name}', 'artists_top', aid, 30))
             # Task B: Recent Albums
-            tasks.append(('new_releases', 'artists_albums', aid, 5))
+            tasks.append(('new_releases', 'artists_albums', aid, 15))
             
             mix_configs.append({'id': f'mix_artist_{name}', 'title': f"Best of {name}", 'type': 'artist'})
 
@@ -972,8 +974,17 @@ def get_home_content():
         found_names = {ra[0] for ra in resolved_artists}
         for artist in artist_names[:5]:
             if artist not in found_names and not artist.endswith('.local'):
-                tasks.append((f'mix_artist_{artist}', 'songs', f"{artist} best hits", 10))
+                tasks.append((f'mix_artist_{artist}', 'songs', f"{artist} best hits", 30))
                 mix_configs.append({'id': f'mix_artist_{artist}', 'title': f"More of {artist}", 'type': 'artist'})
+
+        # ── PRIORITY B: Genre Mixes ──
+        for genre in genre_names[:3]:
+            genre_lower = genre.lower()
+            expected_lang = GENRE_LANGUAGE_MAP.get(genre_lower)
+            smart_queries = GENRE_QUERIES.get(genre_lower, [f"{genre} popular"])
+            for sq in smart_queries[:2]:
+                tasks.append((f'mix_genre_{genre}', 'songs', sq, 30))
+            mix_configs.append({'id': f'mix_genre_{genre}', 'title': f"Because you like {genre}", 'lang': expected_lang, 'type': 'genre'})
 
     # Execute all tasks in parallel (max 15 workers to stay safe on free tier clusters)
     results_map = {}
@@ -1018,11 +1029,12 @@ def get_home_content():
         norm_mix = []
         for s in mix_data:
             norm = _normalize_song(s, pq)
-            if cfg['lang'] and norm.get('language'):
+            target_lang = cfg.get('lang')
+            if target_lang and norm.get('language'):
                  song_lang = norm['language'].lower().strip()
-                 if cfg['lang'] not in song_lang and song_lang not in cfg['lang']:
+                 if target_lang.lower() not in song_lang and song_lang not in target_lang.lower():
                      continue
-            _add_song_if_new(norm, norm_mix)
+            _add_song_if_new(norm, norm_mix, bypass_global_dedup=True)
         
         if norm_mix:
             content['personalized_mixes'].append({
@@ -1032,7 +1044,7 @@ def get_home_content():
                 'songs': norm_mix[:8]
             })
 
-    content['personalized_mixes'] = content['personalized_mixes'][:6]
+    content['personalized_mixes'] = content['personalized_mixes'][:10]
     
     response_data = {
         'success': True, 

@@ -16,6 +16,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 from middleware import token_required
+from engine import cache as rec_cache
 
 # We cannot run the limiter inline via request cleanly without complex wrapper logic,
 # so we will use a simpler custom local rate limiter check for these 2 routes
@@ -273,6 +274,9 @@ def complete_onboarding():
             
         # Mark as completed
         execute_query("UPDATE users SET onboarding_completed = TRUE WHERE user_id = %s", (user_id,))
+        
+        # Invalidate taste profile cache so the home page updates immediately
+        rec_cache.invalidate(f"taste_profile_{user_id}")
         
         return jsonify({"success": True, "message": "Onboarding completed successfully"}), 200
     except Exception as e:
