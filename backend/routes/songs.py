@@ -631,4 +631,111 @@ def get_recommendations(user_id):
         'source': 'empty'
     }), 200
 
+# ==========================================
+#              LYRICS INTEGRATION
+# ==========================================
+from engine import cache as rec_cache
+
+@songs_bp.route('/<song_id>/lyrics', methods=['GET'])
+def get_song_lyrics(song_id):
+    """
+    Fetch synced lyrics from LRCLIB.
+    Uses in-memory cache to prevent rate-limiting from the public LRCLIB server.
+    """
+    cache_key = f"lyrics_{song_id}"
+    cached = rec_cache.get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
+    try:
+        title = ""
+        artist = ""
+        duration = 0
+        
+        # 1. Resolve metadata for the query
+        if str(song_id).startswith("saavn_"):
+            # Fetch from jiosaavn API proxy
+            from routes.jiosaavn import SAAVN_API_BASE
+            from routes.jiosaavn import _normalize_song, get_preferred_quality
+            try:
+                real_id = str(song_id).replace("saavn_", "")
+                resp = ext_requests.get(f"{SAAVN_API_BASE}/songs", params={'ids': real_id}, timeout=10)
+                data = resp.json()
+                if data.get('success'):
+                    sdata = data.get('data', [])
+                    if sdata and len(sdata) > 0:
+                        norm = _normalize_song(sdata[0], get_preferred_quality())
+                        title = norm.get('title', '')
+                        artist = norm.get('artist_name', '')
+                        duration = norm.get('duration', 0)
+            except Exception:
+                pass
+        else:
+            # Fetch from local DB
+            song_data = fetch_one("""
+                SELECT s.title, s.duration, u.username as artist_name 
+                FROM songs s 
+                LEFT JOIN artist_profiles ap ON s.artist_id = ap.artist_id
+                LEFT JOIN users u ON ap.user_id = u.user_id
+                WHERE s.song_id = %s
+            """, (song_id,))
+            if song_data:
+                title = song_data['title']
+                artist = song_data['artist_name']
+                duration = song_data['duration']
+
+        # 2. Query LRCLIB
+        if not title:
+            return jsonify({'success': False, 'error': 'Song metadata could not be resolved for lyrics search'}), 404
+
+        # Clean title slightly (remove features, remasters)
+        import re
+        clean_title = re.sub(r'\(.*?(feat|ft|remix|version|acoustic|live|radio).*?\)', '', title, flags=re.IGNORECASE).strip()
+        clean_title = clean_title.split(' - ')[0].strip()
+        
+        search_params = {
+            'track_name': clean_title,
+            'artist_name': artist or ''
+        }
+        
+        # LRCLIB API call
+        resp = ext_requests.get('https://lrclib.net/api/search', params=search_params, timeout=10)
+        
+        if resp.status_code == 200:
+            results = resp.json()
+            if results and len(results) > 0:
+                # Pick best match 
+                best_match = None
+                for res in results:
+                    if res.get('syncedLyrics'):
+                        best_match = res
+                        break
+                
+                if not best_match:
+                    best_match = results[0] # Fallback to plain text
+                
+                payload = {
+                    'success': True,
+                    'plainLyrics': best_match.get('plainLyrics', ''),
+                    'syncedLyrics': best_match.get('syncedLyrics', ''),
+                    'instrumental': best_match.get('instrumental', False)
+                }
+                
+                # Cache for 24 hours
+                rec_cache.set(cache_key, payload, ttl_seconds=86400)
+                return jsonify(payload)
+
+        # Fallback empty response
+        payload = {
+            'success': True,
+            'plainLyrics': '',
+            'syncedLyrics': ''
+        }
+        rec_cache.set(cache_key, payload, ttl_seconds=86400)
+        return jsonify(payload)
+
+    except Exception as e:
+        print(f"[Lyrics Proxy] Error for {song_id}: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
