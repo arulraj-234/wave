@@ -26,6 +26,12 @@ const parseLRC = (lrcString) => {
   return parsed;
 };
 
+const LyricsPanel = ({ currentSong, currentTime, dominantColor, onClose }) => {
+  const [lyrics, setLyrics] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef(null);
   const { playSong } = React.useContext(require('../context/PlayerContext').PlayerContext);
   const lineRefs = useRef([]);
 
