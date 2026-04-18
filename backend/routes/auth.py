@@ -50,6 +50,18 @@ def register():
     dob = data.get('dob')
     if not dob:
         dob = None
+    else:
+        try:
+            import datetime
+            parsed_dob = datetime.datetime.strptime(dob, '%Y-%m-%d').date()
+            today = datetime.date.today()
+            age = (today - parsed_dob).days / 365.25
+            if age < 13:
+                return jsonify({"error": "You must be at least 13 years old"}), 400
+            if age > 120:
+                return jsonify({"error": "Please enter a valid recent year of birth (max 120 years ago)"}), 400
+        except ValueError:
+            return jsonify({"error": "Invalid date format for DOB (must be YYYY-MM-DD and a real calendar date)"}), 400
 
     if not username or not email or not password:
         return jsonify({"error": "Missing required fields: username, email, password"}), 400

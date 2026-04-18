@@ -79,17 +79,38 @@ const Register = ({ setAuth }) => {
   const validateDob = () => {
     if (!dob) return true; // optional
     const dobDate = new Date(dob);
-    if (dobDate.getFullYear() < 1900) {
-      setDobError('Year must be after 1900');
+    
+    if (isNaN(dobDate.getTime())) {
+      setDobError('Please enter a valid date');
       return false;
     }
+
+    // Strict check to prevent date rollover (e.g. Feb 30 -> Mar 1 or 2)
+    const [year, month, day] = dob.split('-').map(Number);
+    if (
+      dobDate.getUTCFullYear() !== year ||
+      dobDate.getUTCMonth() + 1 !== month ||
+      dobDate.getUTCDate() !== day
+    ) {
+      setDobError('Please enter a valid calendar date');
+      return false;
+    }
+
     const today = new Date();
     const age = today.getFullYear() - dobDate.getFullYear();
     const monthDiff = today.getMonth() - dobDate.getMonth();
-    if (age < 13 || (age === 13 && monthDiff < 0) || (age === 13 && monthDiff === 0 && today.getDate() < dobDate.getDate())) {
+    const exactAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate()) ? age - 1 : age;
+
+    if (exactAge > 120) {
+      setDobError('Please enter a valid recent year of birth (max 120 years ago)');
+      return false;
+    }
+
+    if (exactAge < 13) {
       setDobError('You must be at least 13 years old');
       return false;
     }
+
     setDobError('');
     return true;
   };
@@ -335,7 +356,8 @@ const Register = ({ setAuth }) => {
                     className="input-field cursor-pointer bg-zinc-900 border border-white/10 text-white w-full uppercase"
                     value={dob}
                     onChange={(e) => { setDob(e.target.value); setDobError(''); }}
-                    max={new Date().toISOString().split('T')[0]}
+                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 13)).toISOString().split('T')[0]}
+                    min={new Date(new Date().setFullYear(new Date().getFullYear() - 120)).toISOString().split('T')[0]}
                   />
                   {dobError && <p className="text-red-400 text-xs mt-1.5 font-medium">{dobError}</p>}
                 </div>
