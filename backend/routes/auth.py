@@ -247,8 +247,8 @@ def me():
             }
         }), 200
     
-    print(f"[Auth Error] '/me' check failed: User ID {user_id} not found in database.")
-    return jsonify({"error": "User session invalid or user deleted"}), 401
+    print(f"[Auth Error] '/me' check failed: User ID {user_id} not found in database or DB connection dropped.")
+    return jsonify({"error": "Failed to verify session (database unavailable)"}), 503
 
 @auth_bp.route('/onboarding', methods=['POST'])
 @token_required
