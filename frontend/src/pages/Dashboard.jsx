@@ -32,7 +32,6 @@ const Dashboard = ({ defaultView = 'home' }) => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [songs, setSongs] = useState([]);
   const [recentSongs, setRecentSongs] = useState([]);
-  const [trendingSongs, setTrendingSongs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [likedSongsData, setLikedSongsData] = useState([]);
   const [playlistInfo, setPlaylistInfo] = useState(null);
@@ -88,7 +87,6 @@ const Dashboard = ({ defaultView = 'home' }) => {
         setIsLoading(true);
         await Promise.all([
           fetchRecentSongs(),
-          fetchTrending(),
           fetchHomeContent(),
           fetchRecommendations(),
           fetchFollowedArtists(),
@@ -131,14 +129,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
     }
   };
 
-  const fetchTrending = async () => {
-    try {
-      const response = await api.get('/api/stats/trending');
-      setTrendingSongs(response.data.songs || []);
-    } catch (error) {
-      console.error("Error fetching trending:", error);
-    }
-  };
+
 
   const fetchHomeContent = async () => {
     try {
@@ -542,27 +533,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
                 </div>
               )}
 
-              {/* ── Trending Now (local DB) ── */}
-              {(isLoading || trendingSongs.length > 0) && (
-                <div className="animate-slide-up" style={{ animationDelay: '0.15s' }}>
-                  <SectionHeader title="Trending Now" icon={TrendingUp} subtitle="What everyone's listening to" />
-                  <HorizontalCarousel>
-                    {isLoading ? (
-                      [...Array(5)].map((_, i) => <div key={i} className="w-44 shrink-0"><CardSkeleton /></div>)
-                    ) : (
-                      trendingSongs.slice(0, 10).map(song => (
-                        <ContentCard
-                          key={`trend-${song.song_id}`}
-                          image={resolveUrl(song.cover_image_url)}
-                          title={song.title}
-                          subtitle={song.artist_name}
-                          onClick={() => playSong(song, trendingSongs)}
-                        />
-                      ))
-                    )}
-                  </HorizontalCarousel>
-                </div>
-              )}
+
 
               {/* ── Made For You (Recommendations) ── */}
               {(isLoading || recommendations.length > 0) && (

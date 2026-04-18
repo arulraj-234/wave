@@ -10,6 +10,7 @@ from routes.stats import stats_bp
 from routes.albums import albums_bp
 from routes.jiosaavn import jiosaavn_bp
 from routes.issues import issues_bp
+from routes.recommend import recommend_bp
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -72,6 +73,7 @@ app.register_blueprint(stats_bp, url_prefix='/api/stats')
 app.register_blueprint(albums_bp, url_prefix='/api/albums')
 app.register_blueprint(jiosaavn_bp, url_prefix='/api/jiosaavn')
 app.register_blueprint(issues_bp, url_prefix='/api/issues')
+app.register_blueprint(recommend_bp, url_prefix='/api/recommend')
 
 # Serve static audio files (legacy path)
 @app.route('/uploads/songs/<filename>', methods=['GET'])
@@ -165,6 +167,13 @@ print("\n================================")
 print("   WAVE BACKEND STARTING UP")
 print(f"   Environment: {os.getenv('FLASK_ENV', 'development')}")
 print("================================\n")
+
+# Start the recommendation engine background precomputation
+try:
+    from engine import precompute as rec_precompute
+    rec_precompute.start()
+except Exception as e:
+    print(f"[RecEngine] Failed to start precompute thread: {e}")
 
 if __name__ == '__main__':
     # When running locally, we bind to 0.0.0.0 so other devices on the network (Android) can connect

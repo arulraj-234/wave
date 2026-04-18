@@ -20,6 +20,7 @@ A full-stack music streaming platform built with a **Python/Flask** REST API bac
 - [Authentication](#authentication)
 - [Deployment](#deployment)
 - [Testing](#testing)
+- [Recommendation Engine](#recommendation-engine)
 - [Key Design Decisions](#key-design-decisions)
 - [Known Limitations](#known-limitations)
 - [Future Improvements](#future-improvements)
@@ -446,6 +447,19 @@ Migration files are numbered sequentially: `backend/migrations/001_name.sql`, `0
 
 ---
 
+## Recommendation Engine
+
+Wave features a custom-built **Hybrid Recommendation Engine** (`backend/engine/`) that serves personalized content utilizing entirely native Python structures (zero external ML dependencies for high portability):
+
+- **Content-Based Filtering:** Uses cosine similarity over vectorized song metadata (genre, language, artist correlation, duration).
+- **Collaborative Filtering:** Computes Jaccard-normalized item-item co-occurrences based on the platform's play history (`streams` table).
+- **Session-Based Sequencing:** Calculates Markov chain transition matrixes to intelligently predict the "Up Next" queue based on live listening sessions.
+- **Smart Home Pipeline:** The `/home` endpoint dynamically aggregates content using language-aware matchmaking (e.g., mapping K-Pop securely to Korean content to prevent noise) with strict global deduplication and real-time fallbacks to JioSaavn's API.
+- **Negative Signal Tracking:** Skips before 30 seconds are explicitly logged and penalized within the tensor to minimize recurring bad suggestions.
+- **Background Precomputation:** A daemon thread routinely recalibrates matrix weights synchronously behind the scenes to guarantee fast sub-50ms API responses.
+
+---
+
 ## Audio Engine
 
 The audio engine lives in `PlayerContext.jsx` and handles all playback logic.
@@ -581,7 +595,8 @@ python -m pytest tests/ -v
 
 ## Future Improvements
 
-- **Native Android App** — Wrap the React frontend in a Capacitor WebView to ship as a standalone APK with native media controls (notification bar play/pause/skip), lock-screen integration, and hardware back-button handling. The `capacitor.config.json` and initial Android project scaffolding already exist in `frontend/`.
+- **Advanced Machine Learning Recommendations** — Evolving the current hybrid engine by expanding to 1) Collaborative Filtering using ALS (via the implicit library), 2) Deep Content-Based filtering using cosine similarity on structural song features (tempo, energy, acousticness), and 3) Session-based recommendations leveraging GRU or advanced Markov Chains.
+- **Partial Shift to Native Apps** — Expanding beyond the PWA approach to partially shift development towards a full Native Android/iOS experience (currently scaffolded with Capacitor).
 - **Subscription & Paywall System** — Wire up the existing `subscriptions` table to enable tiered access (e.g., higher audio quality, ad-free experience).
 - **Social Features** — User-to-user song sharing, collaborative playlists, and activity feeds.
 - **Offline Mode** — Service worker caching for previously played tracks (PWA offline support).

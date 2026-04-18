@@ -738,51 +738,109 @@ def _dedup_songs(songs):
 @jiosaavn_bp.route('/home', methods=['GET'])
 def get_home_content():
     """
-    Personalized home page content based on user listening history.
-    Accepts optional ?user_id= to personalize results.
-    Returns: featured_playlists, trending_songs, new_releases, personalized_mixes.
-    Cached for 5 minutes per user.
+    Personalized home page content — v2 (Smart Engine).
+    
+    Fixes over v1:
+    - Empty playlists filtered out (song_count > 0)
+    - Global dedup: no song/playlist appears in multiple sections
+    - Language-aware queries (K-Pop -> Korean, not keyword noise)
+    - Trending comes from JioSaavn, not sparse local DB
+    - New Releases filtered by actual year
+    - Genre mixes validate language to prevent cross-contamination
     """
     user_id = request.args.get('user_id', type=int)
     
     cache_key = f"home_{user_id if user_id else 'guest'}"
-    if cache_key in _home_cache and time.time() - _home_cache[cache_key]['timestamp'] < 300: # 5 min TTL
+    if cache_key in _home_cache and time.time() - _home_cache[cache_key]['timestamp'] < 300:
         return jsonify(_home_cache[cache_key]['data'])
 
     content = {
         'featured_playlists': [],
         'trending_songs': [],
         'new_releases': [],
-        'personalized_mixes': [],   # "Because you listen to X" sections
+        'personalized_mixes': [],
     }
 
-    # ── Fetch user taste profile ──────────────────────────────
+    # ── Global dedup trackers ──
+    _seen_song_ids = set()
+    _seen_playlist_ids = set()
+
+    def _add_song_if_new(song, target_list):
+        sid = song.get('saavn_id', '')
+        if sid and sid not in _seen_song_ids and song.get('audio_url'):
+            _seen_song_ids.add(sid)
+            target_list.append(song)
+            return True
+        return False
+
+    def _add_playlist_if_new(pl, target_list):
+        pid = pl.get('id', '')
+        count = pl.get('song_count', 0)
+        if pid and pid not in _seen_playlist_ids and count and count > 0:
+            _seen_playlist_ids.add(pid)
+            target_list.append(pl)
+            return True
+        return False
+
+    # ── Genre-to-language mapping ──
+    GENRE_LANGUAGE_MAP = {
+        'k-pop': 'korean', 'kpop': 'korean',
+        'j-pop': 'japanese', 'jpop': 'japanese',
+        'bollywood': 'hindi', 'tollywood': 'telugu', 'kollywood': 'tamil',
+        'punjabi': 'punjabi', 'bhojpuri': 'bhojpuri',
+        'latin': 'spanish', 'reggaeton': 'spanish',
+        'pop': 'english', 'rock': 'english', 'hip-hop': 'english',
+        'hip hop': 'english', 'r&b': 'english', 'edm': 'english',
+        'indie': 'english', 'lo-fi': 'english', 'lofi': 'english',
+        'classical': 'hindi',
+    }
+
+    # ── Smart artist queries per genre (produces relevant results) ──
+    GENRE_QUERIES = {
+        'k-pop': ['BTS', 'BLACKPINK', 'Stray Kids', 'NewJeans', 'aespa', 'TWICE'],
+        'kpop': ['BTS', 'BLACKPINK', 'Stray Kids', 'NewJeans', 'aespa', 'TWICE'],
+        'j-pop': ['YOASOBI', 'Official HIGE DANdism', 'Ado', 'LiSA'],
+        'jpop': ['YOASOBI', 'Official HIGE DANdism', 'Ado', 'LiSA'],
+        'bollywood': ['Arijit Singh', 'Shreya Ghoshal', 'Pritam latest'],
+        'hip-hop': ['Drake', 'Kendrick Lamar', 'Travis Scott'],
+        'hip hop': ['Drake', 'Kendrick Lamar', 'Travis Scott'],
+        'edm': ['Martin Garrix', 'Marshmello', 'Alan Walker'],
+        'lo-fi': ['lofi beats', 'chill lofi', 'lofi study'],
+        'lofi': ['lofi beats', 'chill lofi', 'lofi study'],
+        'pop': ['Taylor Swift', 'The Weeknd', 'Dua Lipa', 'Bruno Mars'],
+        'rock': ['Imagine Dragons', 'Coldplay', 'Linkin Park'],
+        'r&b': ['SZA', 'Daniel Caesar', 'The Weeknd R&B'],
+        'indie': ['Arctic Monkeys', 'Tame Impala', 'Hozier'],
+        'classical': ['classical instrumental', 'Indian classical raag'],
+        'punjabi': ['AP Dhillon', 'Diljit Dosanjh', 'Sidhu Moose Wala'],
+    }
+
+    # ── Fetch user taste profile ──
     user_genres = []
+    user_languages = []
     user_artists = []
     
     if user_id:
         try:
-            # 1. Inject Explicit Onboarding Preferences
             prefs = fetch_all("SELECT preference_type, preference_value FROM user_preferences WHERE user_id = %s", (user_id,))
             for p in prefs:
                 if p['preference_type'] == 'genre':
-                    user_genres.append({'genre': p['preference_value']})
+                    user_genres.append(p['preference_value'])
                 elif p['preference_type'] == 'artist':
-                    user_artists.append({'artist_name': p['preference_value']})
+                    user_artists.append(p['preference_value'])
+                elif p['preference_type'] == 'language':
+                    user_languages.append(p['preference_value'])
 
-            # 2. Top genres from live listening history (real genres only)
             stream_genres = fetch_all("""
                 SELECT s.genre, COUNT(*) AS cnt
-                FROM streams st
-                JOIN songs s ON st.song_id = s.song_id
+                FROM streams st JOIN songs s ON st.song_id = s.song_id
                 WHERE st.user_id = %s AND s.genre IS NOT NULL AND s.genre != '' AND s.genre != 'Unknown'
-                GROUP BY s.genre
-                ORDER BY cnt DESC
-                LIMIT 5
+                GROUP BY s.genre ORDER BY cnt DESC LIMIT 5
             """, (user_id,))
-            user_genres.extend(stream_genres)
+            for g in stream_genres:
+                if g['genre'] not in user_genres:
+                    user_genres.append(g['genre'])
             
-            # 3. Top artists from live listening history (primary signal)
             stream_artists = fetch_all("""
                 SELECT u.username AS artist_name, COUNT(*) AS cnt
                 FROM streams st
@@ -790,156 +848,193 @@ def get_home_content():
                 JOIN artist_profiles ap ON s.artist_id = ap.artist_id
                 JOIN users u ON ap.user_id = u.user_id
                 WHERE st.user_id = %s
-                GROUP BY u.username
-                ORDER BY cnt DESC
-                LIMIT 8
+                GROUP BY u.username ORDER BY cnt DESC LIMIT 8
             """, (user_id,))
-            user_artists.extend(stream_artists)
+            for a in stream_artists:
+                name = a['artist_name']
+                if name and not name.endswith('@wave.local') and name not in user_artists:
+                    user_artists.append(name)
         except Exception as e:
             log_error(f"Error fetching user taste: {str(e)}")
 
-    # ── Build personalized search queries ──────────────────────
-    genre_names = [g['genre'] for g in user_genres if g.get('genre')]
-    artist_names = [a['artist_name'] for a in user_artists 
-                    if a.get('artist_name') and not a['artist_name'].endswith('@wave.local')]
-    
+    # Derive expected languages from genres
+    for g in user_genres:
+        lang = GENRE_LANGUAGE_MAP.get(g.lower())
+        if lang and lang not in user_languages:
+            user_languages.append(lang)
+
+    genre_names = [g for g in user_genres if g]
+    artist_names = [a for a in user_artists if a and not a.endswith('@wave.local')]
+
+    # ── Build playlist queries ──
     if artist_names:
-        # Build playlist queries from top artists
         playlist_queries = []
-        for a in artist_names[:4]:
+        for a in artist_names[:3]:
             playlist_queries.append(f"{a} mix")
             playlist_queries.append(f"best of {a}")
-        # Add some discovery queries
-        playlist_queries.extend(['Trending Now', 'Chill Vibes', 'Top Hits'])
+        for g in genre_names[:2]:
+            playlist_queries.append(f"{g} hits playlist")
+        playlist_queries.extend(['Top Hits 2026', 'Chill Vibes'])
     else:
-        # Default queries for new users
         playlist_queries = [
-            'Bollywood Hits', 'Top Hindi', 'Trending Now', 'Chill Vibes',
-            'Romantic Hits', 'Punjabi Hits', 'English Pop', 'Lofi'
+            'Top Hits 2026', 'Trending Now', 'Chill Vibes', 'Workout Beats',
+            'Romantic Hits', 'Party Anthems', 'Mood Booster', 'Lofi'
         ]
 
-    # Trending query — personalized by top artist or generic
-    trending_query = artist_names[0] if artist_names else 'trending'
-    
-    # New releases query — based on taste or generic
-    new_release_query = artist_names[0] + ' album' if artist_names else 'new releases 2026'
+    import datetime
+    current_year = datetime.datetime.now().year
+    pq = get_preferred_quality(user_id)
 
     try:
-        # ── 1. Featured Playlists ──────────────────────────────
+        # ── 1. Featured Playlists (empty ones filtered out) ──
         for query in playlist_queries[:8]:
             try:
                 resp = requests.get(
                     f"{SAAVN_API_BASE}/search/playlists",
-                    params={'query': query, 'limit': 2},
+                    params={'query': query, 'limit': 3},
                     timeout=60
                 )
-                try:
-                    data = resp.json()
-                except:
-                    log_error(f"Non-JSON response for featured playlist query '{query}' (Status: {resp.status_code})", f"{SAAVN_API_BASE}/search/playlists", resp.text)
-                    continue
-
+                data = resp.json()
                 if data.get('success'):
                     raw_data = data.get('data', {})
                     results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
-                    if not results:
-                        log_error(f"Empty results for featured playlist query '{query}'")
                     for p in results:
                         if isinstance(p, dict):
                             norm = _normalize_playlist(p)
-                            if norm.get('song_count', 0) > 0:
-                                content['featured_playlists'].append(norm)
-                else:
-                    log_error(f"Upstream failure for playlist query '{query}': {data.get('message', 'No details')}", f"{SAAVN_API_BASE}/search/playlists", str(data))
-            except Exception as e:
-                log_error(f"Network error for playlist query '{query}': {str(e)}", f"{SAAVN_API_BASE}/search/playlists")
+                            _add_playlist_if_new(norm, content['featured_playlists'])
+            except Exception:
                 continue
+        content['featured_playlists'] = content['featured_playlists'][:12]
 
-        # Deduplicate
-        seen_ids = set()
-        unique_playlists = []
-        for p in content['featured_playlists']:
-            if p.get('id') and p['id'] not in seen_ids:
-                seen_ids.add(p['id'])
-                unique_playlists.append(p)
-        content['featured_playlists'] = unique_playlists[:12]
+        # ── 2. Trending Songs (from JioSaavn, language-aware) ──
+        trending_queries = []
+        if genre_names:
+            for g in genre_names[:2]:
+                smart = GENRE_QUERIES.get(g.lower(), [])
+                if smart:
+                    trending_queries.append(smart[0])
+                else:
+                    trending_queries.append(f"{g} trending {current_year}")
+        if artist_names:
+            trending_queries.append(f"{artist_names[0]} hits")
+        if not trending_queries:
+            trending_queries = [f'trending songs {current_year}', 'viral hits']
 
-        # ── 2. Trending Songs (personalized) ───────────────────
-        try:
-            resp = requests.get(
-                f"{SAAVN_API_BASE}/search/songs",
-                params={'query': trending_query, 'limit': 15},
-                timeout=60
-            )
-            data = resp.json()
-            if data.get('success'):
-                raw_data = data.get('data', {})
-                results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
-                if not results:
-                    log_error(f"Empty results for trending query '{trending_query}'")
-                pq = get_preferred_quality(user_id)
-                content['trending_songs'] = _dedup_songs([_normalize_song(s, pq) for s in results if isinstance(s, dict)])
-            else:
-                log_error(f"Upstream failure for trending query: {data.get('message', 'No details')}")
-        except Exception as e:
-            log_error(f"Failed to fetch trending songs: {str(e)}")
+        for tq in trending_queries[:3]:
+            try:
+                resp = requests.get(
+                    f"{SAAVN_API_BASE}/search/songs",
+                    params={'query': tq, 'limit': 10},
+                    timeout=60
+                )
+                data = resp.json()
+                if data.get('success'):
+                    raw_data = data.get('data', {})
+                    results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
+                    for s in results:
+                        if isinstance(s, dict):
+                            norm = _normalize_song(s, pq)
+                            # Language validation
+                            if user_languages and norm.get('language'):
+                                song_lang = norm['language'].lower().strip()
+                                if song_lang and not any(
+                                    ul.lower() in song_lang or song_lang in ul.lower()
+                                    for ul in user_languages
+                                ):
+                                    continue
+                            _add_song_if_new(norm, content['trending_songs'])
+            except Exception:
+                continue
+        content['trending_songs'] = content['trending_songs'][:15]
 
-        # ── 3. New Releases (personalized) ─────────────────────
-        try:
-            resp = requests.get(
-                f"{SAAVN_API_BASE}/search/albums",
-                params={'query': new_release_query, 'limit': 10},
-                timeout=60
-            )
-            data = resp.json()
-            if data.get('success'):
-                raw_data = data.get('data', {})
-                results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
-                if not results:
-                    log_error(f"Empty results for new releases query '{new_release_query}'")
-                content['new_releases'] = [_normalize_album(a) for a in results if isinstance(a, dict)]
-            else:
-                log_error(f"Upstream failure for new releases: {data.get('message', 'No details')}")
-        except Exception as e:
-            log_error(f"Failed to fetch new releases: {str(e)}")
+        # ── 3. New Releases (year-filtered) ──
+        nr_queries = []
+        if artist_names:
+            nr_queries.append(f"{artist_names[0]} new album")
+        for g in genre_names[:2]:
+            nr_queries.append(f"{g} new album {current_year}")
+        if not nr_queries:
+            nr_queries = [f'new releases {current_year}', f'latest albums {current_year}']
 
-        # ── 4. Personalized Mixes ("Because you listen to [Genre]" & "More of [artist]") ─
+        seen_album_ids = set()
+        for nrq in nr_queries[:3]:
+            try:
+                resp = requests.get(
+                    f"{SAAVN_API_BASE}/search/albums",
+                    params={'query': nrq, 'limit': 8},
+                    timeout=60
+                )
+                data = resp.json()
+                if data.get('success'):
+                    raw_data = data.get('data', {})
+                    results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
+                    for a in results:
+                        if isinstance(a, dict):
+                            norm = _normalize_album(a)
+                            aid = norm.get('id', '')
+                            if aid in seen_album_ids:
+                                continue
+                            # Year filter: current or last year only
+                            try:
+                                yr = int(norm.get('year', 0) or 0)
+                            except (ValueError, TypeError):
+                                yr = 0
+                            if yr < current_year - 1:
+                                continue
+                            # Language relevance check
+                            album_lang = (norm.get('language') or '').lower().strip()
+                            if user_languages and album_lang:
+                                if not any(ul.lower() in album_lang or album_lang in ul.lower() for ul in user_languages):
+                                    continue
+                            seen_album_ids.add(aid)
+                            content['new_releases'].append(norm)
+            except Exception:
+                continue
+        content['new_releases'] = content['new_releases'][:10]
+
+        # ── 4. Personalized Mixes (language-validated) ──
         if genre_names or artist_names:
-            seen_song_ids = set()
-            
-            # Genre-based mixes
+            # Genre mixes
             for genre in genre_names[:3]:
-                try:
-                    resp = requests.get(
-                        f"{SAAVN_API_BASE}/search/songs",
-                        params={'query': f"{genre} popular", 'limit': 10},
-                        timeout=60
-                    )
-                    data = resp.json()
-                    if data.get('success'):
-                        raw_data = data.get('data', {})
-                        results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
-                        songs = []
-                        for s in results:
-                            if isinstance(s, dict):
-                                norm = _normalize_song(s)
-                                sid = norm.get('saavn_id', '')
-                                if sid and sid not in seen_song_ids:
-                                    seen_song_ids.add(sid)
-                                    songs.append(norm)
-                        songs = _dedup_songs(songs)
-                        if songs:
-                            content['personalized_mixes'].append({
-                                'title': f"Because you like {genre}",
-                                'type': 'genre',
-                                'key': f"genre-{genre}",
-                                'songs': songs[:8]
-                            })
-                except:
-                    continue
+                genre_lower = genre.lower()
+                expected_lang = GENRE_LANGUAGE_MAP.get(genre_lower)
+                smart_queries = GENRE_QUERIES.get(genre_lower, [f"{genre} popular", f"{genre} hits"])
+                
+                mix_songs = []
+                for sq in smart_queries[:3]:
+                    try:
+                        resp = requests.get(
+                            f"{SAAVN_API_BASE}/search/songs",
+                            params={'query': sq, 'limit': 8},
+                            timeout=60
+                        )
+                        data = resp.json()
+                        if data.get('success'):
+                            raw_data = data.get('data', {})
+                            results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
+                            for s in results:
+                                if isinstance(s, dict):
+                                    norm = _normalize_song(s, pq)
+                                    # Strict language validation for genre mixes
+                                    if expected_lang and norm.get('language'):
+                                        song_lang = norm['language'].lower().strip()
+                                        if song_lang and expected_lang not in song_lang and song_lang not in expected_lang:
+                                            continue
+                                    _add_song_if_new(norm, mix_songs)
+                    except Exception:
+                        continue
+                
+                if mix_songs:
+                    content['personalized_mixes'].append({
+                        'title': f"Because you like {genre}",
+                        'type': 'genre',
+                        'key': f"genre-{genre}",
+                        'songs': mix_songs[:8]
+                    })
 
-            # Artist-based mixes for top artists
+            # Artist mixes
             for artist in artist_names[:3]:
+                mix_songs = []
                 try:
                     resp = requests.get(
                         f"{SAAVN_API_BASE}/search/songs",
@@ -950,24 +1045,20 @@ def get_home_content():
                     if data.get('success'):
                         raw_data = data.get('data', {})
                         results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
-                        songs = []
                         for s in results:
                             if isinstance(s, dict):
-                                norm = _normalize_song(s)
-                                sid = norm.get('saavn_id', '')
-                                if sid and sid not in seen_song_ids:
-                                    seen_song_ids.add(sid)
-                                    songs.append(norm)
-                        songs = _dedup_songs(songs)
-                        if songs:
-                            content['personalized_mixes'].append({
-                                'title': f"More of {artist}",
-                                'type': 'artist',
-                                'key': artist,
-                                'songs': songs[:8]
-                            })
-                except:
+                                norm = _normalize_song(s, pq)
+                                _add_song_if_new(norm, mix_songs)
+                except Exception:
                     continue
+                
+                if mix_songs:
+                    content['personalized_mixes'].append({
+                        'title': f"More of {artist}",
+                        'type': 'artist',
+                        'key': f"artist-{artist}",
+                        'songs': mix_songs[:8]
+                    })
 
     except Exception as e:
         log_error(f"Home content aggregation error: {str(e)}")
@@ -978,11 +1069,13 @@ def get_home_content():
         'personalized': bool(genre_names or artist_names)
     }
     
-    # Save to memory cache for 5 minutes
     _home_cache[cache_key] = {
         'timestamp': time.time(),
         'data': response_data
     }
+
+    return jsonify(response_data)
+
 
     return jsonify(response_data)
 

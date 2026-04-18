@@ -160,12 +160,20 @@ function App() {
         }
       } catch (error) {
         // Only explicitly remove the token if the server explicitly rejected the token (401/403)
-        // This prevents users from being randomly logged out if the server is just offline/cold-starting
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
           localStorage.removeItem('user');
           localStorage.removeItem('token');
+          setIsAuthenticated(false);
+        } else {
+          // It's a network error or 5xx (server cold-starting on Render).
+          // Optimistically stay authenticated so the user isn't kicked to the login screen.
+          // If the token is actually invalid, the global 401 interceptor will catch it on the next API call.
+          if (localStorage.getItem('user')) {
+            setIsAuthenticated(true);
+          } else {
+            setIsAuthenticated(false);
+          }
         }
-        setIsAuthenticated(false);
       } finally {
         setIsInitializing(false);
       }

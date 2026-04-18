@@ -222,6 +222,15 @@ export const PlayerProvider = ({ children }) => {
     }).catch(err => console.error("Stream tracking error:", err));
   }, [user.id]);
 
+  // Record a skip event (negative signal for recommendation engine)
+  const recordSkip = useCallback((songId, skipPosition) => {
+    if (!user.id || !songId) return;
+    api.post(`/api/songs/${songId}/skip`, {
+      user_id: user.id,
+      skip_position: Math.round(skipPosition || 0)
+    }).catch(err => console.error("Skip tracking error:", err));
+  }, [user.id]);
+
   // Internal: start playing a specific song object
   const startPlayback = useCallback(async (song) => {
     if (!song) return;
@@ -516,6 +525,17 @@ export const PlayerProvider = ({ children }) => {
   };
 
   const playNext = () => {
+    // Track skip if user clicked next before 30s of listening
+    if (currentSong?.song_id) {
+      let listenedSoFar = accumulatedDurationRef.current;
+      if (lastPlayTimeRef.current && !audioRef.current.paused) {
+        listenedSoFar += (Date.now() - lastPlayTimeRef.current) / 1000;
+      }
+      if (listenedSoFar < 30) {
+        recordSkip(currentSong.song_id, Math.round(listenedSoFar));
+      }
+    }
+
     if (queue.length === 0) {
       if (currentSong) fetchAndPlaySimilar(currentSong);
       return;

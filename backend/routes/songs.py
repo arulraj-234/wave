@@ -413,6 +413,23 @@ def record_stream(song_id):
     
     return jsonify({"message": "Stream recorded successfully"}), 200
 
+@songs_bp.route('/<int:song_id>/skip', methods=['POST'])
+def record_skip(song_id):
+    """Record a skip event for negative signal in the recommendation engine."""
+    data = request.json
+    user_id = data.get('user_id')
+    skip_position = data.get('skip_position', 0)  # Seconds into song when skipped
+    
+    if not user_id:
+        return jsonify({"message": "Skip noted (anonymous)"}), 200
+    
+    execute_query(
+        "INSERT INTO song_skips (user_id, song_id, skip_position) VALUES (%s, %s, %s)",
+        (user_id, song_id, skip_position)
+    )
+    
+    return jsonify({"message": "Skip recorded"}), 200
+
 @songs_bp.route('/<int:song_id>/like', methods=['POST'])
 def toggle_like_song(song_id):
     data = request.json
@@ -576,127 +593,41 @@ def update_song(song_id):
 def get_recommendations(user_id):
     """
     Personalized recommendations based on listening history and preferences.
-    Uses Pure SQL Collaborative Filtering. Falls back to JioSaavn API for new users.
-    """
-    from config import Config
-    SAAVN_API_BASE = Config.SAAVN_API_URL
     
-    # 1. Try Pure SQL Collaborative Recommendation Engine
+    Pipeline (in priority order):
+    1. Hybrid Recommendation Engine (content + collaborative + session)
+    2. JioSaavn API fallback for cold-start / sparse DB
+    """
+    # 1. Try the new hybrid recommendation engine
     try:
-        sql_recs = fetch_all("""
-            SELECT DISTINCT s.song_id, s.title, s.audio_url, s.cover_image_url, s.duration, s.genre, s.play_count,
-                   u.username AS artist_name, ap.artist_id,
-                   s.saavn_id
-            FROM songs s
-            LEFT JOIN song_artists sa ON s.song_id = sa.song_id
-            LEFT JOIN artist_profiles ap ON sa.artist_id = ap.artist_id
-            LEFT JOIN users u ON ap.user_id = u.user_id
-            WHERE (
-                s.genre IN (SELECT preference_value FROM user_preferences WHERE user_id = %s AND preference_type = 'genre')
-                OR u.username IN (SELECT preference_value FROM user_preferences WHERE user_id = %s AND preference_type = 'artist')
-                OR sa.artist_id IN (
-                    SELECT sa2.artist_id FROM user_liked_songs uls 
-                    JOIN song_artists sa2 ON uls.song_id = sa2.song_id 
-                    WHERE uls.user_id = %s
-                )
-                OR sa.artist_id IN (
-                    SELECT sa3.artist_id FROM streams st
-                    JOIN song_artists sa3 ON st.song_id = sa3.song_id
-                    WHERE st.user_id = %s
-                )
-            )
-            AND s.song_id NOT IN (SELECT song_id FROM streams WHERE user_id = %s)
-            ORDER BY s.play_count DESC
-            LIMIT 15
-        """, (user_id, user_id, user_id, user_id, user_id))
+        from engine.ranker import get_home_recommendations
+        engine_recs = get_home_recommendations(user_id, count=15)
         
-        if sql_recs and len(sql_recs) >= 3:
-            # We have enough internal data to provide pure DB recommendations
+        if engine_recs and len(engine_recs) >= 3:
+            # Enrich with artist junction data
             from routes.songs import enrich_song_metadata
             return jsonify({
-                "success": True, 
-                "songs": enrich_song_metadata(sql_recs), 
-                "label": "Recommended for You"
+                "success": True,
+                "songs": enrich_song_metadata(engine_recs),
+                "label": "Recommended for You",
+                "source": "hybrid_engine"
             }), 200
     except Exception as e:
-        print("SQL Recommendation error:", e)
+        print(f"[RecEngine] Hybrid engine error in /recommendations: {e}")
 
-    # 2. Fallback to API logic for cold starts
+    # 2. Fallback: delegate to the recommend blueprint's JioSaavn fallback
+    try:
+        from routes.recommend import _jiosaavn_fallback_home
+        return _jiosaavn_fallback_home(user_id, 15)
+    except Exception as e:
+        print(f"[RecEngine] JioSaavn fallback error: {e}")
 
-    # Get user's top artists
-    top_artists = fetch_all("""
-        SELECT u.username AS artist_name, COUNT(*) AS cnt
-        FROM streams st
-        JOIN songs s ON st.song_id = s.song_id
-        JOIN artist_profiles ap ON s.artist_id = ap.artist_id
-        JOIN users u ON ap.user_id = u.user_id
-        WHERE st.user_id = %s
-        GROUP BY u.username
-        ORDER BY cnt DESC
-        LIMIT 5
-    """, (user_id,))
-    
-    top_genres = fetch_all("""
-        SELECT s.genre, COUNT(*) AS cnt
-        FROM streams st
-        JOIN songs s ON st.song_id = s.song_id
-        WHERE st.user_id = %s AND s.genre IS NOT NULL
-        GROUP BY s.genre
-        ORDER BY cnt DESC
-        LIMIT 5
-    """, (user_id,))
-
-    # Build search queries from listening history
-    search_queries = []
-    for a in top_artists:
-        if a.get('artist_name') and not a['artist_name'].endswith('@wave.local'):
-            search_queries.append(a['artist_name'])
-            search_queries.append(f"{a['artist_name']} best")
-
-    # Fallback for new users
-    if not search_queries:
-        search_queries = ['trending songs', 'top hits', 'viral']
-
-    seen_ids = set()
-    recommendations = []
-    for query in search_queries[:4]:
-        try:
-            resp = ext_requests.get(
-                f"{SAAVN_API_BASE}/search/songs",
-                params={'query': query, 'limit': 8},
-                timeout=60
-            )
-            data = resp.json()
-            if data.get('success'):
-                from routes.jiosaavn import _normalize_song, get_preferred_quality
-                raw_data = data.get('data', {})
-                results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
-                pq = get_preferred_quality(user_id)
-                for s in results:
-                    if isinstance(s, dict):
-                        norm = _normalize_song(s, pq)
-                        sid = norm.get('saavn_id', '')
-                        if sid and sid not in seen_ids:
-                            seen_ids.add(sid)
-                            recommendations.append(norm)
-        except:
-            continue
-
-    # Deduplicate across the queries
-    from routes.jiosaavn import _dedup_songs
-    recommendations = _dedup_songs(recommendations)
-
-    # Shuffle to add variety
-    import random
-    random.shuffle(recommendations)
-
+    # 3. Last resort: return empty
     return jsonify({
         'success': True,
-        'songs': recommendations[:15],
-        'based_on': {
-            'genres': [g['genre'] for g in top_genres] if top_genres else [],
-            'artists': [a['artist_name'] for a in top_artists] if top_artists else []
-        }
+        'songs': [],
+        'label': 'Recommended for You',
+        'source': 'empty'
     }), 200
 
 
