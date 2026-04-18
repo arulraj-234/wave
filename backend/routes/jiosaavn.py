@@ -3,6 +3,9 @@ from db import execute_query, fetch_all, fetch_one
 import requests
 import uuid
 import html
+import time
+
+from engine.ranker import get_dynamic_taste_profile
 
 from config import Config
 
@@ -815,49 +818,21 @@ def get_home_content():
         'punjabi': ['AP Dhillon', 'Diljit Dosanjh', 'Sidhu Moose Wala'],
     }
 
-    # ── Fetch user taste profile ──
+    # ── Fetch user taste profile (DYNAMIC ML BRIDGE) ──
     user_genres = []
     user_languages = []
     user_artists = []
     
     if user_id:
         try:
-            prefs = fetch_all("SELECT preference_type, preference_value FROM user_preferences WHERE user_id = %s", (user_id,))
-            for p in prefs:
-                if p['preference_type'] == 'genre':
-                    user_genres.append(p['preference_value'])
-                elif p['preference_type'] == 'artist':
-                    user_artists.append(p['preference_value'])
-                elif p['preference_type'] == 'language':
-                    user_languages.append(p['preference_value'])
-
-            stream_genres = fetch_all("""
-                SELECT s.genre, COUNT(*) AS cnt
-                FROM streams st JOIN songs s ON st.song_id = s.song_id
-                WHERE st.user_id = %s AND s.genre IS NOT NULL AND s.genre != '' AND s.genre != 'Unknown'
-                GROUP BY s.genre ORDER BY cnt DESC LIMIT 5
-            """, (user_id,))
-            for g in stream_genres:
-                if g['genre'] not in user_genres:
-                    user_genres.append(g['genre'])
-            
-            stream_artists = fetch_all("""
-                SELECT u.username AS artist_name, COUNT(*) AS cnt
-                FROM streams st
-                JOIN songs s ON st.song_id = s.song_id
-                JOIN artist_profiles ap ON s.artist_id = ap.artist_id
-                JOIN users u ON ap.user_id = u.user_id
-                WHERE st.user_id = %s
-                GROUP BY u.username ORDER BY cnt DESC LIMIT 8
-            """, (user_id,))
-            for a in stream_artists:
-                name = a['artist_name']
-                if name and not name.endswith('@wave.local') and name not in user_artists:
-                    user_artists.append(name)
+            profile = get_dynamic_taste_profile(user_id)
+            user_genres = profile.get('genres', [])
+            user_artists = profile.get('artists', [])
+            user_languages = profile.get('languages', [])
         except Exception as e:
-            log_error(f"Error fetching user taste: {str(e)}")
+            log_error(f"Error fetching dynamic ML user taste: {str(e)}")
 
-    # Derive expected languages from genres
+    # Derive expected languages from genres natively mapped
     for g in user_genres:
         lang = GENRE_LANGUAGE_MAP.get(g.lower())
         if lang and lang not in user_languages:

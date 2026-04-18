@@ -52,11 +52,20 @@ def _get_recently_skipped(user_id, hours=48):
     return set(r['song_id'] for r in rows)
 
 
-def _get_user_taste_profile(user_id):
+def get_dynamic_taste_profile(user_id):
     """
     Build a taste profile from the user's preferences and listening history.
+    Heavily cached (6 hours) to prevent expensive GROUP BY queries on every page load.
     Returns: { 'genres': [...], 'languages': [...], 'artists': [...] }
     """
+    if not user_id:
+        return {'genres': [], 'languages': [], 'artists': []}
+        
+    cache_key = f"taste_profile_{user_id}"
+    cached = rec_cache.get(cache_key)
+    if cached is not None:
+        return cached
+        
     profile = {'genres': [], 'languages': [], 'artists': []}
     
     # Explicit onboarding preferences
@@ -72,7 +81,7 @@ def _get_user_taste_profile(user_id):
         elif p['preference_type'] == 'artist':
             profile['artists'].append(p['preference_value'])
     
-    # Enrich from streaming history
+    # Enrich from streaming history (implicit signals)
     stream_genres = fetch_all("""
         SELECT s.genre, COUNT(*) AS cnt
         FROM streams st JOIN songs s ON st.song_id = s.song_id
@@ -96,6 +105,9 @@ def _get_user_taste_profile(user_id):
         name = a['artist_name']
         if name and not name.endswith('@wave.local') and name not in profile['artists']:
             profile['artists'].append(name)
+            
+    # Cache for 6 hours
+    rec_cache.set(cache_key, profile, ttl_seconds=21600)
     
     return profile
 
@@ -227,7 +239,7 @@ def _cold_start_recommendations(user_id, count, all_meta):
     Recommendations for users with very little listening history.
     Uses onboarding preferences and global popularity as signals.
     """
-    profile = _get_user_taste_profile(user_id)
+    profile = get_dynamic_taste_profile(user_id)
     
     if not all_meta:
         return []
