@@ -159,7 +159,7 @@ const Sidebar = () => {
           </Link>
         )}
 
-        <div className="pt-6 pb-6">
+        {/* <div className="pt-6 pb-6">
           <a
             href="/wave.apk"
             download="wave.apk"
@@ -169,7 +169,7 @@ const Sidebar = () => {
             <Download className="w-5 h-5 shrink-0 text-brand-primary" />
             {!isSidebarCollapsed && <span className="truncate text-sm font-semibold text-brand-primary">Get Android App</span>}
           </a>
-        </div>
+        </div> */}
       </nav>
     </div>
 

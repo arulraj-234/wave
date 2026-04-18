@@ -71,13 +71,13 @@ const UserMenu = ({ isOpen, onClose, user, onOpenSettings, onLogout, navigate })
           <div className="h-px bg-white/5 mx-2 my-1" />
 
           {/* Secondary Actions */}
-          <button
+          {/* <button
             onClick={() => { window.open('/wave.apk', '_blank'); onClose(); }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group text-left"
           >
              <Download className="w-4 h-4 text-brand-muted group-hover:text-brand-primary" />
              <span className="text-[11px] font-semibold text-brand-muted group-hover:text-brand-primary">Download App</span>
-          </button>
+          </button> */}
 
           <button
             onClick={onLogout}
