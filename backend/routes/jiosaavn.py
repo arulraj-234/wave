@@ -776,14 +776,15 @@ def get_home_content():
             return True
         return False
 
-    def _add_playlist_if_new(pl, target_list):
-        pid = pl.get('id', '')
-        count = pl.get('song_count', 0)
-        if pid and pid not in _seen_playlist_ids and count and count > 0:
-            _seen_playlist_ids.add(pid)
-            target_list.append(pl)
-            return True
-        return False
+    def _add_playlist_if_new(raw_pl, target_list):
+        norm = _normalize_playlist(raw_pl)
+        pid = norm.get('id', '')
+        # Allow missing song_count data, just filter out empty IDs
+        if not pid or pid in _seen_playlist_ids:
+            return False
+        _seen_playlist_ids.add(pid)
+        target_list.append(norm)
+        return True
 
     # ── Genre-to-language mapping ──
     GENRE_LANGUAGE_MAP = {
@@ -875,8 +876,7 @@ def get_home_content():
                     results = raw_data.get('results', []) if isinstance(raw_data, dict) else []
                     for p in results:
                         if isinstance(p, dict):
-                            norm = _normalize_playlist(p)
-                            _add_playlist_if_new(norm, content['featured_playlists'])
+                            _add_playlist_if_new(p, content['featured_playlists'])
             except Exception:
                 continue
         content['featured_playlists'] = content['featured_playlists'][:12]
@@ -909,14 +909,7 @@ def get_home_content():
                     for s in results:
                         if isinstance(s, dict):
                             norm = _normalize_song(s, pq)
-                            # Language validation
-                            if user_languages and norm.get('language'):
-                                song_lang = norm['language'].lower().strip()
-                                if song_lang and not any(
-                                    ul.lower() in song_lang or song_lang in ul.lower()
-                                    for ul in user_languages
-                                ):
-                                    continue
+                            # Trending is global; don't strictly filter language
                             _add_song_if_new(norm, content['trending_songs'])
             except Exception:
                 continue
@@ -954,7 +947,8 @@ def get_home_content():
                                 yr = int(norm.get('year', 0) or 0)
                             except (ValueError, TypeError):
                                 yr = 0
-                            if yr < current_year - 1:
+                            # Relax to last 3 years to ensure artists with gaps still return content
+                            if yr > 0 and yr < current_year - 3:
                                 continue
                             # Language relevance check
                             album_lang = (norm.get('language') or '').lower().strip()
