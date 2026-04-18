@@ -241,9 +241,17 @@ def add_song():
         album_id_val = int(album_id) if album_id and str(album_id).isdigit() else None
         result = execute_query(query, (artist_id, album_id_val, title[:200], audio_url, cover_image_url, duration, safe_genre, user_id))
         if result:
+            song_id = result
+            # Enforce song_artists mapping for universal search and recommendation engine
+            if isinstance(song_id, int):
+                execute_query(
+                    "INSERT INTO song_artists (song_id, artist_id, is_primary) VALUES (%s, %s, TRUE)",
+                    (song_id, artist_id)
+                )
+                
             return jsonify({
                 "message": "Song added successfully", 
-                "song_id": result,
+                "song_id": song_id,
                 "metadata_extracted": {
                     "title": title,
                     "duration": duration,

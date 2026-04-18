@@ -158,12 +158,9 @@ def login():
     if not check_password_hash(user['hashed_password'], password):
         return jsonify({"error": "Incorrect password"}), 401
 
-    # Enforce single-session: if user already has an active session, warn them
-    if user.get('active_session') and not force_login:
-        return jsonify({
-            "error": "session_conflict",
-            "message": "You're already logged in on another device. Continue to log out the other session."
-        }), 409
+    # We silently overwrite the active session here.
+    # This automatically invalidates any other device holding the old session ID
+    # preventing the annoying prompt when users just close their browsers.
 
     # Extract onboarding state directly from dict (1/0 to true/false)
     is_onboarded = bool(user.get('onboarding_completed', False))
