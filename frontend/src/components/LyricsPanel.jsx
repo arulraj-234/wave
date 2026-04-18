@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mic2, AlertCircle } from 'lucide-react';
-import api from '../services/api';
+import api from '../api';
 
 const parseLRC = (lrcString) => {
   if (!lrcString) return [];
@@ -117,15 +117,15 @@ const LyricsPanel = ({ currentSong, currentTime, dominantColor, onClose }) => {
     >
       {/* Header */}
       <div className="flex items-center justify-between p-6 md:p-10 shrink-0">
-        <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/5 shadow-2xl">
-                <Mic2 className="w-6 h-6 text-brand-primary" />
+        <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/5 shadow-2xl shrink-0">
+                <Mic2 className="w-5 h-5 md:w-6 md:h-6 text-brand-primary" />
             </div>
-            <div>
-                <h2 className="text-xl md:text-2xl font-black text-white drop-shadow-md tracking-tight leading-tight">
+            <div className="min-w-0">
+                <h2 className="text-lg md:text-2xl font-black text-white drop-shadow-md tracking-tight leading-tight truncate">
                     {currentSong?.title || "Lyrics"}
                 </h2>
-                <p className="text-white/60 font-medium text-sm md:text-base">
+                <p className="text-white/60 font-medium text-xs md:text-base truncate">
                     {currentSong?.artist_name}
                 </p>
             </div>
@@ -141,7 +141,7 @@ const LyricsPanel = ({ currentSong, currentTime, dominantColor, onClose }) => {
       {/* Lyrics Container */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto w-full max-w-4xl mx-auto px-6 md:px-12 pb-64 pt-32 custom-scrollbar scroll-smooth relative"
+        className="flex-1 overflow-y-auto w-full max-w-4xl mx-auto px-6 md:px-12 pb-64 pt-20 md:pt-32 custom-scrollbar scroll-smooth relative"
       >
         {loading ? (
           <div className="h-full flex flex-col items-center justify-center gap-6">
@@ -175,15 +175,15 @@ const LyricsPanel = ({ currentSong, currentTime, dominantColor, onClose }) => {
               return (
                 <div
                   key={i}
-                  className={`lyric-line transform transition-all duration-700 ease-in-out cursor-pointer group ${
+                  className={`lyric-line transform transition-all duration-700 ease-in-out cursor-pointer group will-change-transform ${
                     isActive
                       ? 'scale-105 md:scale-110 opacity-100 text-white drop-shadow-2xl'
                       : isPassed 
-                          ? 'scale-95 opacity-30 text-white/40 blur-[1px]'
-                          : 'scale-95 opacity-50 text-white/60 blur-[1.5px]'
+                          ? 'scale-100 md:scale-95 opacity-30 text-white/40 blur-[0.5px] md:blur-[1px]'
+                          : 'scale-100 md:scale-95 opacity-50 text-white/60 blur-[1px] md:blur-[1.5px]'
                   }`}
                 >
-                  <p className="text-3xl md:text-5xl font-black leading-tight tracking-tight origin-left transition-colors duration-500">
+                  <p className="text-2xl md:text-5xl font-black leading-tight tracking-tight origin-left transition-colors duration-500">
                     {line.text}
                   </p>
                 </div>

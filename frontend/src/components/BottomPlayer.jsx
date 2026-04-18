@@ -379,10 +379,14 @@ const BottomPlayer = () => {
                 </button>
               </div>
 
-               {/* Extra Bottom Actions (Queue) */}
+               {/* Extra Bottom Actions (Queue & Lyrics) */}
               <div className="flex items-center justify-between mt-auto">
-                <button className="p-2 text-brand-muted" title="Volume">
-                  <Volume2 className="w-5 h-5 invisible" /> {/* Placeholder for balance */}
+                <button 
+                  onClick={() => setShowLyrics(!showLyrics)}
+                  title="Lyrics"
+                  className={`p-2 transition-colors ${showLyrics ? 'text-brand-primary' : 'text-brand-muted hover:text-white'}`}
+                >
+                  <Mic2 className="w-6 h-6" />
                 </button>
                 <button 
                   onClick={() => setShowQueue(!showQueue)}
