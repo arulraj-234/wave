@@ -1,11 +1,12 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Music, Play, Pause, SkipForward, SkipBack, Heart, Volume2, VolumeX, Maximize2, ChevronDown, Shuffle, Repeat, Repeat1, ListMusic, Timer, Moon } from 'lucide-react';
+import { Music, Play, Pause, SkipForward, SkipBack, Heart, Volume2, VolumeX, Maximize2, ChevronDown, Shuffle, Repeat, Repeat1, ListMusic, Timer, Moon, Mic2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PlayerContext } from '../context/PlayerContext';
 import TiltedCard from './TiltedCard';
 import QueuePanel from './QueuePanel';
 import ElasticSlider from './ElasticSlider';
+import LyricsPanel from './LyricsPanel';
 
 const useDominantColor = (imageUrl) => {
   const [color, setColor] = useState('#121212');
@@ -193,6 +194,16 @@ const BottomPlayer = () => {
 
   return (
     <>
+      <AnimatePresence>
+        {showLyrics && (
+           <LyricsPanel 
+              currentSong={currentSong} 
+              currentTime={currentTime} 
+              dominantColor={dominantColor} 
+              onClose={() => setShowLyrics(false)} 
+            />
+        )}
+      </AnimatePresence>
       <QueuePanel isOpen={showQueue} onClose={() => setShowQueue(false)} />
 
       {/* Full Screen Player Overlay */}
@@ -507,6 +518,14 @@ const BottomPlayer = () => {
                 className={`relative p-2 rounded-full transition-colors ${showQueue ? 'text-brand-primary bg-white/[0.06]' : 'text-brand-muted hover:text-white'}`}
               >
                 <ListMusic className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowLyrics(!showLyrics); }}
+                title="Lyrics"
+                className={`relative p-2 rounded-full transition-colors ${showLyrics ? 'text-brand-primary bg-white/[0.06]' : 'text-brand-muted hover:text-white'}`}
+              >
+                <Mic2 className="w-4 h-4" />
               </button>
 
               <div className="relative">

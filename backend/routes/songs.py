@@ -8,6 +8,7 @@ import hashlib
 from werkzeug.utils import secure_filename
 import mutagen
 import requests as ext_requests
+import urllib.parse
 
 # Ensure upload directory exists
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'songs')
