@@ -707,7 +707,7 @@ const UsersTab = ({ token }) => {
   const filteredUsers = users.filter(u => {
     const matchesSearch = (u.username?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
                           (u.email?.toLowerCase() || '').includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'all' || u.role === roleFilter || (!u.role && roleFilter === 'user');
+    const matchesRole = roleFilter === 'all' || u.role === roleFilter || (!u.role && roleFilter === 'listener');
     return matchesSearch && matchesRole;
   }).sort((a, b) => {
     if (sortBy === 'newest') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
@@ -740,7 +740,7 @@ const UsersTab = ({ token }) => {
           <option value="all">All Roles</option>
           <option value="admin">Admins</option>
           <option value="artist">Artists</option>
-          <option value="user">Users</option>
+          <option value="listener">Listeners</option>
         </select>
         <select 
           className="bg-[#1a1a24] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 appearance-none bg-no-repeat bg-[url('data:image/svg+xml;utf8,<svg fill=%22white%22 height=%2224%22 viewBox=%220 0 24 24%22 width=%2224%22 xmlns=%22http://www.w3.org/2000/svg%22><path d=%22M7 10l5 5 5-5z%22/></svg>')] bg-[length:1.25rem_1.25rem] bg-[position:right_0.5rem_center] pr-10" 
@@ -786,7 +786,7 @@ const UsersTab = ({ token }) => {
                         u.role === 'admin' ? 'bg-rose-500/10 text-rose-300 border-rose-500/30' : 
                         u.role === 'artist' ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'
                       }`}>
-                        {u.role || 'user'}
+                        {u.role || 'listener'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-white/40 text-[11px] font-mono whitespace-nowrap">
