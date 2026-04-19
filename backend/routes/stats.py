@@ -13,7 +13,7 @@ def get_listener_stats(user_id):
             u.user_id,
             u.username,
             COUNT(st.stream_id) AS total_streams,
-            COALESCE(SUM(s.duration), 0) AS total_listen_seconds,
+            COALESCE(SUM(st.listen_duration), 0) AS total_listen_seconds,
             COUNT(DISTINCT st.song_id) AS unique_songs,
             COUNT(DISTINCT s.artist_id) AS unique_artists,
             COUNT(DISTINCT s.genre) AS unique_genres,
