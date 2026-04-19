@@ -775,6 +775,11 @@ def get_home_content():
     start_time = time.time()
     from flask import current_app
     
+    # ── Cache Key Generation ──
+    # User-specific cache if personalized, fixed cache otherwise
+    user_id = request.args.get('user_id', type=int)
+    cache_key = f"home_v2_user_{user_id}" if user_id else "home_v2_guest"
+    
     # ── Global dedup trackers ──
     _seen_playlist_ids = set()
 
@@ -978,6 +983,24 @@ def get_home_content():
                         
                         payload = {'data': results, 'timestamp': time.time()}
                         cache.set(cache_key, payload, timeout=ttl * 10) # hard expire much later to allow SWR grace period
+
+                        # Broadening Fallback: if we got very few results and had a specific query, try broader
+                        if len(results) < 5 and current_year and str(current_year) in str(query):
+                            broader_query = str(query).replace(str(current_year), "").strip()
+                            if broader_query:
+                                try:
+                                    current_app.logger.warning(f"[SWR] Low results ({len(results)}) for {query}. Retrying broader: {broader_query}")
+                                    br_resp = requests.get(url, params={**params, 'query': broader_query}, timeout=10)
+                                    if br_resp.status_code == 200:
+                                        br_data = br_resp.json()
+                                        if br_data.get('success'):
+                                            br_res = br_data.get('data', [])
+                                            if isinstance(br_res, dict): br_list = br_res.get('results') or br_res.get('songs') or br_res.get('data') or []
+                                            else: br_list = br_res
+                                            if len(br_list) > len(results):
+                                                return br_list
+                                except: pass
+
                         return results
             except Exception as e:
                 print(f"[SWR bg_fetch] failed for {category}: {e}")

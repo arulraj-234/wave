@@ -167,15 +167,18 @@ def get_dynamic_taste_profile(user_id):
             profile['genres'].append(g['genre'])
 
     stream_artists = fetch_all("""
-        SELECT s.artist_name,
+        SELECT u.username AS artist_name,
                SUM(
                    LEAST(st.listen_duration / GREATEST(s.duration, 1), 1.0) *
                    EXP(-DATEDIFF(NOW(), st.streamed_at) / 30)
                ) AS weighted_cnt
         FROM streams st
         JOIN songs s ON st.song_id = s.song_id
-        WHERE st.user_id = %s
-        GROUP BY s.artist_name ORDER BY weighted_cnt DESC LIMIT 8
+        JOIN song_artists sa ON s.song_id = sa.song_id
+        JOIN artist_profiles ap ON sa.artist_id = ap.artist_id
+        JOIN users u ON ap.user_id = u.user_id
+        WHERE st.user_id = %s AND sa.is_primary = 1
+        GROUP BY u.username ORDER BY weighted_cnt DESC LIMIT 8
     """, (user_id,))
     for a in stream_artists:
         name = a['artist_name']
@@ -183,7 +186,9 @@ def get_dynamic_taste_profile(user_id):
             profile['artists'].append(name)
 
     # Cache for 10 minutes (responsive but efficient)
-    rec_cache.set(cache_key, profile, ttl_seconds=600)
+    try:
+        rec_cache.set(cache_key, profile, ttl_seconds=600)
+    except: pass
 
     return profile
 
