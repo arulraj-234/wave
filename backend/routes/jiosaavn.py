@@ -764,16 +764,33 @@ def get_home_content():
     """
     user_id = request.args.get('user_id', type=int)
 
+    personalized_resp = _home_cache.get(cache_key)
+    
+    if personalized_resp:
+        age = time.time() - personalized_resp['timestamp']
+        if age < 3600: # 1 hour fresh
+            return jsonify(personalized_resp['data'])
+        else:
+            # Stale: Return immediately but trigger background rebuild
+            import threading
+            threading.Thread(target=_build_home_payload, args=(user_id, cache_key)).start()
+            return jsonify(personalized_resp['data'])
+
+    # Cold start: Block and build (only happens once per taste profile)
+    return jsonify(_build_home_payload(user_id, cache_key))
+
+def _build_home_payload(user_id, cache_key):
+    """Heavy lifting to build the dashboard, now safely isolated for SWR."""
+    from flask import current_app
+    import time
+    start_time = time.time()
+
     content = {
         'featured_playlists': [],
         'trending_songs': [],
         'new_releases': [],
         'personalized_mixes': [],
     }
-
-    import time
-    start_time = time.time()
-    from flask import current_app
     
     # ── Cache Key Generation ──
     # User-specific cache if personalized, fixed cache otherwise
@@ -919,11 +936,6 @@ def get_home_content():
     artist_names = [a for a in user_artists if a and not a.endswith('@wave.local')]
 
     # ── Build playlist queries ──
-    if artist_names:
-        playlist_queries = []
-        for a in artist_names[:3]:
-            playlist_queries.append(f"{a} mix")
-            playlist_queries.append(f"best of {a}")
         for g in genre_names[:2]:
             playlist_queries.append(f"{g} hits playlist")
         playlist_queries.extend(['Top Hits 2026', 'Chill Vibes'])
@@ -934,31 +946,20 @@ def get_home_content():
         ]
 
     import datetime
-    current_year = datetime.datetime.now().year
+    current_year = datetime.datetime.now().today().year
     pq = get_preferred_quality(user_id)
 
-    # ── Parallel Task Execution Engine ──
-    def _resolve_artist_id(artist_name):
-        """Quickly resolve a name like 'Bad Bunny' to a JioSaavn ID."""
-        try:
-            resp = requests.get(f"{SAAVN_API_BASE}/search/artists", params={'query': artist_name, 'limit': 1}, timeout=5)
-            data = resp.json()
-            if data.get('success'):
-                results = data.get('data', {}).get('results', [])
-                if results: return results[0].get('id')
-        except: pass
-        return None
-
+    # ── Concurrency Engine v3 (Fully Parallel) ──
     def fetch_api_task(category, type, query, limit=10):
         # Segmented TTLs (in seconds)
         ttl = 14400 # 4 hrs for charts/mixes
         if 'trending' in category: ttl = 1800 # 30 mins
         elif 'releases' in category or 'albums' in type: ttl = 3600 # 1 hour
         
-        cache_key = f"saavn_task_{category}_{type}_{query}_{limit}"
+        task_cache_key = f"saavn_task_{category}_{type}_{query}_{limit}"
         
         from app import cache
-        cached_payload = cache.get(cache_key)
+        cached_payload = cache.get(task_cache_key)
         
         # SWR Helper
         def bg_revalidate():
@@ -1058,29 +1059,23 @@ def get_home_content():
     # Task 4: Mixed Genre/Artist specific tasks
     mix_configs = []
     if genre_names or artist_names:
-        # ── PRIORITY A: Artist Mixes (Highly specific) ──
-        # Resolve Artists in parallel (increase to 5 to respect user preferences)
-        resolved_artists = []
-        with ThreadPoolExecutor(max_workers=5) as resolver_exec:
-            artist_futures = {resolver_exec.submit(_resolve_artist_id, name): name for name in artist_names[:5]}
-            for fut in as_completed(artist_futures):
-                aid = fut.result()
-                if aid: resolved_artists.append((artist_futures[fut], aid))
+        # Resolve Artists in parallel as PART of the main task list (v3 Optimization)
+        # We no longer block the whole dashboard for the artist ID lookup
+        def artist_mixed_task(name):
+            aid = _resolve_artist_id(name)
+            if not aid:
+                # Fallback: Keyword search
+                return fetch_api_task(f'mix_artist_{name}', 'songs', f"{name} best hits", 30)
+            else:
+                # Primary: ID based Radio/Albums
+                radio = fetch_api_task(f'mix_artist_{name}', 'artists_top', aid, 50)
+                # We return the radio results as the primary payload for this task
+                return radio
 
-        for name, aid in resolved_artists:
-            # Task A: Official Top Hits (Fetch more for better dedup quality)
-            tasks.append((f'mix_artist_{name}', 'artists_top', aid, 50))
-            # Task B: Recent Albums
-            tasks.append(('new_releases', 'artists_albums', aid, 15))
-            
-            mix_configs.append({'id': f'mix_artist_{name}', 'title': f"Best of {name}", 'type': 'artist'})
-
-        # Fallback for unresolved artists — use smart keyword hits
-        found_names = {ra[0] for ra in resolved_artists}
-        for artist in artist_names[:5]:
-            if artist not in found_names and not artist.endswith('.local'):
-                tasks.append((f'mix_artist_{artist}', 'songs', f"{artist} best hits", 30))
-                mix_configs.append({'id': f'mix_artist_{artist}', 'title': f"More of {artist}", 'type': 'artist'})
+        for name in artist_names[:5]:
+            if not name.endswith('.local'):
+                tasks.append(f"mix_artist_{name}") # Marker for the complex task
+                mix_configs.append({'id': f'mix_artist_{name}', 'title': f"Best of {name}", 'type': 'artist'})
 
         # ── PRIORITY B: Genre Mixes ──
         for genre in genre_names[:3]:
@@ -1088,16 +1083,28 @@ def get_home_content():
             expected_lang = GENRE_LANGUAGE_MAP.get(genre_lower)
             smart_queries = GENRE_QUERIES.get(genre_lower, [f"{genre} popular"])
             for sq in smart_queries[:2]:
-                tasks.append((f'mix_genre_{genre}', 'songs', sq, 50))
+                tasks.append(('trending_songs', 'songs', sq, 50)) # Added directly to global pool
             mix_configs.append({'id': f'mix_genre_{genre}', 'title': f"Because you like {genre}", 'lang': expected_lang, 'type': 'genre'})
 
-    # Execute all tasks in parallel (max 15 workers to stay safe on free tier clusters)
+    # Execute all tasks in parallel (max 20 workers for v3 performance)
     results_map = {}
-    with ThreadPoolExecutor(max_workers=15) as executor:
-        future_to_task = {executor.submit(fetch_api_task, *t): t for t in tasks}
-        for future in as_completed(future_to_task):
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        futures = {}
+        for t in tasks:
+            if isinstance(t, str) and t.startswith('mix_artist_'):
+                name = t.replace('mix_artist_', '')
+                futures[executor.submit(artist_mixed_task, name)] = t
+            else:
+                futures[executor.submit(fetch_api_task, *t)] = t[0]
+        
+        for future in as_completed(futures):
             res = future.result()
-            cat = res['category']
+            if not res: continue
+            cat = res.get('category') or futures[future]
+            if cat not in results_map:
+                results_map[cat] = []
+            results_map[cat].extend(res.get('results', []))
+
             if cat not in results_map:
                 results_map[cat] = []
             results_map[cat].extend(res['results'])
