@@ -892,22 +892,53 @@ def _build_home_payload(user_id, cache_key):
         'classical': 'hindi',
     }
 
-    # ── Smart artist queries per genre (produces relevant results) ──
-    GENRE_QUERIES = {
-        'k-pop': ['BTS', 'BLACKPINK', 'Stray Kids', 'NewJeans', 'aespa', 'TWICE'],
-        'kpop': ['BTS', 'BLACKPINK', 'Stray Kids', 'NewJeans', 'aespa', 'TWICE'],
-        'j-pop': ['YOASOBI', 'Official HIGE DANdism', 'Ado', 'LiSA'],
-        'jpop': ['YOASOBI', 'Official HIGE DANdism', 'Ado', 'LiSA'],
-        'bollywood': ['Arijit Singh', 'Shreya Ghoshal', 'Pritam latest'],
-        'hip-hop': ['Drake', 'Kendrick Lamar', 'Travis Scott'],
-        'hip hop': ['Drake', 'Kendrick Lamar', 'Travis Scott'],
-        'edm': ['Martin Garrix', 'Marshmello', 'Alan Walker'],
-        'lo-fi': ['lofi beats', 'chill lofi', 'lofi study'],
-        'lofi': ['lofi beats', 'chill lofi', 'lofi study'],
-        'pop': ['Taylor Swift', 'The Weeknd', 'Dua Lipa', 'Bruno Mars'],
-        'rock': ['Imagine Dragons', 'Coldplay', 'Linkin Park'],
-        'r&b': ['SZA', 'Daniel Caesar', 'The Weeknd R&B'],
-        'indie': ['Arctic Monkeys', 'Tame Impala', 'Hozier'],
+    # ── Discovery Engine v3: Vibe & Expansion Map ──
+    # Maps simple genres to a spectrum of search vibes + expansion entities
+    VIBE_MAP = {
+        'k-pop': {
+            'keywords': ['K-Pop hits', 'Hallyu trending', 'K-Drama OST'],
+            'entities': ['BTS', 'BLACKPINK', 'Stray Kids', 'NewJeans', 'aespa', 'IVE'],
+            'fallback_vibes': ['pop', 'j-pop']
+        },
+        'bollywood': {
+            'keywords': ['Bollywood latest', 'Hindi chartbusters', 'Desi hits'],
+            'entities': ['Arijit Singh', 'Shreya Ghosal', 'Pritam', 'Badshah'],
+            'fallback_vibes': ['punjabi', 'indie']
+        },
+        'pop': {
+            'keywords': ['Pop 2026', 'Billboard Top 100', 'Top 40 hits'],
+            'entities': ['Taylor Swift', 'The Weeknd', 'Dua Lipa', 'Bruno Mars', 'Billie Eilish'],
+            'fallback_vibes': ['r&b', 'edm', 'rock']
+        },
+        'indie': {
+            'keywords': ['Indie hits', 'Alternative vibes', 'Independent music'],
+            'entities': ['Arctic Monkeys', 'Tame Impala', 'Prateek Kuhad', 'Anuv Jain'],
+            'fallback_vibes': ['rock', 'acoustic', 'lo-fi']
+        },
+        'punjabi': {
+            'keywords': ['Punjabi hits', 'Latest Punjabi', 'Bhangra vibes'],
+            'entities': ['AP Dhillon', 'Diljit Dosanjh', 'Karan Aujla', 'Sidhu Moose Wala'],
+            'fallback_vibes': ['bollywood', 'hip-hop']
+        },
+        'hip-hop': {
+            'keywords': ['Hip Hop hits', 'Rap trending', 'Street vibes'],
+            'entities': ['Drake', 'Kendrick Lamar', 'Travis Scott', 'Divine', 'Stan'],
+            'fallback_vibes': ['r&b', 'pop']
+        },
+        'edm': {
+            'keywords': ['EDM bangers', 'Dance hits', 'Electronic trending'],
+            'entities': ['Martin Garrix', 'Marshmello', 'Alan Walker', 'Nucleya'],
+            'fallback_vibes': ['pop', 'hip-hop']
+        },
+        'lo-fi': {
+            'keywords': ['lofi beats', 'chill lofi', 'aesthetic beats'],
+            'entities': ['chillhop', 'lofi girl', 'vibe'],
+            'fallback_vibes': ['acoustic', 'indie']
+        }
+    }
+    VIBE_MAP['kpop'] = VIBE_MAP['k-pop']
+    VIBE_MAP['hip hop'] = VIBE_MAP['hip-hop']
+    VIBE_MAP['lofi'] = VIBE_MAP['lo-fi']
         'classical': ['classical instrumental', 'Indian classical raag'],
         'punjabi': ['AP Dhillon', 'Diljit Dosanjh', 'Sidhu Moose Wala'],
     }
@@ -985,22 +1016,37 @@ def _build_home_payload(user_id, cache_key):
                         payload = {'data': results, 'timestamp': time.time()}
                         cache.set(cache_key, payload, timeout=ttl * 10) # hard expire much later to allow SWR grace period
 
-                        # Broadening Fallback: if we got very few results and had a specific query, try broader
-                        if len(results) < 5 and current_year and str(current_year) in str(query):
-                            broader_query = str(query).replace(str(current_year), "").strip()
-                            if broader_query:
-                                try:
-                                    current_app.logger.warning(f"[SWR] Low results ({len(results)}) for {query}. Retrying broader: {broader_query}")
-                                    br_resp = requests.get(url, params={**params, 'query': broader_query}, timeout=10)
-                                    if br_resp.status_code == 200:
-                                        br_data = br_resp.json()
-                                        if br_data.get('success'):
-                                            br_res = br_data.get('data', [])
-                                            if isinstance(br_res, dict): br_list = br_res.get('results') or br_res.get('songs') or br_res.get('data') or []
-                                            else: br_list = br_res
-                                            if len(br_list) > len(results):
-                                                return br_list
-                                except: pass
+                        # ── Discovery Engine v3: Multi-Tiered Broadening ──
+                        if len(results) < 8:
+                            try:
+                                # Tier 1 -> Tier 2: Drop Year/Strict filters
+                                if current_year and str(current_year) in str(query):
+                                    broader_query = str(query).replace(str(current_year), "").strip()
+                                    if broader_query:
+                                        current_app.logger.warning(f"[Discovery Tier 2] Low results ({len(results)}) for {query}. Dropping year filter.")
+                                        br_resp = requests.get(url, params={**params, 'query': broader_query}, timeout=10)
+                                        if br_resp.status_code == 200:
+                                            br_data = br_resp.json()
+                                            if br_data.get('success'):
+                                                br_res = br_data.get('data', [])
+                                                if isinstance(br_res, dict): br_list = br_res.get('results') or br_res.get('songs') or br_res.get('data') or []
+                                                else: br_list = br_res
+                                                if len(br_list) > len(results): results = br_list
+
+                                # Tier 2 -> Tier 3: Entity + Genre Hybridization
+                                if len(results) < 5:
+                                    current_app.logger.warning(f"[Discovery Tier 3] Still low for {query}. Trying global vibe search.")
+                                    # Use a snippet of the query for a fresh global search
+                                    vibe_query = query.split(' ')[0] if ' ' in str(query) else query
+                                    v_resp = requests.get(f"{SAAVN_API_BASE}/search/songs", params={'query': f"{vibe_query} trending hits", 'limit': limit}, timeout=10)
+                                    if v_resp.status_code == 200:
+                                        v_data = v_resp.json()
+                                        if v_data.get('success'):
+                                            v_res = v_data.get('data', {}).get('results', [])
+                                            if len(v_res) > len(results): results = v_res
+
+                            except Exception as e:
+                                print(f"[Broadening] error: {e}")
 
                         return results
             except Exception as e:
@@ -1030,19 +1076,25 @@ def _build_home_payload(user_id, cache_key):
     for query in playlist_queries[:6]:
         tasks.append(('featured_playlists', 'playlists', query, 3))
 
-    # Task 2: Trending Songs
+    # Task 2: Trending Songs (Enhanced with Vibe Hybridization)
     trending_queries = []
     if genre_names:
-        for g in genre_names[:2]:
-            smart = GENRE_QUERIES.get(g.lower(), [])
-            trending_queries.append(smart[0] if smart else f"{g} trending {current_year}")
+        for g in genre_names[:3]:
+            vibe = VIBE_MAP.get(g.lower())
+            if vibe:
+                # Hybridize: Artist + Genre
+                import random
+                top_entity = random.choice(vibe['entities'])
+                trending_queries.append(f"{top_entity} {g} hits")
+                trending_queries.append(random.choice(vibe['keywords']))
     if artist_names:
-        trending_queries.append(f"{artist_names[0]} hits")
-    if not trending_queries:
-        trending_queries = [f'trending songs {current_year}', 'viral hits']
+        trending_queries.append(f"{artist_names[0]} hits {current_year}")
     
-    for tq in trending_queries[:3]:
-        tasks.append(('trending_songs', 'songs', tq, 50))
+    if not trending_queries:
+        trending_queries = [f'trending songs {current_year}', 'viral hits global']
+    
+    for tq in trending_queries[:4]:
+        tasks.append(('trending_songs', 'songs', tq, 80)) # Higher limit for better capping quality
 
     # Task 3: New Releases
     nr_queries = []
@@ -1056,35 +1108,53 @@ def _build_home_payload(user_id, cache_key):
     for nrq in nr_queries[:3]:
         tasks.append(('new_releases', 'albums', nrq, 8))
 
-    # Task 4: Mixed Genre/Artist specific tasks
+    # Task 4: Mixed Genre/Artist specific tasks (Deep Discovery Engine v3)
     mix_configs = []
     if genre_names or artist_names:
-        # Resolve Artists in parallel as PART of the main task list (v3 Optimization)
-        # We no longer block the whole dashboard for the artist ID lookup
+        # Resolve Artists in parallel with "Deep Search" Logic
         def artist_mixed_task(name):
             aid = _resolve_artist_id(name)
-            if not aid:
-                # Fallback: Keyword search
-                return fetch_api_task(f'mix_artist_{name}', 'songs', f"{name} best hits", 30)
-            else:
-                # Primary: ID based Radio/Albums
-                radio = fetch_api_task(f'mix_artist_{name}', 'artists_top', aid, 50)
-                # We return the radio results as the primary payload for this task
-                return radio
+            results = []
+            
+            # Fetch direct artist radio in one thread
+            if aid:
+                radio_data = fetch_api_task(f'mix_artist_{name}', 'artists_top', aid, 40)
+                results.extend(radio_data.get('results', []))
+            
+            # Fetch "Collaborative/Fan" hits for the artist in another logic branch
+            # This brings in covers, live versions, and featured tracks
+            keyword_data = fetch_api_task(f'mix_artist_{name}', 'songs', f"{name} greatest hits", 40)
+            results.extend(keyword_data.get('results', []))
+            
+            return {'category': f'mix_artist_{name}', 'results': results}
 
-        for name in artist_names[:5]:
+        for name in artist_names[:6]:
             if not name.endswith('.local'):
-                tasks.append(f"mix_artist_{name}") # Marker for the complex task
-                mix_configs.append({'id': f'mix_artist_{name}', 'title': f"Best of {name}", 'type': 'artist'})
+                tasks.append(f"mix_artist_{name}") 
+                mix_configs.append({'id': f'mix_artist_{name}', 'title': f"Deep Dive: {name}", 'type': 'artist'})
 
-        # ── PRIORITY B: Genre Mixes ──
-        for genre in genre_names[:3]:
-            genre_lower = genre.lower()
-            expected_lang = GENRE_LANGUAGE_MAP.get(genre_lower)
-            smart_queries = GENRE_QUERIES.get(genre_lower, [f"{genre} popular"])
-            for sq in smart_queries[:2]:
-                tasks.append(('trending_songs', 'songs', sq, 50)) # Added directly to global pool
-            mix_configs.append({'id': f'mix_genre_{genre}', 'title': f"Because you like {genre}", 'lang': expected_lang, 'type': 'genre'})
+        # ── Expansion: Fallback Vibes (Increases Sections) ──
+        # If the user has few artists/genres, expand into fallback vibes from the VIBE_MAP
+        expanded_genres = list(genre_names)
+        if len(expanded_genres) < 4:
+            for g in genre_names:
+                vibe = VIBE_MAP.get(g.lower())
+                if vibe:
+                    for fv in vibe['fallback_vibes']:
+                        if fv not in expanded_genres:
+                            expanded_genres.append(fv)
+                            if len(expanded_genres) >= 5: break
+                if len(expanded_genres) >= 5: break
+
+        for genre in expanded_genres[:5]:
+            vibe = VIBE_MAP.get(genre.lower())
+            if vibe:
+                # Hybridize: Entity + Genre Query
+                import random
+                top_entity = random.choice(vibe['entities'])
+                tasks.append((f'mix_genre_{genre}', 'songs', f"{top_entity} {genre} top hits", 50))
+                tasks.append((f'mix_genre_{genre}', 'songs', random.choice(vibe['keywords']), 50))
+                mix_configs.append({'id': f'mix_genre_{genre}', 'title': f"Because you like {genre.title()}", 'type': 'genre'})
 
     # Execute all tasks in parallel (max 20 workers for v3 performance)
     results_map = {}
