@@ -678,6 +678,11 @@ const SongsTab = ({ token }) => {
 const UsersTab = ({ token }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Feature states for filtering and sorting
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
 
   const fetchUsers = async () => {
     try {
@@ -699,9 +704,56 @@ const UsersTab = ({ token }) => {
     }
   };
 
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = (u.username?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
+                          (u.email?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter === 'all' || u.role === roleFilter || (!u.role && roleFilter === 'user');
+    return matchesSearch && matchesRole;
+  }).sort((a, b) => {
+    if (sortBy === 'newest') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    if (sortBy === 'oldest') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+    if (sortBy === 'username_asc') return (a.username || '').localeCompare(b.username || '');
+    if (sortBy === 'username_desc') return (b.username || '').localeCompare(a.username || '');
+    return 0;
+  });
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold mb-6">User Management</h2>
+      
+      {/* Filters and Search Bar */}
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
+        <div className="flex-1 relative">
+          <input 
+            type="text" 
+            placeholder="Search by username or email..." 
+            className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 transition-all"
+            value={searchQuery} 
+            onChange={e => setSearchQuery(e.target.value)} 
+          />
+        </div>
+        <select 
+          className="bg-[#1a1a24] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 appearance-none bg-no-repeat bg-[url('data:image/svg+xml;utf8,<svg fill=%22white%22 height=%2224%22 viewBox=%220 0 24 24%22 width=%2224%22 xmlns=%22http://www.w3.org/2000/svg%22><path d=%22M7 10l5 5 5-5z%22/></svg>')] bg-[length:1.25rem_1.25rem] bg-[position:right_0.5rem_center] pr-10" 
+          value={roleFilter} 
+          onChange={e => setRoleFilter(e.target.value)}
+        >
+          <option value="all">All Roles</option>
+          <option value="admin">Admins</option>
+          <option value="artist">Artists</option>
+          <option value="user">Users</option>
+        </select>
+        <select 
+          className="bg-[#1a1a24] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 appearance-none bg-no-repeat bg-[url('data:image/svg+xml;utf8,<svg fill=%22white%22 height=%2224%22 viewBox=%220 0 24 24%22 width=%2224%22 xmlns=%22http://www.w3.org/2000/svg%22><path d=%22M7 10l5 5 5-5z%22/></svg>')] bg-[length:1.25rem_1.25rem] bg-[position:right_0.5rem_center] pr-10" 
+          value={sortBy} 
+          onChange={e => setSortBy(e.target.value)}
+        >
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="username_asc">Username (A-Z)</option>
+          <option value="username_desc">Username (Z-A)</option>
+        </select>
+      </div>
+
       <div className="glass-panel overflow-hidden">
         {loading ? (
            <div className="p-8 text-center text-white/50 animate-pulse">Loading users...</div>
@@ -712,12 +764,13 @@ const UsersTab = ({ token }) => {
                 <tr className="border-b border-white/5 text-[10px] font-bold uppercase tracking-wider text-indigo-200/40 bg-white/[0.02]">
                   <th className="px-6 py-4">User</th>
                   <th className="px-6 py-4">Role</th>
+                  <th className="px-6 py-4">Joined</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {users.map(u => (
+                {filteredUsers.map(u => (
                   <tr key={u.user_id} className="hover:bg-indigo-500/[0.02] transition-colors">
                     <td className="px-6 py-4 flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-300 font-bold text-xs ring-1 ring-indigo-500/30">
@@ -736,6 +789,9 @@ const UsersTab = ({ token }) => {
                         {u.role || 'user'}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-white/40 text-[11px] font-mono whitespace-nowrap">
+                      {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                    </td>
                     <td className="px-6 py-4">
                       <span className="text-emerald-400 text-xs flex items-center gap-1 pr-2"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span> Active</span>
                     </td>
@@ -746,6 +802,9 @@ const UsersTab = ({ token }) => {
                     </td>
                   </tr>
                 ))}
+                {filteredUsers.length === 0 && (
+                  <tr><td colSpan="5" className="text-center p-8 text-white/30">No users match your filters.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
