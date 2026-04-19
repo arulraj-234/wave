@@ -55,12 +55,12 @@ def _get_weighted_stream_history(user_id):
 
     weighted = []
     for r in rows:
-        days_ago = max(r.get('days_ago') or 0, 0)
-        listen_dur = r.get('listen_duration') or 0
-        song_dur = r.get('song_duration') or 1
+        days_ago = float(r.get('days_ago') or 0)
+        listen_dur = float(r.get('listen_duration') or 0)
+        song_dur = float(r.get('song_duration') or 1)
 
         # Completion ratio: how much of the song the user actually heard
-        completion = min(listen_dur / max(song_dur, 1), 1.0)
+        completion = min(listen_dur / max(song_dur, 1.0), 1.0)
 
         # Temporal decay: recent streams dominate
         time_decay = math.exp(-days_ago / DECAY_HALFLIFE_DAYS)
@@ -109,8 +109,8 @@ def _get_skip_penalties(user_id):
 
     penalties = {}
     for r in rows:
-        very_recent = r.get('very_recent') or 0
-        older = r.get('older') or 0
+        very_recent = float(r.get('very_recent') or 0)
+        older = float(r.get('older') or 0)
         penalty = (very_recent * 0.5) + (older * 0.15)
         penalties[r['song_id']] = min(penalty, 0.9)
 
@@ -222,9 +222,9 @@ def _compute_user_blend_weights(user_id):
             WHERE user_id = %s AND streamed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         """, (user_id,))
 
-        total = (repeat_data or {}).get('total_streams') or 0
-        repeats = (repeat_data or {}).get('repeat_streams') or 0
-        repeat_rate = repeats / max(total, 1)
+        total = float((repeat_data or {}).get('total_streams') or 0)
+        repeats = float((repeat_data or {}).get('repeat_streams') or 0)
+        repeat_rate = repeats / max(total, 1.0)
 
         # Session depth: avg songs per session (30-min gap = new session)
         session_rows = fetch_all("""
@@ -375,11 +375,11 @@ def _cloud_boost_top3(user_id, all_meta):
         if not saavn_id or saavn_id in seen_saavn:
             continue
 
-        days_ago = max(r.get('days_ago') or 0, 0)
-        listen_dur = r.get('listen_duration') or 0
-        song_dur = r.get('song_duration') or 1
-        completion = min(listen_dur / max(song_dur, 1), 1.0)
-        weight = completion * math.exp(-days_ago / 7)  # Faster decay for cloud selection
+        days_ago = float(r.get('days_ago') or 0)
+        listen_dur = float(r.get('listen_duration') or 0)
+        song_dur = float(r.get('song_duration') or 1)
+        completion = min(listen_dur / max(song_dur, 1.0), 1.0)
+        weight = completion * math.exp(-days_ago / 7.0)  # Faster decay for cloud selection
 
         scored.append((saavn_id, weight))
         seen_saavn.add(saavn_id)
@@ -571,7 +571,7 @@ def _cold_start_scores(user_id, total_streams, all_meta):
             score += 0.7 * onboarding_mult
 
         # Small popularity boost to surface quality content
-        pop = math.log1p(meta.get('play_count', 0))
+        pop = math.log1p(float(meta.get('play_count', 0)))
         score += min(pop * 0.05, 0.3)
 
         if score > 0:

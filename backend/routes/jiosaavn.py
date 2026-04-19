@@ -812,7 +812,7 @@ def get_home_content():
                 dropped_null_url += 1
             normalized.append(norm)
             
-        try: current_app.logger.info(f"{section_name}: {len(normalized)} songs after normalization ({dropped_null_id} dropped_null_id, {dropped_null_url} lacking audio_url but kept)")
+        try: current_app.logger.warning(f"{section_name}: {len(normalized)} songs after normalization ({dropped_null_id} dropped_null_id, {dropped_null_url} lacking audio_url but kept)")
         except: pass
         
         # Intra-Section Deduplication
@@ -825,7 +825,7 @@ def get_home_content():
                 deduped.append(s)
                 
         dropped_dedup = len(normalized) - len(deduped)
-        try: current_app.logger.info(f"{section_name}: {len(deduped)} songs after dedup ({dropped_dedup} removed as duplicates)")
+        try: current_app.logger.warning(f"{section_name}: {len(deduped)} songs after dedup ({dropped_dedup} removed as duplicates)")
         except: pass
         
         # Artist Cap
@@ -844,11 +844,11 @@ def get_home_content():
                 capped.append(s)
                 artist_counts[clean_artist] = artist_counts.get(clean_artist, 0) + 1
                 
-        try: current_app.logger.info(f"{section_name}: {len(capped)} songs after artist cap")
+        try: current_app.logger.warning(f"{section_name}: {len(capped)} songs after artist cap")
         except: pass
         
         sliced = capped[:target_count]
-        try: current_app.logger.info(f"{section_name}: returning {len(sliced)} songs to frontend")
+        try: current_app.logger.warning(f"{section_name}: returning {len(sliced)} songs to frontend")
         except: pass
         
         if len(sliced) < 5:
@@ -973,7 +973,7 @@ def get_home_content():
                     data = resp.json()
                     if data.get('success'):
                         raw_res = data.get('data', [])
-                        if isinstance(raw_res, dict): results = raw_res.get('results') or raw_res.get('data') or []
+                        if isinstance(raw_res, dict): results = raw_res.get('results') or raw_res.get('songs') or raw_res.get('data') or []
                         else: results = raw_res
                         
                         payload = {'data': results, 'timestamp': time.time()}
@@ -1136,7 +1136,7 @@ def get_home_content():
                 global_song_counts[sid] = global_song_counts.get(sid, 0) + 1
         mix['songs'] = final_mix
         
-    try: current_app.logger.info(f"Home page built in {int((time.time() - start_time)*1000)}ms — sections: trending={len(content['trending_songs'])}, new_releases={len(content['new_releases'])}, mixes={len(content['personalized_mixes'])}")
+    try: current_app.logger.warning(f"Home page built in {int((time.time() - start_time)*1000)}ms — sections: trending={len(content['trending_songs'])}, new_releases={len(content['new_releases'])}, mixes={len(content['personalized_mixes'])}")
     except: pass
     
     response_data = {
