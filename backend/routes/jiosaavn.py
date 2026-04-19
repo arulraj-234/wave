@@ -939,9 +939,6 @@ def _build_home_payload(user_id, cache_key):
     VIBE_MAP['kpop'] = VIBE_MAP['k-pop']
     VIBE_MAP['hip hop'] = VIBE_MAP['hip-hop']
     VIBE_MAP['lofi'] = VIBE_MAP['lo-fi']
-        'classical': ['classical instrumental', 'Indian classical raag'],
-        'punjabi': ['AP Dhillon', 'Diljit Dosanjh', 'Sidhu Moose Wala'],
-    }
 
     # ── Fetch user taste profile (DYNAMIC ML BRIDGE) ──
     user_genres = []
