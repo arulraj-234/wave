@@ -10,6 +10,11 @@ from config import Config
 
 auth_bp = Blueprint('auth', __name__)
 
+@auth_bp.route('/health', methods=['GET', 'OPTIONS'])
+def health_ping():
+    """Unauthenticated fast-ping for waking Render machines"""
+    return jsonify({"status": "alive"}), 200
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 def allowed_file(filename):

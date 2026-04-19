@@ -2,10 +2,12 @@ import React, { createContext, useState, useRef, useEffect, useCallback } from '
 import api, { resolveUrl } from '../api';
 import { App as CapacitorApp } from '@capacitor/app';
 import { CapacitorMusicControls } from 'capacitor-music-controls-plugin';
+import { useToast } from './ToastContext';
 
 export const PlayerContext = createContext();
 
 export const PlayerProvider = ({ children }) => {
+  const toast = useToast();
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -157,17 +159,40 @@ export const PlayerProvider = ({ children }) => {
 
   const toggleLike = async (songId) => {
     if (!user.id) return;
+    
+    // 1. Optimistic Update
+    const isCurrentlyLiked = likedSongs.has(songId);
+    setLikedSongs(prev => {
+      const next = new Set(prev);
+      if (isCurrentlyLiked) next.delete(songId);
+      else next.add(songId);
+      return next;
+    });
+
     try {
+      // 2. Network Request
       const response = await api.post(`/api/songs/${songId}/like`, { user_id: user.id });
-      const newLikedSongs = new Set(likedSongs);
-      if (response.data.liked) {
-        newLikedSongs.add(songId);
-      } else {
-        newLikedSongs.delete(songId);
+      
+      // 3. Optional Server Sync (If server disagreed with our optimistic flip)
+      if (response.data.liked !== !isCurrentlyLiked) {
+        setLikedSongs(prev => {
+          const next = new Set(prev);
+          if (response.data.liked) next.add(songId);
+          else next.delete(songId);
+          return next;
+        });
       }
-      setLikedSongs(newLikedSongs);
     } catch (error) {
       console.error("Error toggling like:", error);
+      // 4. Rollback on Failure
+      setLikedSongs(prev => {
+        const next = new Set(prev);
+        if (isCurrentlyLiked) next.add(songId);
+        else next.delete(songId);
+        return next;
+      });
+      // Try to invoke toast if available
+      if (toast) toast.error('Failed to update library. Connection error.');
     }
   };
 

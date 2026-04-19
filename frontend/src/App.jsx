@@ -80,6 +80,7 @@ const AnimatedRoutes = ({ isAuthenticated, setIsAuthenticated }) => {
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isWaking, setIsWaking] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   // Initialize Native Android Status bar — don't overlay so status bar has its own space
@@ -111,10 +112,13 @@ function App() {
   // Validate session on initial load
   useEffect(() => {
     const checkAuth = async () => {
+      const wakeTimeout = setTimeout(() => setIsWaking(true), 2000);
+      
       const token = localStorage.getItem('token');
       if (!token) {
         setIsAuthenticated(false);
         setIsInitializing(false);
+        clearTimeout(wakeTimeout);
         return;
       }
       try {
@@ -132,7 +136,6 @@ function App() {
         } else {
           // It's a network error or 5xx (server cold-starting on Render).
           // Optimistically stay authenticated so the user isn't kicked to the login screen.
-          // If the token is actually invalid, the global 401 interceptor will catch it on the next API call.
           if (localStorage.getItem('user')) {
             setIsAuthenticated(true);
           } else {
@@ -140,6 +143,7 @@ function App() {
           }
         }
       } finally {
+        clearTimeout(wakeTimeout);
         setIsInitializing(false);
       }
     };
@@ -162,22 +166,33 @@ function App() {
     return () => api.interceptors.response.eject(interceptor);
   }, []);
 
-  // Session heartbeat — periodically validate that this session is still active
+  // Session heartbeat — periodically keep the Render instance awake
   useEffect(() => {
     if (!isAuthenticated) return;
     const interval = setInterval(async () => {
       try {
-        await api.get('/api/auth/me');
-      } catch {
-        // 401 will be caught by the interceptor above and trigger logout
-      }
-    }, 30000); // every 30 seconds
+        await api.get('/api/health');
+      } catch {}
+    }, 600000); // every 10 minutes
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
-
   if (isInitializing) {
-    return <div className="min-h-screen bg-brand-dark flex items-center justify-center"><div className="w-8 h-8 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" /></div>;
+    return (
+      <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center">
+        <div className="w-8 h-8 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin" />
+        {isWaking && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 flex flex-col items-center text-center px-4"
+          >
+            <p className="text-brand-primary font-bold text-lg mb-1">Waking up server...</p>
+            <p className="text-brand-muted text-sm max-w-xs">Connecting to free-tier cloud instance. This may take up to 30 seconds.</p>
+          </motion.div>
+        )}
+      </div>
+    );
   }
 
   return (
