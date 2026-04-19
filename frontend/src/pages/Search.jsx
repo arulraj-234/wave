@@ -4,6 +4,7 @@ import { Search as SearchIcon, Music, Play, Pause, Heart, Plus, Database, Loader
 import api from '../api';
 
 import { PlayerContext } from '../context/PlayerContext';
+import { useToast } from '../context/ToastContext';
 import Skeleton, { SongSkeleton } from '../components/Skeleton';
 
 const Search = () => {
@@ -13,7 +14,8 @@ const Search = () => {
   const [globalResults, setGlobalResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [importingId, setImportingId] = useState(null); 
-  const { currentSong, isPlaying, likedSongs, toggleLike, playlists, addSongToPlaylist, playSong, resolveUrl } = useContext(PlayerContext);
+  const { currentSong, isPlaying, likedSongs, toggleLike, playlists, addSongToPlaylist, playSong, resolveUrl, addToQueue } = useContext(PlayerContext);
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'song', 'artist', 'album', 'playlist'
 
   // Read query parameter from URL (from global search bar)
@@ -147,6 +149,19 @@ const Search = () => {
                   <div className={`font-semibold truncate text-sm ${isActive ? 'text-brand-primary' : 'text-white'}`}>{song.title}</div>
                   <div className="text-xs text-brand-muted truncate font-medium">{song.artist_name}</div>
                 </div>
+                {/* Add to Queue Button */}
+                <button 
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    addToQueue(song);
+                    toast.success('Added to queue');
+                  }}
+                  className="w-10 h-10 flex items-center justify-center rounded-full text-brand-muted hover:text-brand-primary opacity-0 group-hover:opacity-100 transition-all duration-200"
+                  title="Add to Queue"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+
                 {/* Removed Global badge to white-label results */}
                 <div className="text-xs text-brand-muted font-medium w-10 text-right tabular-nums">{formatTime(song.duration)}</div>
               </div>

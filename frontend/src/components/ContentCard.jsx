@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Music, Play, Pause } from 'lucide-react';
+import { Music, Play, Pause, Plus } from 'lucide-react';
 
 /* ============ Playable Card (for songs/playlists/albums) ============ */
-const ContentCard = ({ image, title, subtitle, onClick, isRound = false, size = 'normal', isCurrentlyPlaying = false, isCurrentlyPaused = false }) => {
+const ContentCard = ({ image, title, subtitle, onClick, onAddToQueue, isRound = false, size = 'normal', isCurrentlyPlaying = false, isCurrentlyPaused = false }) => {
   const w = size === 'large' ? 'w-40 md:w-52 shrink-0' : 'w-36 md:w-44 shrink-0';
   const [imgError, setImgError] = useState(false);
   
@@ -28,11 +28,23 @@ const ContentCard = ({ image, title, subtitle, onClick, isRound = false, size = 
             </div>
           </div>
         )}
-        {/* Hover play — only on non-playing cards */}
+        {/* Hover actions — only on non-playing cards */}
         {!isCurrentlyPlaying && (
-          <div className="absolute inset-0 bg-brand-dark/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-            <div className="w-12 h-12 bg-brand-primary rounded-full flex items-center justify-center shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-              <Play className="w-6 h-6 fill-current text-brand-dark ml-1" />
+          <div className="absolute inset-0 bg-brand-dark/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-brand-primary rounded-full flex items-center justify-center shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:scale-105">
+                <Play className="w-6 h-6 fill-current text-brand-dark ml-1" />
+              </div>
+              
+              {onAddToQueue && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onAddToQueue(); }}
+                  className="w-10 h-10 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:scale-110 text-white"
+                  title="Add to queue"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              )}
             </div>
           </div>
         )}

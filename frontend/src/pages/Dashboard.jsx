@@ -63,13 +63,18 @@ const Dashboard = ({ defaultView = 'home' }) => {
   const [saavnPlaylist, setSaavnPlaylist] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const handleAddToQueue = (song) => {
+    addToQueue(song);
+    toast.success('Added to queue');
+  };
+
   const { 
     currentSong, isPlaying, progress, duration, volume,
     likedSongs, toggleLike, 
     playlists, createPlaylist, addSongToPlaylist,
     likedPlaylists, fetchLikedPlaylists, toggleLikePlaylist,
     playSong, togglePlay, seek, setVolume,
-    playNext, playPrevious, resolveUrl
+    playNext, playPrevious, resolveUrl, addToQueue
   } = useContext(PlayerContext);
 
   // Determine current view from URL
@@ -534,6 +539,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
                           title={song.title}
                           subtitle={song.artist_name}
                           onClick={() => playSong(song, recentSongs)}
+                          onAddToQueue={() => handleAddToQueue(song)}
                         />
                       ))
                     )}
@@ -558,6 +564,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
                           title={song.title}
                           subtitle={song.artist_name}
                           onClick={() => handleGlobalPlay(song)}
+                          onAddToQueue={() => handleAddToQueue(song)}
                         />
                       ))
                     )}
@@ -602,6 +609,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
                           title={song.title}
                           subtitle={song.artist_name}
                           onClick={() => handleGlobalPlay(song)}
+                          onAddToQueue={() => handleAddToQueue(song)}
                         />
                       ))
                     )}
@@ -625,6 +633,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
                         title={song.title}
                         subtitle={song.artist_name}
                         onClick={() => handleGlobalPlay(song)}
+                        onAddToQueue={() => handleAddToQueue(song)}
                       />
                     ))}
                   </HorizontalCarousel>
@@ -953,6 +962,16 @@ const Dashboard = ({ defaultView = 'home' }) => {
                               <div className="text-sm font-semibold text-brand-primary truncate">{song.title}</div>
                               <div className="text-xs text-brand-muted truncate">{song.album_name}</div>
                             </div>
+                            
+                            {/* Add to Queue Button */}
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleAddToQueue(song); }}
+                              className="w-10 h-10 flex items-center justify-center rounded-full text-brand-muted hover:text-brand-primary opacity-0 group-hover:opacity-100 transition-all duration-200"
+                              title="Add to Queue"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+
                             <span className="text-xs text-brand-muted font-medium tabular-nums">{formatTime(song.duration)}</span>
                           </div>
                         ))}
@@ -1042,6 +1061,16 @@ const Dashboard = ({ defaultView = 'home' }) => {
                           <div className="text-sm font-semibold text-brand-primary truncate">{song.title}</div>
                           <div className="text-xs text-brand-muted truncate">{song.artist_name}</div>
                         </div>
+
+                        {/* Add to Queue Button */}
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleAddToQueue(song); }}
+                          className="w-10 h-10 flex items-center justify-center rounded-full text-brand-muted hover:text-brand-primary opacity-0 group-hover:opacity-100 transition-all duration-200"
+                          title="Add to Queue"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+
                         <span className="text-xs text-brand-muted font-medium tabular-nums">{formatTime(song.duration)}</span>
                       </div>
                     ))}
@@ -1134,6 +1163,16 @@ const Dashboard = ({ defaultView = 'home' }) => {
                           <div className="text-sm font-semibold text-brand-primary truncate">{song.title}</div>
                           <div className="text-xs text-brand-muted truncate">{song.artist_name}</div>
                         </div>
+
+                        {/* Add to Queue Button */}
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleAddToQueue(song); }}
+                          className="w-10 h-10 flex items-center justify-center rounded-full text-brand-muted hover:text-brand-primary opacity-0 group-hover:opacity-100 transition-all duration-200"
+                          title="Add to Queue"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+
                         <span className="text-xs text-brand-muted font-medium tabular-nums">{formatTime(song.duration)}</span>
                       </div>
                     ))}
