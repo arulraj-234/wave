@@ -215,9 +215,13 @@ def _normalize_song(song, preferred_quality='high'):
     final_audio_url = best_match or (download_urls[-1].get('url', '') if download_urls and isinstance(download_urls[-1], dict) else '')
 
     audio_url = final_audio_url
+    if not audio_url:
+        from flask import current_app
+        try: current_app.logger.warning(f"Normalization lenient: Missing audio_url for saavn_id={song.get('id', '')}. Lazy-import handles this.")
+        except: pass
     
     # Get 500x500 cover image
-    cover_url = _get_high_res_image(song.get('image'))
+    cover_url = _get_high_res_image(song.get('image')) or 'https://ui-avatars.com/api/?name=Music&background=1c1c1c&color=fff&size=500'
     
     # Title: search-all uses 'title', individual uses 'name'
     title = song.get('name') or song.get('title') or 'Unknown Title'
@@ -767,36 +771,91 @@ def get_home_content():
         'personalized_mixes': [],
     }
 
+    import time
+    start_time = time.time()
+    from flask import current_app
+    
     # ── Global dedup trackers ──
-    _seen_song_ids = set()
     _seen_playlist_ids = set()
-
-    def _add_song_if_new(song, target_list, bypass_global_dedup=False):
-        sid = song.get('saavn_id', '')
-        if not sid or not song.get('audio_url'):
-            return False
-        
-        # Internal slab dedup (always required)
-        slab_ids = {s.get('saavn_id') for s in target_list}
-        if sid in slab_ids:
-            return False
-
-        if bypass_global_dedup or sid not in _seen_song_ids:
-            if not bypass_global_dedup:
-                _seen_song_ids.add(sid)
-            target_list.append(song)
-            return True
-        return False
 
     def _add_playlist_if_new(raw_pl, target_list):
         norm = _normalize_playlist(raw_pl)
         pid = norm.get('id', '')
-        # Allow missing song_count data, just filter out empty IDs
         if not pid or pid in _seen_playlist_ids:
             return False
         _seen_playlist_ids.add(pid)
         target_list.append(norm)
         return True
+        
+    def process_section(raw_songs, section_name, target_count, max_artists=3, target_lang=None):
+        try: current_app.logger.info(f"{section_name}: API returned {len(raw_songs)} songs")
+        except: pass
+        
+        normalized = []
+        dropped_null_id = 0
+        dropped_null_url = 0
+        
+        # Normalization
+        for rs in raw_songs:
+            norm = _normalize_song(rs, pq)
+            sid = norm.get('saavn_id')
+            if not sid:
+                dropped_null_id += 1
+                continue
+                
+            if target_lang and norm.get('language'):
+                 song_lang = norm['language'].lower().strip()
+                 if target_lang.lower() not in song_lang and song_lang not in target_lang.lower():
+                     continue
+                     
+            if not norm.get('audio_url'):
+                dropped_null_url += 1
+            normalized.append(norm)
+            
+        try: current_app.logger.info(f"{section_name}: {len(normalized)} songs after normalization ({dropped_null_id} dropped_null_id, {dropped_null_url} lacking audio_url but kept)")
+        except: pass
+        
+        # Intra-Section Deduplication
+        deduped = []
+        seen_sids = set()
+        for s in normalized:
+            sid = s['saavn_id']
+            if sid not in seen_sids:
+                seen_sids.add(sid)
+                deduped.append(s)
+                
+        dropped_dedup = len(normalized) - len(deduped)
+        try: current_app.logger.info(f"{section_name}: {len(deduped)} songs after dedup ({dropped_dedup} removed as duplicates)")
+        except: pass
+        
+        # Artist Cap
+        capped = []
+        artist_counts = {}
+        for s in deduped:
+            primary_artist = ''
+            if s.get('artists') and len(s['artists']) > 0:
+                primary_artist = s['artists'][0].get('name', '')
+            else:
+                primary_artist = s.get('artist_name', '')
+                
+            clean_artist = primary_artist.lower().strip()
+            
+            if artist_counts.get(clean_artist, 0) < max_artists:
+                capped.append(s)
+                artist_counts[clean_artist] = artist_counts.get(clean_artist, 0) + 1
+                
+        try: current_app.logger.info(f"{section_name}: {len(capped)} songs after artist cap")
+        except: pass
+        
+        sliced = capped[:target_count]
+        try: current_app.logger.info(f"{section_name}: returning {len(sliced)} songs to frontend")
+        except: pass
+        
+        if len(sliced) < 5:
+            try: current_app.logger.warning(f"THRESHOLD WARN: {section_name} only produced {len(sliced)} valid songs!")
+            except: pass
+            
+        return sliced
 
     # ── Genre-to-language mapping ──
     GENRE_LANGUAGE_MAP = {
@@ -959,7 +1018,7 @@ def get_home_content():
         trending_queries = [f'trending songs {current_year}', 'viral hits']
     
     for tq in trending_queries[:3]:
-        tasks.append(('trending_songs', 'songs', tq, 10))
+        tasks.append(('trending_songs', 'songs', tq, 50))
 
     # Task 3: New Releases
     nr_queries = []
@@ -987,7 +1046,7 @@ def get_home_content():
 
         for name, aid in resolved_artists:
             # Task A: Official Top Hits (Fetch more for better dedup quality)
-            tasks.append((f'mix_artist_{name}', 'artists_top', aid, 30))
+            tasks.append((f'mix_artist_{name}', 'artists_top', aid, 50))
             # Task B: Recent Albums
             tasks.append(('new_releases', 'artists_albums', aid, 15))
             
@@ -1006,7 +1065,7 @@ def get_home_content():
             expected_lang = GENRE_LANGUAGE_MAP.get(genre_lower)
             smart_queries = GENRE_QUERIES.get(genre_lower, [f"{genre} popular"])
             for sq in smart_queries[:2]:
-                tasks.append((f'mix_genre_{genre}', 'songs', sq, 30))
+                tasks.append((f'mix_genre_{genre}', 'songs', sq, 50))
             mix_configs.append({'id': f'mix_genre_{genre}', 'title': f"Because you like {genre}", 'lang': expected_lang, 'type': 'genre'})
 
     # Execute all tasks in parallel (max 15 workers to stay safe on free tier clusters)
@@ -1025,10 +1084,7 @@ def get_home_content():
         _add_playlist_if_new(p, content['featured_playlists'])
     content['featured_playlists'] = content['featured_playlists'][:12]
 
-    for s in results_map.get('trending_songs', []):
-        norm = _normalize_song(s, pq)
-        _add_song_if_new(norm, content['trending_songs'])
-    content['trending_songs'] = content['trending_songs'][:15]
+    content['trending_songs'] = process_section(results_map.get('trending_songs', []), 'trending', target_count=20, max_artists=3)
 
     seen_album_ids = set()
     for a in results_map.get('new_releases', []):
@@ -1049,15 +1105,7 @@ def get_home_content():
 
     for cfg in mix_configs:
         mix_data = results_map.get(cfg['id'], [])
-        norm_mix = []
-        for s in mix_data:
-            norm = _normalize_song(s, pq)
-            target_lang = cfg.get('lang')
-            if target_lang and norm.get('language'):
-                 song_lang = norm['language'].lower().strip()
-                 if target_lang.lower() not in song_lang and song_lang not in target_lang.lower():
-                     continue
-            _add_song_if_new(norm, norm_mix, bypass_global_dedup=True)
+        norm_mix = process_section(mix_data, cfg['id'], target_count=8, max_artists=2, target_lang=cfg.get('lang'))
         
         if norm_mix:
             content['personalized_mixes'].append({
@@ -1068,6 +1116,28 @@ def get_home_content():
             })
 
     content['personalized_mixes'] = content['personalized_mixes'][:10]
+    
+    # ── Final Global Cross-Section Deduplication ──
+    global_song_counts = {}
+    
+    final_trending = []
+    for s in content['trending_songs']:
+        sid = s['saavn_id']
+        global_song_counts[sid] = global_song_counts.get(sid, 0) + 1
+        final_trending.append(s)
+    content['trending_songs'] = final_trending
+    
+    for mix in content['personalized_mixes']:
+        final_mix = []
+        for s in mix['songs']:
+            sid = s['saavn_id']
+            if global_song_counts.get(sid, 0) < 2:
+                final_mix.append(s)
+                global_song_counts[sid] = global_song_counts.get(sid, 0) + 1
+        mix['songs'] = final_mix
+        
+    try: current_app.logger.info(f"Home page built in {int((time.time() - start_time)*1000)}ms — sections: trending={len(content['trending_songs'])}, new_releases={len(content['new_releases'])}, mixes={len(content['personalized_mixes'])}")
+    except: pass
     
     response_data = {
         'success': True, 
