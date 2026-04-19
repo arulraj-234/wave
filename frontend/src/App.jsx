@@ -40,7 +40,7 @@ const AnimatedRoutes = ({ isAuthenticated, setIsAuthenticated }) => {
   return (
     <AnimatePresence>
       <motion.div
-        key={location.pathname}
+        key={location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/search') ? 'dashboard' : location.pathname}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
