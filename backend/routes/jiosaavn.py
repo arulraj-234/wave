@@ -761,7 +761,7 @@ def get_home_content():
     user_id = request.args.get('user_id', type=int)
     
     cache_key = f"home_{user_id if user_id else 'guest'}"
-    if cache_key in _home_cache and time.time() - _home_cache[cache_key]['timestamp'] < 30:
+    if cache_key in _home_cache and time.time() - _home_cache[cache_key]['timestamp'] < 3600:
         return jsonify(_home_cache[cache_key]['data'])
 
     content = {

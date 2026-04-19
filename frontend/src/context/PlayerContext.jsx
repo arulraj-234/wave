@@ -41,6 +41,12 @@ export const PlayerProvider = ({ children }) => {
   const lastPlayTimeRef = useRef(null);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
+  // Enforce aggressive pre-buffering for high quality audio streams
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.preload = 'auto';
+    if (preloadAudioRef.current) preloadAudioRef.current.preload = 'auto';
+  }, []);
+
   // Re-export resolveUrl from api.js for use by components via context
   const resolveBackendUrl = resolveUrl;
 

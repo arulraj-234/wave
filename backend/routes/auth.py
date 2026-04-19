@@ -184,6 +184,9 @@ def login():
             "id": user['user_id'],
             "username": user['username'],
             "first_name": user['first_name'],
+            "last_name": user.get('last_name', ''),
+            "avatar_url": user.get('avatar_url', ''),
+            "streaming_quality": user.get('streaming_quality', 'auto'),
             "email": user['email'],
             "role": user['role'],
             "onboarding_completed": is_onboarded
