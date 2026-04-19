@@ -964,6 +964,11 @@ def _build_home_payload(user_id, cache_key):
     artist_names = [a for a in user_artists if a and not a.endswith('@wave.local')]
 
     # ── Build playlist queries ──
+    playlist_queries = []
+    if artist_names:
+        for a in artist_names[:3]:
+            playlist_queries.append(f"{a} mix")
+            playlist_queries.append(f"best of {a}")
         for g in genre_names[:2]:
             playlist_queries.append(f"{g} hits playlist")
         playlist_queries.extend(['Top Hits 2026', 'Chill Vibes'])
