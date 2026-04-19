@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
+import { usePerformance } from '../context/PerformanceContext';
 import './Plasma.css';
 
 const hexToRgb = hex => {
@@ -93,8 +94,11 @@ export const Plasma = ({
   opacity = 1,
   mouseInteractive = true
 }) => {
+  const { reducedEffects } = usePerformance();
   const containerRef = useRef(null);
   const mousePos = useRef({ x: 0, y: 0 });
+
+  if (reducedEffects) return null;
 
   useEffect(() => {
     if (!containerRef.current) return;

@@ -51,6 +51,9 @@ export const ParticleCard = ({
   clickEffect = false,
   enableMagnetism = false
 }) => {
+  const { reducedEffects } = usePerformance();
+  const shouldDisable = disableAnimations || reducedEffects;
+  
   const cardRef = useRef(null);
   const particlesRef = useRef([]);
   const timeoutsRef = useRef([]);
@@ -129,7 +132,7 @@ export const ParticleCard = ({
   }, [initializeParticles]);
 
   useEffect(() => {
-    if (disableAnimations || !cardRef.current) return;
+    if (shouldDisable || !cardRef.current) return;
 
     const element = cardRef.current;
 
@@ -418,20 +421,7 @@ export const BentoCardGrid = ({ children, gridRef, className = '' }) => (
   </div>
 );
 
-const useMobileDetection = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  return isMobile;
-};
+import { usePerformance } from '../context/PerformanceContext';
 
 export default function MagicBento({
   children,
@@ -442,8 +432,8 @@ export default function MagicBento({
   glowColor = DEFAULT_GLOW_COLOR,
 }) {
   const gridRef = useRef(null);
-  const isMobile = useMobileDetection();
-  const shouldDisableAnimations = disableAnimations || isMobile;
+  const { reducedEffects } = usePerformance();
+  const shouldDisableAnimations = disableAnimations || reducedEffects;
 
   return (
     <>

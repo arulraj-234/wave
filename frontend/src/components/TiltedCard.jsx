@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { motion, useMotionValue, useSpring } from 'motion/react';
+import { usePerformance } from '../context/PerformanceContext';
 
 const springValues = {
   damping: 30,
@@ -22,6 +23,7 @@ export default function TiltedCard({
   overlayContent = null,
   displayOverlayContent = false
 }) {
+  const { reducedEffects } = usePerformance();
   const ref = useRef(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -38,7 +40,7 @@ export default function TiltedCard({
   const [lastY, setLastY] = useState(0);
 
   function handleMouse(e) {
-    if (!ref.current) return;
+    if (!ref.current || reducedEffects) return;
 
     const rect = ref.current.getBoundingClientRect();
     const offsetX = e.clientX - rect.left - rect.width / 2;
@@ -59,6 +61,7 @@ export default function TiltedCard({
   }
 
   function handleMouseEnter() {
+    if (reducedEffects) return;
     scale.set(scaleOnHover);
     opacity.set(1);
   }

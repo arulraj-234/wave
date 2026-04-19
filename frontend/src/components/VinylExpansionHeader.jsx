@@ -1,7 +1,10 @@
 import React from 'react';
+import { usePerformance } from '../context/PerformanceContext';
 
 /* ============ Floating Vinyl Expansion Header ============ */
 const VinylExpansionHeader = ({ currentSong, isPlaying, resolveUrl }) => {
+  const { reducedEffects } = usePerformance();
+  
   if (!currentSong) return null;
 
   return (
@@ -36,7 +39,7 @@ const VinylExpansionHeader = ({ currentSong, isPlaying, resolveUrl }) => {
                {/* The Spinning Vinyl (Handles Rotation) */}
                <div 
                  className="w-full h-full rounded-full bg-[#0a0a0a] shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center justify-center border-[2px] border-[#1a1a1a] overflow-hidden relative"
-                 style={{ animation: isPlaying ? 'spin 5s linear infinite' : 'none' }}
+                 style={{ animation: (isPlaying && !reducedEffects) ? 'spin 5s linear infinite' : 'none' }}
                >
                  {/* Grooves */}
                  <div className="absolute inset-[2px] md:inset-[4px] rounded-full border border-white/5" />
