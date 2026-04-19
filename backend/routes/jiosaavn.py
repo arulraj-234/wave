@@ -749,6 +749,17 @@ def _dedup_songs(songs):
             
     return unique_songs
 
+def _resolve_artist_id(artist_name):
+    """Quickly resolve a name like 'Bad Bunny' to a JioSaavn ID."""
+    try:
+        resp = requests.get(f"{SAAVN_API_BASE}/search/artists", params={'query': artist_name, 'limit': 1}, timeout=5)
+        data = resp.json()
+        if data.get('success'):
+            results = data.get('data', {}).get('results', [])
+            if results: return results[0].get('id')
+    except: pass
+    return None
+
 @jiosaavn_bp.route('/home', methods=['GET'])
 def get_home_content():
     """
@@ -1020,7 +1031,7 @@ def _build_home_payload(user_id, cache_key):
                                 if current_year and str(current_year) in str(query):
                                     broader_query = str(query).replace(str(current_year), "").strip()
                                     if broader_query:
-                                        current_app.logger.warning(f"[Discovery Tier 2] Low results ({len(results)}) for {query}. Dropping year filter.")
+                                        print(f"[Discovery Tier 2] Low results ({len(results)}) for {query}. Dropping year filter.")
                                         br_resp = requests.get(url, params={**params, 'query': broader_query}, timeout=10)
                                         if br_resp.status_code == 200:
                                             br_data = br_resp.json()
@@ -1032,7 +1043,7 @@ def _build_home_payload(user_id, cache_key):
 
                                 # Tier 2 -> Tier 3: Entity + Genre Hybridization
                                 if len(results) < 5:
-                                    current_app.logger.warning(f"[Discovery Tier 3] Still low for {query}. Trying global vibe search.")
+                                    print(f"[Discovery Tier 3] Still low for {query}. Trying global vibe search.")
                                     # Use a snippet of the query for a fresh global search
                                     vibe_query = query.split(' ')[0] if ' ' in str(query) else query
                                     v_resp = requests.get(f"{SAAVN_API_BASE}/search/songs", params={'query': f"{vibe_query} trending hits", 'limit': limit}, timeout=10)
