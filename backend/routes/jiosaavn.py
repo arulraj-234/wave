@@ -781,10 +781,10 @@ def get_home_content():
 
 def _build_home_payload(user_id, cache_key):
     """Heavy lifting to build the dashboard, now safely isolated for SWR."""
-    from flask import current_app
     import time
     start_time = time.time()
 
+    # Move context-dependent imports/calls to the top and initialize data safely
     content = {
         'featured_playlists': [],
         'trending_songs': [],
@@ -792,10 +792,7 @@ def _build_home_payload(user_id, cache_key):
         'personalized_mixes': [],
     }
     
-    # ── Cache Key Generation ──
-    # User-specific cache if personalized, fixed cache otherwise
-    user_id = request.args.get('user_id', type=int)
-    cache_key = f"home_v2_user_{user_id}" if user_id else "home_v2_guest"
+    pq = get_preferred_quality(user_id)
     
     # ── Global dedup trackers ──
     _seen_playlist_ids = set()
@@ -810,8 +807,8 @@ def _build_home_payload(user_id, cache_key):
         return True
         
     def process_section(raw_songs, section_name, target_count, max_artists=3, target_lang=None):
-        try: current_app.logger.info(f"{section_name}: API returned {len(raw_songs)} songs")
-        except: pass
+        # We use print instead of current_app.logger to be thread-safe without context
+        print(f"[{section_name}] API returned {len(raw_songs)} songs")
         
         normalized = []
         dropped_null_id = 0
@@ -866,12 +863,10 @@ def _build_home_payload(user_id, cache_key):
                 capped.append(s)
                 artist_counts[clean_artist] = artist_counts.get(clean_artist, 0) + 1
                 
-        try: current_app.logger.warning(f"{section_name}: {len(capped)} songs after artist cap")
-        except: pass
+        print(f"[{section_name}] {len(capped)} songs after artist cap")
         
         sliced = capped[:target_count]
-        try: current_app.logger.warning(f"{section_name}: returning {len(sliced)} songs to frontend")
-        except: pass
+        print(f"[{section_name}] returning {len(sliced)} songs to frontend")
         
         if len(sliced) < 5:
             try: current_app.logger.warning(f"THRESHOLD WARN: {section_name} only produced {len(sliced)} valid songs!")
@@ -980,7 +975,6 @@ def _build_home_payload(user_id, cache_key):
 
     import datetime
     current_year = datetime.datetime.now().today().year
-    pq = get_preferred_quality(user_id)
 
     # ── Concurrency Engine v3 (Fully Parallel) ──
     def fetch_api_task(category, type, query, limit=10):
@@ -1170,16 +1164,15 @@ def _build_home_payload(user_id, cache_key):
                 futures[executor.submit(fetch_api_task, *t)] = t[0]
         
         for future in as_completed(futures):
-            res = future.result()
-            if not res: continue
-            cat = res.get('category') or futures[future]
-            if cat not in results_map:
-                results_map[cat] = []
-            results_map[cat].extend(res.get('results', []))
-
-            if cat not in results_map:
-                results_map[cat] = []
-            results_map[cat].extend(res['results'])
+            try:
+                res = future.result()
+                if not res: continue
+                cat = res.get('category') or (futures[future] if isinstance(futures[future], str) else futures[future][0])
+                if cat not in results_map:
+                    results_map[cat] = []
+                results_map[cat].extend(res.get('results', []))
+            except Exception as e:
+                print(f"[Executor] Task failed: {e}")
 
     # ── Collate results back into content ──
     for p in results_map.get('featured_playlists', []):
@@ -1238,8 +1231,7 @@ def _build_home_payload(user_id, cache_key):
                 global_song_counts[sid] = global_song_counts.get(sid, 0) + 1
         mix['songs'] = final_mix
         
-    try: current_app.logger.warning(f"Home page built in {int((time.time() - start_time)*1000)}ms — sections: trending={len(content['trending_songs'])}, new_releases={len(content['new_releases'])}, mixes={len(content['personalized_mixes'])}")
-    except: pass
+    print(f"Home page built in {int((time.time() - start_time)*1000)}ms — sections: trending={len(content['trending_songs'])}, new_releases={len(content['new_releases'])}, mixes={len(content['personalized_mixes'])}")
     
     response_data = {
         'success': True, 
@@ -1252,7 +1244,7 @@ def _build_home_payload(user_id, cache_key):
         'data': response_data
     }
 
-    return jsonify(response_data)
+    return response_data
 
 
 def _resolve_or_create_artist(artist_name, artist_image_url=''):
