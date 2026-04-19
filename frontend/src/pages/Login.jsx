@@ -29,7 +29,8 @@ const Login = ({ setAuth }) => {
       });
       localStorage.setItem('token', response.data.token);
 
-      // Profile data is now fully included in the login response
+      // Profile data from login is typically a minimal payload (id, username, token)
+      // Save it immediately to unblock the UI thread
       localStorage.setItem('user', JSON.stringify(response.data.user));
 
       const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -42,6 +43,17 @@ const Login = ({ setAuth }) => {
       else navigate('/dashboard', { replace: true });
 
       toast.success('Welcome back!');
+
+      // Progressive Load: Background fetch full profile (preferences, avatar, dynamic data)
+      api.get('/api/auth/me').then(meResponse => {
+        if (meResponse.data && meResponse.data.success) {
+          const fullUser = meResponse.data.user;
+          localStorage.setItem('user', JSON.stringify(fullUser));
+          // If PlayerContext or other providers are listening, they will pick up the updated user state on next render
+          // Or dispatch a custom event to notify components that cross-tab sync is ready
+          window.dispatchEvent(new Event('storage')); 
+        }
+      }).catch(err => console.error("Silent background fetch failed:", err));
 
     } catch (err) {
       const errorData = err.response?.data;

@@ -25,6 +25,11 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
+# Caching Configuration
+from flask_caching import Cache
+cache = Cache(app)
+
+
 # Configure CORS to explicitly allow credentials and dynamically match the request origin
 # if it is in our allowed list, bypassing strict string-matching issues with Flask-Cors
 # Configure CORS for all environments

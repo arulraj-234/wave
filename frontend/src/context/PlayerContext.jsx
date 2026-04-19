@@ -41,10 +41,10 @@ export const PlayerProvider = ({ children }) => {
   const lastPlayTimeRef = useRef(null);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-  // Enforce aggressive pre-buffering for high quality audio streams
+  // Enforce aggressive pre-buffering for high quality audio streams, but smart load the next track
   useEffect(() => {
     if (audioRef.current) audioRef.current.preload = 'auto';
-    if (preloadAudioRef.current) preloadAudioRef.current.preload = 'auto';
+    if (preloadAudioRef.current) preloadAudioRef.current.preload = 'metadata'; // wait for 70% progress marker
   }, []);
 
   // Re-export resolveUrl from api.js for use by components via context
@@ -243,10 +243,18 @@ export const PlayerProvider = ({ children }) => {
 
     let targetSong = song;
 
+    // Adaptive Quality Determination
+    let adaptiveQuality = 'high'; // Default 320kbps
+    if (navigator.connection && navigator.connection.effectiveType) {
+      if (navigator.connection.effectiveType === '3g') adaptiveQuality = 'medium'; // 160kbps
+      else if (navigator.connection.effectiveType === '2g' || navigator.connection.effectiveType === 'slow-2g') adaptiveQuality = 'low'; // 96kbps
+    }
+
     // Intercept raw JioSaavn songs from the queue and auto-import them on the fly
     if ((song.source === 'jiosaavn' || !song.song_id) && song.saavn_id) {
       try {
-        const res = await api.post('/api/jiosaavn/import', song);
+        const importPayload = { ...song, quality_override: adaptiveQuality };
+        const res = await api.post('/api/jiosaavn/import', importPayload);
         if (res.data.success) {
           const imported = res.data.song;
           targetSong = {
@@ -383,13 +391,29 @@ export const PlayerProvider = ({ children }) => {
           } catch (e) { /* ignore */ }
         }
 
-        // Gapless Preloading Logic
-        if (audio.duration - audio.currentTime < 15 && queue.length > 0) {
+        // Gapless Preloading Logic (70% playback threshold)
+        if (audio.duration > 0 && (audio.currentTime / audio.duration) >= 0.70 && queue.length > 0) {
           const nextSong = queue[0];
-          const nextUrl = resolveUrl(nextSong.audio_url);
-          if (nextUrl && preloadAudioRef.current.src !== nextUrl) {
-            preloadAudioRef.current.src = nextUrl;
-            preloadAudioRef.current.load();
+          // Determine quality for next track prefetch identically to startPlayback
+          let adaptiveQuality = 'high';
+          if (navigator.connection && navigator.connection.effectiveType) {
+            if (navigator.connection.effectiveType === '3g') adaptiveQuality = 'medium';
+            else if (navigator.connection.effectiveType === '2g' || navigator.connection.effectiveType === 'slow-2g') adaptiveQuality = 'low';
+          }
+          
+          // Use the adaptive quality to get the URL or hit the import endpoint if needed
+          const preloadSource = nextSong.source === 'jiosaavn' || !nextSong.song_id ? 
+            { ...nextSong, quality_override: adaptiveQuality } : nextSong;
+            
+          // Instead of instantly calling the API to import, we just rely on the audio_url if it exists.
+          // True pre-fetching for raw JioSaavn links without audio_url is complex here, 
+          // so we only preload if audio_url is already resolved.
+          if (preloadSource.audio_url) {
+            const nextUrl = resolveUrl(preloadSource.audio_url);
+            if (nextUrl && preloadAudioRef.current.src !== nextUrl) {
+              preloadAudioRef.current.src = nextUrl;
+              preloadAudioRef.current.load();
+            }
           }
         }
       }

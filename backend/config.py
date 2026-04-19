@@ -35,3 +35,8 @@ class Config:
     if not _saavn_url.endswith('/api'):
         _saavn_url += '/api'
     SAAVN_API_URL = _saavn_url
+    
+    # Redis & Flask-Caching Configuration
+    CACHE_TYPE = "RedisCache" if os.getenv('REDIS_URL') else "SimpleCache"
+    CACHE_REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    CACHE_DEFAULT_TIMEOUT = 3600

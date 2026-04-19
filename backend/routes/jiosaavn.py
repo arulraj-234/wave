@@ -759,10 +759,6 @@ def get_home_content():
     - Genre mixes validate language to prevent cross-contamination
     """
     user_id = request.args.get('user_id', type=int)
-    
-    cache_key = f"home_{user_id if user_id else 'guest'}"
-    if cache_key in _home_cache and time.time() - _home_cache[cache_key]['timestamp'] < 3600:
-        return jsonify(_home_cache[cache_key]['data'])
 
     content = {
         'featured_playlists': [],
@@ -890,32 +886,59 @@ def get_home_content():
         return None
 
     def fetch_api_task(category, type, query, limit=10):
-        try:
-            if type == 'artists_top':
-                # Official Top Songs for a resolved ID
-                url = f"{SAAVN_API_BASE}/artists/{query}/songs"
-                params = {'limit': limit, 'page': 1, 'sortBy': 'popularity'}
-            elif type == 'artists_albums':
-                # Official New Releases for a resolved ID
-                url = f"{SAAVN_API_BASE}/artists/{query}/albums"
-                params = {'limit': limit, 'page': 1, 'sortBy': 'latest'}
+        # Segmented TTLs (in seconds)
+        ttl = 14400 # 4 hrs for charts/mixes
+        if 'trending' in category: ttl = 1800 # 30 mins
+        elif 'releases' in category or 'albums' in type: ttl = 3600 # 1 hour
+        
+        cache_key = f"saavn_task_{category}_{type}_{query}_{limit}"
+        
+        from app import cache
+        cached_payload = cache.get(cache_key)
+        
+        # SWR Helper
+        def bg_revalidate():
+            try:
+                if type == 'artists_top':
+                    url = f"{SAAVN_API_BASE}/artists/{query}/songs"
+                    params = {'limit': limit, 'page': 1, 'sortBy': 'popularity'}
+                elif type == 'artists_albums':
+                    url = f"{SAAVN_API_BASE}/artists/{query}/albums"
+                    params = {'limit': limit, 'page': 1, 'sortBy': 'latest'}
+                else:
+                    url = f"{SAAVN_API_BASE}/search/{type}"
+                    params = {'query': query, 'limit': limit}
+                    
+                resp = requests.get(url, params=params, timeout=15)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get('success'):
+                        raw_res = data.get('data', [])
+                        if isinstance(raw_res, dict): results = raw_res.get('results') or raw_res.get('data') or []
+                        else: results = raw_res
+                        
+                        payload = {'data': results, 'timestamp': time.time()}
+                        cache.set(cache_key, payload, timeout=ttl * 10) # hard expire much later to allow SWR grace period
+                        return results
+            except Exception as e:
+                print(f"[SWR bg_fetch] failed for {category}: {e}")
+            return None
+
+        # SWR Check
+        if cached_payload and isinstance(cached_payload, dict):
+            age = time.time() - cached_payload.get('timestamp', 0)
+            if age < ttl:
+                # Fresh hit
+                return {'category': category, 'results': cached_payload['data'], 'query': query}
             else:
-                # Standard Keyword Search
-                url = f"{SAAVN_API_BASE}/search/{type}"
-                params = {'query': query, 'limit': limit}
+                # Stale hit (SWR) - return immediately, spawn rebuild in unbound thread
+                import threading
+                threading.Thread(target=bg_revalidate).start()
+                return {'category': category, 'results': cached_payload['data'], 'query': query}
                 
-            resp = requests.get(url, params=params, timeout=15)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get('success'):
-                    raw_res = data.get('data', [])
-                    if isinstance(raw_res, dict):
-                        results = raw_res.get('results') or raw_res.get('data') or []
-                    else:
-                        results = raw_res
-                    return {'category': category, 'results': results, 'query': query}
-        except Exception as e:
-            print(f"[ParallelHome] Task failed for {category} ({type}/{query}): {e}")
+        # Cold start (Blocks, full cost paid ONCE per cache key, not per user dashboard load)
+        fresh_results = bg_revalidate()
+        return {'category': category, 'results': fresh_results or [], 'query': query}
         return {'category': category, 'results': [], 'query': query}
 
     tasks = []
