@@ -156,12 +156,12 @@ def _jiosaavn_fallback_home(user_id, count):
     """
     import requests as ext_requests
     from config import Config
-    from engine.ranker import _get_user_taste_profile
+    from engine.ranker import get_dynamic_taste_profile
     from routes.jiosaavn import _normalize_song, _dedup_songs, get_preferred_quality
     import random
     
     SAAVN_API_BASE = Config.SAAVN_API_URL
-    profile = _get_user_taste_profile(user_id)
+    profile = get_dynamic_taste_profile(user_id)
     pq = get_preferred_quality(user_id)
     
     # Build search queries from taste profile
