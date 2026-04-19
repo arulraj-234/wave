@@ -763,6 +763,7 @@ def get_home_content():
     - Genre mixes validate language to prevent cross-contamination
     """
     user_id = request.args.get('user_id', type=int)
+    cache_key = f"home_v2_user_{user_id}" if user_id else "home_v2_guest"
 
     personalized_resp = _home_cache.get(cache_key)
     
