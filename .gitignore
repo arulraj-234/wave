@@ -45,3 +45,4 @@ backend/uploads/avatars/*
 
 # Scratch / temp files
 tmp/
+backend/scratch/
