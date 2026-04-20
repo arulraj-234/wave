@@ -43,6 +43,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
   const [homeContent, setHomeContent] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [followedArtists, setFollowedArtists] = useState([]);
+  const [trendingSongs, setTrendingSongs] = useState([]);
   
   // Individual loading states for progressive hydration
   const [loadingStates, setLoadingStates] = useState({
@@ -101,6 +102,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
         fetchHomeContent().finally(() => setLoadingStates(prev => ({ ...prev, home: false })));
         fetchRecommendations().finally(() => setLoadingStates(prev => ({ ...prev, recommendations: false })));
         fetchFollowedArtists().finally(() => setLoadingStates(prev => ({ ...prev, followed: false })));
+        fetchTrending();
         
         hasLoadedHome.current = true;
         setIsLoading(false); // Global loader is for the layout, components handle their own data
@@ -164,6 +166,15 @@ const Dashboard = ({ defaultView = 'home' }) => {
       setFollowedArtists(response.data.following || []);
     } catch (error) {
       console.error("Error fetching followed artists:", error);
+    }
+  };
+
+  const fetchTrending = async () => {
+    try {
+      const response = await api.get('/api/stats/trending');
+      setTrendingSongs(response.data.songs || []);
+    } catch (error) {
+      console.error("Error fetching trending songs:", error);
     }
   };
 
@@ -449,39 +460,17 @@ const Dashboard = ({ defaultView = 'home' }) => {
 
 
 
-            {/* ── Dynamic Layout: Top 3 Trending vs Vinyl expansion (with Animaton) ── */}
+            {/* ── Fixed Layout: Our DB Top 3 Songs Header ── */}
             <div className="relative md:min-h-[300px] hidden md:block">
-              <AnimatePresence>
-                {currentSong ? (
-                  <motion.div
-                    key="vinyl-header"
-                    initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 1.05, y: -15 }}
-                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                  >
-                    <VinylExpansionHeader currentSong={currentSong} isPlaying={isPlaying} resolveUrl={resolveUrl} />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="trending-header"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                  >
-                    {loadingStates.home && loadingStates.recommendations ? (
-                      <div className="w-full h-[300px] bg-white/[0.02] rounded-3xl animate-pulse" />
-                    ) : (
-                      <TopThreeHeader 
-                        trendingSongs={homeContent?.trending_songs?.length >= 3 ? homeContent.trending_songs : (recommendations || [])} 
-                        resolveUrl={resolveUrl} 
-                        onPlay={handleGlobalPlay} 
-                      />
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {loadingStates.home && trendingSongs.length === 0 ? (
+                <div className="w-full h-[300px] bg-white/[0.02] rounded-3xl animate-pulse mx-8 mt-6" />
+              ) : (
+                <TopThreeHeader 
+                  trendingSongs={trendingSongs.length >= 3 ? trendingSongs : (homeContent?.trending_songs || recommendations || [])} 
+                  resolveUrl={resolveUrl} 
+                  onPlay={handleGlobalPlay} 
+                />
+              )}
             </div>
 
             <div className="p-4 md:p-8 max-w-[1400px] mx-auto space-y-8 md:space-y-10 mt-4 md:mt-0">
