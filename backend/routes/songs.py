@@ -311,23 +311,17 @@ def search_local():
         
         # 2. Artists
         artists_query = """
-            SELECT ap.artist_id as id, u.username as name, u.avatar_url as image, ap.verified
+            SELECT ap.artist_id as id, u.username as name, u.avatar_url as image, ap.verified, 'artist' AS type, 'local' AS source
             FROM artist_profiles ap
             JOIN users u ON ap.user_id = u.user_id
             WHERE u.username LIKE %s
             LIMIT 5
         """
         matched_artists = fetch_all(artists_query, (like_pattern,))
-        for a in matched_artists: 
-            a['type'] = 'artist'
-            a['source'] = 'local'
             
         # 3. Playlists (Minimal for All tab)
-        playlists_query = "SELECT playlist_id as id, title as name FROM playlists WHERE title LIKE %s LIMIT 5"
+        playlists_query = "SELECT playlist_id as id, title as name, 'playlist' AS type, 'local' AS source FROM playlists WHERE title LIKE %s LIMIT 5"
         matched_playlists = fetch_all(playlists_query, (like_pattern,))
-        for p in matched_playlists: 
-            p['type'] = 'playlist'
-            p['source'] = 'local'
 
         return jsonify({
             "results": {
@@ -355,16 +349,12 @@ def search_local():
 
     elif search_type == 'artist':
         search_query = """
-            SELECT ap.artist_id as id, u.username as name, u.avatar_url as image, ap.verified, ap.bio
+            SELECT ap.artist_id as id, u.username as name, u.avatar_url as image, ap.verified, ap.bio, 'artist' AS type, 'local' AS source
             FROM artist_profiles ap
             JOIN users u ON ap.user_id = u.user_id
             WHERE u.username LIKE %s
         """
         artists = fetch_all(search_query, (like_pattern,))
-        # Map to common format
-        for a in artists:
-            a['type'] = 'artist'
-            a['source'] = 'local'
         return jsonify({"results": artists, "type": "artist"})
 
     elif search_type == 'album':
@@ -372,28 +362,22 @@ def search_local():
         # If not, we'll return empty for now to avoid crash
         try:
             search_query = """
-                SELECT album_id as id, title as name, cover_image_url, artist_id
+                SELECT album_id as id, title as name, cover_image_url, artist_id, 'album' AS type, 'local' AS source
                 FROM albums
                 WHERE title LIKE %s
             """
             albums = fetch_all(search_query, (like_pattern,))
-            for a in albums:
-                a['type'] = 'album'
-                a['source'] = 'local'
             return jsonify({"results": albums, "type": "album"})
         except:
             return jsonify({"results": [], "type": "album"})
 
     elif search_type == 'playlist':
         search_query = """
-            SELECT playlist_id as id, title as name, description, user_id
+            SELECT playlist_id as id, title as name, description, user_id, 'playlist' AS type, 'local' AS source
             FROM playlists
             WHERE (title LIKE %s OR description LIKE %s)
         """
         playlists = fetch_all(search_query, (like_pattern, like_pattern))
-        for p in playlists:
-            p['type'] = 'playlist'
-            p['source'] = 'local'
         return jsonify({"results": playlists, "type": "playlist"})
 
     return jsonify({"results": [], "type": search_type}), 200

@@ -1,0 +1,3 @@
+## 2024-04-24 - Database static projection optimization
+**Learning:** Python loops over database results to append static metadata (like `type` or `source`) add unnecessary CPU overhead, especially on routes like `/search` which combine many queries. Offloading static metadata injection directly into the SQL `SELECT` statement (e.g., `SELECT album AS type`) avoids these loop iterations and cleans up the application layer code.
+**Action:** Always inject static metadata directly in the database queries using the `AS` keyword instead of processing result lists in the application later when fetching lists from the database.
