@@ -69,14 +69,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
     toast.success('Added to queue');
   };
 
-  const { 
-    currentSong, isPlaying, progress, duration, volume,
-    likedSongs, toggleLike, 
-    playlists, createPlaylist, addSongToPlaylist,
-    likedPlaylists, fetchLikedPlaylists, toggleLikePlaylist,
-    playSong, togglePlay, seek, setVolume,
-    playNext, playPrevious, resolveUrl, addToQueue
-  } = useContext(PlayerContext);
+  const { resolveUrl, playlists, createPlaylist, likedPlaylists, toggleLikePlaylist, playSong, addToQueue } = useContext(PlayerContext);
 
   // Determine current view from URL
   let currentView = 'home';
