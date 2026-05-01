@@ -64,7 +64,7 @@ const formatTime = (seconds) => {
 
 const BottomPlayer = () => {
   const {
-    currentSong, isPlaying, progress, duration, volume,
+    currentSong, isPlaying, duration, volume, audioRef,
     likedSongs, toggleLike,
     togglePlay, seek, setVolume,
     playNext, playPrevious, resolveUrl,
@@ -117,6 +117,26 @@ const BottomPlayer = () => {
   }, [isFullScreenPlayer]);
 
   const dominantColor = useDominantColor(currentSong?.cover_image_url ? resolveUrl(currentSong.cover_image_url) : null);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    return () => audio.removeEventListener('timeupdate', updateProgress);
+  }, [audioRef]);
+
+  // reset progress when song changes
+  useEffect(() => {
+     setProgress(0);
+  }, [currentSong]);
   const currentTime = (progress / 100) * (duration || currentSong?.duration || 0);
 
   // Auto-minimize full screen player when navigating

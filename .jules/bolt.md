@@ -1,0 +1,3 @@
+## 2024-05-01 - Avoid global re-renders from PlayerContext progress state
+**Learning:** Storing playback progress (`progress` state updated via `<audio>` `timeupdate` events) in a high-level React Context like `PlayerContext` causes the entire component tree consuming that context to re-render several times a second. This causes significant performance issues and jank across the application.
+**Action:** Do not store `progress` in `PlayerContext`. Instead, expose the `audioRef` from the context or use a custom hook to allow specific components (like `BottomPlayer`) to listen to the `audio` element's `timeupdate` event locally, isolating the high-frequency re-renders to only the progress bar UI.
