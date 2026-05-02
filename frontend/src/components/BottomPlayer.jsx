@@ -64,7 +64,7 @@ const formatTime = (seconds) => {
 
 const BottomPlayer = () => {
   const {
-    currentSong, isPlaying, progress, duration, volume,
+    currentSong, isPlaying, duration, volume, audioRef,
     likedSongs, toggleLike,
     togglePlay, seek, setVolume,
     playNext, playPrevious, resolveUrl,
@@ -78,9 +78,27 @@ const BottomPlayer = () => {
   const [showLyrics, setShowLyrics] = useState(false);
   const [showSleepMenu, setShowSleepMenu] = useState(false);
   const [isIdle, setIsIdle] = useState(false);
+  const [progress, setProgress] = useState(0);
   const location = useLocation();
 
   const idleTimerRef = useRef(null);
+
+  useEffect(() => {
+    const audio = audioRef?.current;
+    if (!audio) return;
+
+    // ⚡ Bolt Optimization: By managing progress state locally in BottomPlayer instead of
+    // globally in PlayerContext, we prevent the entire app from re-rendering on every
+    // timeupdate tick (~4 times per second).
+    const handleTimeUpdate = () => {
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    return () => audio.removeEventListener('timeupdate', handleTimeUpdate);
+  }, [audioRef]);
   const touchStartY = useRef(0);
   const touchEndY = useRef(0);
   const touchStartX = useRef(0);
