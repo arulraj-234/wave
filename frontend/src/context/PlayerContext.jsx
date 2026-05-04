@@ -10,7 +10,7 @@ export const PlayerProvider = ({ children }) => {
   const toast = useToast();
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+
   const [duration, setDuration] = useState(0);
 
   // Load persistent volume, shuffle, and repeat state
@@ -237,11 +237,11 @@ export const PlayerProvider = ({ children }) => {
         }
       }
       setIsPlaying(false);
-      setProgress(0);
+
     } catch (err) {
       console.error("Autoplay fetch failed:", err);
       setIsPlaying(false);
-      setProgress(0);
+
     }
   };
 
@@ -403,7 +403,7 @@ export const PlayerProvider = ({ children }) => {
 
     const handleTimeUpdate = () => {
       if (audio.duration) {
-        setProgress((audio.currentTime / audio.duration) * 100);
+
 
         // Update MediaSession position state for lock screen seekbar
         if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
@@ -473,7 +473,7 @@ export const PlayerProvider = ({ children }) => {
             setTimeout(() => fetchAndPlaySimilar(currentSong), 0);
           } else {
             setIsPlaying(false);
-            setProgress(0);
+
           }
           return [];
         }
@@ -628,14 +628,14 @@ export const PlayerProvider = ({ children }) => {
       accumulatedDurationRef.current = 0;
 
       audioRef.current.currentTime = 0;
-      setProgress(0);
+
       return;
     }
 
     if (history.length === 0) {
       // Nothing to go back to, just restart
       audioRef.current.currentTime = 0;
-      setProgress(0);
+
       return;
     }
 
@@ -685,7 +685,7 @@ export const PlayerProvider = ({ children }) => {
 
     const time = (percentage / 100) * audioRef.current.duration;
     audioRef.current.currentTime = time;
-    setProgress(percentage);
+
   };
 
   // Set initial audio volume
@@ -816,7 +816,8 @@ export const PlayerProvider = ({ children }) => {
 
   return (
     <PlayerContext.Provider value={{
-      currentSong, isPlaying, progress, duration, volume,
+      currentSong, isPlaying, duration, volume,
+      audioRef,
       likedSongs, toggleLike,
       playlists, createPlaylist, addSongToPlaylist,
       likedPlaylists, fetchLikedPlaylists, toggleLikePlaylist,
