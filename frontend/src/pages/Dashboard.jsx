@@ -70,12 +70,9 @@ const Dashboard = ({ defaultView = 'home' }) => {
   };
 
   const { 
-    currentSong, isPlaying, progress, duration, volume,
-    likedSongs, toggleLike, 
-    playlists, createPlaylist, addSongToPlaylist,
-    likedPlaylists, fetchLikedPlaylists, toggleLikePlaylist,
-    playSong, togglePlay, seek, setVolume,
-    playNext, playPrevious, resolveUrl, addToQueue
+    playlists, createPlaylist,
+    likedPlaylists, toggleLikePlaylist,
+    playSong, resolveUrl, addToQueue
   } = useContext(PlayerContext);
 
   // Determine current view from URL
