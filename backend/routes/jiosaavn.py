@@ -481,12 +481,16 @@ def import_song():
         )
 
         # Step 3: Populate the song_artists junction table
+        from db import execute_batch
+        song_artists_params = []
         for idx, aid in enumerate(artist_ids):
             is_primary = 1 if idx == 0 else 0
-            execute_query(
-                "INSERT IGNORE INTO song_artists (song_id, artist_id, is_primary) VALUES (%s, %s, %s)",
-                (song_id, aid, is_primary)
-            )
+            song_artists_params.append((song_id, aid, is_primary))
+
+        execute_batch(
+            "INSERT IGNORE INTO song_artists (song_id, artist_id, is_primary) VALUES (%s, %s, %s)",
+            song_artists_params
+        )
         
         return jsonify({
             'success': True,

@@ -1,0 +1,3 @@
+## 2026-05-05 - DB Batch Insertion Optimization
+**Learning:** Found N+1 insertion queries taking place inside iterative `for` loops in critical endpoints like `auth.py` and `jiosaavn.py` which drastically slowed down processes on user registration (with tastes) and song importing due to database round-trip overhead.
+**Action:** Implemented `execute_batch` relying on `executemany` in `db.py` and refactored iterative queries to collect param tuples in a list to reduce latency significantly. Remember to always search for iterative `execute_query` loops in Python DB layers to avoid N+1 anti-patterns.

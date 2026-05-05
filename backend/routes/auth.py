@@ -273,12 +273,16 @@ def complete_onboarding():
         execute_query("DELETE FROM user_preferences WHERE user_id = %s", (user_id,))
         
         # Batch insert
+        from db import execute_batch
+        preferences_params = []
         for g in genres:
-            execute_query("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", (user_id, 'genre', g))
+            preferences_params.append((user_id, 'genre', g))
         for l in languages:
-            execute_query("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", (user_id, 'language', l))
+            preferences_params.append((user_id, 'language', l))
         for a in artists:
-            execute_query("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", (user_id, 'artist', a))
+            preferences_params.append((user_id, 'artist', a))
+
+        execute_batch("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", preferences_params)
             
         # Mark as completed
         execute_query("UPDATE users SET onboarding_completed = TRUE WHERE user_id = %s", (user_id,))

@@ -72,6 +72,28 @@ def fetch_all(query, params=None):
         cursor.close()
         conn.close()
 
+def execute_batch(query, params_list=None):
+    """
+    Executes a batch query using `cursor.executemany()` for optimized bulk inserts and updates.
+    Returns True if successful, False otherwise.
+    """
+    if not params_list:
+        return True
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.executemany(query, params_list)
+        conn.commit()
+        return True
+    except mysql.connector.Error as e:
+        print(f"DB Error (Batch): {e}")
+        conn.rollback()
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
 def execute_query(query, params=None):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
