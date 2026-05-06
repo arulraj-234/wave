@@ -61,7 +61,10 @@ const SongContextMenu = ({ isOpen, onClose, song, position }) => {
         <div className="flex items-center gap-3 mb-4 px-2">
           <div className="w-12 h-12 rounded-lg overflow-hidden bg-brand-dark shrink-0">
             {song.cover_image_url ? (
-              <img src={song.cover_image_url} alt="" className="w-full h-full object-cover" />
+              <>
+                {/* ⚡ Bolt: Added loading="lazy" for performance optimization to defer off-screen image loading */}
+                <img src={song.cover_image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+              </>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-brand-muted"><Radio className="w-5 h-5" /></div>
             )}

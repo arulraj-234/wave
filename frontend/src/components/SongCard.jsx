@@ -48,7 +48,10 @@ const SongCard = ({ song }) => {
         <div className="flex items-center gap-4 min-w-0 flex-1">
           <div className="w-12 h-12 bg-brand-dark rounded-lg overflow-hidden shadow-sm shrink-0 relative">
             {song.cover_image_url ? (
-              <img src={resolveUrl(song.cover_image_url)} alt="cover" className="w-full h-full object-cover"/>
+              <>
+                {/* ⚡ Bolt: Added loading="lazy" for performance optimization to defer off-screen image loading */}
+                <img src={resolveUrl(song.cover_image_url)} alt="cover" className="w-full h-full object-cover" loading="lazy" />
+              </>
             ) : (
               <Music className="w-5 h-5 m-auto mt-3.5 text-brand-muted" />
             )}
