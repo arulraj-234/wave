@@ -24,11 +24,13 @@ def mock_db(mocker):
     Mock the database module to prevent tests from mutating the actual database.
     """
     mock_execute = mocker.patch('db.execute_query', return_value=1)
+    mock_execute_batch = mocker.patch('db.execute_batch', return_value=1)
     mock_fetch_one = mocker.patch('db.fetch_one', return_value=None)
     mock_fetch_all = mocker.patch('db.fetch_all', return_value=[])
     
     return {
         'execute': mock_execute,
+        'execute_batch': mock_execute_batch,
         'fetch_one': mock_fetch_one,
         'fetch_all': mock_fetch_all
     }
