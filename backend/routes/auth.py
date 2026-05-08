@@ -5,7 +5,7 @@ import jwt
 import datetime
 import os
 import uuid
-from db import execute_query, fetch_one
+from db import execute_query, fetch_one, execute_batch
 from config import Config
 
 auth_bp = Blueprint('auth', __name__)
@@ -273,12 +273,12 @@ def complete_onboarding():
         execute_query("DELETE FROM user_preferences WHERE user_id = %s", (user_id,))
         
         # Batch insert
-        for g in genres:
-            execute_query("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", (user_id, 'genre', g))
-        for l in languages:
-            execute_query("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", (user_id, 'language', l))
-        for a in artists:
-            execute_query("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", (user_id, 'artist', a))
+        if genres:
+            execute_batch("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", [(user_id, 'genre', g) for g in genres])
+        if languages:
+            execute_batch("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", [(user_id, 'language', l) for l in languages])
+        if artists:
+            execute_batch("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", [(user_id, 'artist', a) for a in artists])
             
         # Mark as completed
         execute_query("UPDATE users SET onboarding_completed = TRUE WHERE user_id = %s", (user_id,))

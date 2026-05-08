@@ -86,3 +86,18 @@ def execute_query(query, params=None):
     finally:
         cursor.close()
         conn.close()
+
+def execute_batch(query, params_list):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.executemany(query, params_list)
+        conn.commit()
+        return cursor.rowcount
+    except mysql.connector.Error as e:
+        print(f"DB Error: {e}")
+        conn.rollback()
+        return False
+    finally:
+        cursor.close()
+        conn.close()

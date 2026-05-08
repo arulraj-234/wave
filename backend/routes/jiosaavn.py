@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from db import execute_query, fetch_all, fetch_one
+from db import execute_query, fetch_all, fetch_one, execute_batch
 import requests
 import uuid
 import html
@@ -481,11 +481,10 @@ def import_song():
         )
 
         # Step 3: Populate the song_artists junction table
-        for idx, aid in enumerate(artist_ids):
-            is_primary = 1 if idx == 0 else 0
-            execute_query(
+        if artist_ids:
+            execute_batch(
                 "INSERT IGNORE INTO song_artists (song_id, artist_id, is_primary) VALUES (%s, %s, %s)",
-                (song_id, aid, is_primary)
+                [(song_id, aid, 1 if idx == 0 else 0) for idx, aid in enumerate(artist_ids)]
             )
         
         return jsonify({
