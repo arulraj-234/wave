@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from db import execute_query, fetch_all, fetch_one
+from db import execute_query, execute_batch, fetch_all, fetch_one
 import requests
 import uuid
 import html
@@ -481,12 +481,15 @@ def import_song():
         )
 
         # Step 3: Populate the song_artists junction table
-        for idx, aid in enumerate(artist_ids):
-            is_primary = 1 if idx == 0 else 0
-            execute_query(
-                "INSERT IGNORE INTO song_artists (song_id, artist_id, is_primary) VALUES (%s, %s, %s)",
-                (song_id, aid, is_primary)
-            )
+        # ⚡ Bolt Optimization: Batch insert for multiple artists
+        # Replaces O(n) execute_query calls with a single execute_batch call.
+        # Expected Impact: Faster song import for tracks with multiple artists.
+        if artist_ids:
+            sa_params = []
+            for idx, aid in enumerate(artist_ids):
+                is_primary = 1 if idx == 0 else 0
+                sa_params.append((song_id, aid, is_primary))
+            execute_batch("INSERT IGNORE INTO song_artists (song_id, artist_id, is_primary) VALUES (%s, %s, %s)", sa_params)
         
         return jsonify({
             'success': True,

@@ -86,3 +86,27 @@ def execute_query(query, params=None):
     finally:
         cursor.close()
         conn.close()
+
+def execute_batch(query, params_list=None):
+    """
+    ⚡ Bolt Optimization: Batch execution using `cursor.executemany()`
+    Reduces database round-trips from O(n) to O(1) for multiple identical queries
+    with different parameters (e.g. bulk inserts).
+    Expected Impact: Significant latency reduction when inserting multiple rows.
+    """
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        if params_list:
+            cursor.executemany(query, params_list)
+        else:
+            cursor.execute(query)
+        conn.commit()
+        return cursor.rowcount
+    except mysql.connector.Error as e:
+        print(f"DB Error (Batch): {e}")
+        conn.rollback()
+        return False
+    finally:
+        cursor.close()
+        conn.close()

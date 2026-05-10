@@ -5,7 +5,7 @@ import jwt
 import datetime
 import os
 import uuid
-from db import execute_query, fetch_one
+from db import execute_query, execute_batch, fetch_one
 from config import Config
 
 auth_bp = Blueprint('auth', __name__)
@@ -272,13 +272,21 @@ def complete_onboarding():
         # Clear existing preferences just in case it's a retry
         execute_query("DELETE FROM user_preferences WHERE user_id = %s", (user_id,))
         
-        # Batch insert
-        for g in genres:
-            execute_query("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", (user_id, 'genre', g))
-        for l in languages:
-            execute_query("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", (user_id, 'language', l))
-        for a in artists:
-            execute_query("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", (user_id, 'artist', a))
+        # ⚡ Bolt Optimization: Batch insert user preferences
+        # Replaces multiple sequential execute_query calls with batch inserts,
+        # reducing database round-trips from O(genres + languages + artists) to O(1) per type.
+        # Expected Impact: Faster onboarding completion, especially for users with many preferences.
+        genre_params = [(user_id, 'genre', g) for g in genres]
+        if genre_params:
+            execute_batch("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", genre_params)
+
+        language_params = [(user_id, 'language', l) for l in languages]
+        if language_params:
+            execute_batch("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", language_params)
+
+        artist_params = [(user_id, 'artist', a) for a in artists]
+        if artist_params:
+            execute_batch("INSERT INTO user_preferences (user_id, preference_type, preference_value) VALUES (%s, %s, %s)", artist_params)
             
         # Mark as completed
         execute_query("UPDATE users SET onboarding_completed = TRUE WHERE user_id = %s", (user_id,))
