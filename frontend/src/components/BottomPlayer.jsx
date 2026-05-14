@@ -64,7 +64,7 @@ const formatTime = (seconds) => {
 
 const BottomPlayer = () => {
   const {
-    currentSong, isPlaying, progress, duration, volume,
+    currentSong, isPlaying, duration, volume, audioRef,
     likedSongs, toggleLike,
     togglePlay, seek, setVolume,
     playNext, playPrevious, resolveUrl,
@@ -78,6 +78,7 @@ const BottomPlayer = () => {
   const [showLyrics, setShowLyrics] = useState(false);
   const [showSleepMenu, setShowSleepMenu] = useState(false);
   const [isIdle, setIsIdle] = useState(false);
+  const [localProgress, setLocalProgress] = useState(0);
   const location = useLocation();
 
   const idleTimerRef = useRef(null);
@@ -100,6 +101,22 @@ const BottomPlayer = () => {
   };
 
   useEffect(() => {
+    const audio = audioRef?.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      if (audio.duration) {
+        setLocalProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    return () => {
+      audio.removeEventListener('timeupdate', updateProgress);
+    };
+  }, [audioRef]);
+
+  useEffect(() => {
     if (isFullScreenPlayer) {
       resetIdleTimer();
       window.addEventListener('mousemove', resetIdleTimer);
@@ -117,7 +134,7 @@ const BottomPlayer = () => {
   }, [isFullScreenPlayer]);
 
   const dominantColor = useDominantColor(currentSong?.cover_image_url ? resolveUrl(currentSong.cover_image_url) : null);
-  const currentTime = (progress / 100) * (duration || currentSong?.duration || 0);
+  const currentTime = (localProgress / 100) * (duration || currentSong?.duration || 0);
 
   // Auto-minimize full screen player when navigating
   useEffect(() => {
@@ -357,7 +374,7 @@ const BottomPlayer = () => {
               {/* Mobile Progress Bar (using ElasticSlider) */}
               <div className="mb-6 shrink-0 text-brand-muted text-[11px] font-medium tracking-wide">
                 <ElasticSlider
-                  defaultValue={progress}
+                  defaultValue={localProgress}
                   maxValue={100}
                   onChange={(val) => seek(val)}
                   className="w-full !p-0 mb-2"
@@ -365,7 +382,7 @@ const BottomPlayer = () => {
                   rightIcon={null}
                 />
                 <div className="flex justify-between w-full mt-2">
-                  <span>{formatTime((progress / 100) * duration)}</span>
+                  <span>{formatTime((localProgress / 100) * duration)}</span>
                   <span>{formatTime(duration || currentSong.duration)}</span>
                 </div>
               </div>
@@ -506,10 +523,10 @@ const BottomPlayer = () => {
               
               {/* Progress Bar (Desktop only) */}
               <div className="hidden md:flex w-full max-w-md items-center gap-3 text-xs text-brand-muted font-medium">
-                <span>{formatTime((progress / 100) * duration)}</span>
+                <span>{formatTime((localProgress / 100) * duration)}</span>
                 <div className="flex-1 flex items-center px-2 group">
                   <ElasticSlider
-                    defaultValue={progress}
+                    defaultValue={localProgress}
                     maxValue={100}
                     onChange={(val) => seek(val)}
                     className="w-full !p-0"
@@ -601,7 +618,7 @@ const BottomPlayer = () => {
 
             {/* Mobile Progress Bar (absolute bottom edge of compact bar) */}
             <div className="absolute bottom-0 left-0 h-[2.5px] bg-white/10 md:hidden w-full rounded-b-xl overflow-hidden shadow-inner">
-               <div className="h-full bg-brand-primary shadow-[0_0_10px_rgba(255,255,255,0.8)] transition-all duration-300 ease-linear" style={{ width: `${(progress / 100) * 100}%` }} />
+               <div className="h-full bg-brand-primary shadow-[0_0_10px_rgba(255,255,255,0.8)] transition-all duration-300 ease-linear" style={{ width: `${(localProgress / 100) * 100}%` }} />
             </div>
           </motion.div>
         )}
