@@ -64,7 +64,7 @@ const formatTime = (seconds) => {
 
 const BottomPlayer = () => {
   const {
-    currentSong, isPlaying, progress, duration, volume,
+    currentSong, isPlaying, duration, volume, audioRef,
     likedSongs, toggleLike,
     togglePlay, seek, setVolume,
     playNext, playPrevious, resolveUrl,
@@ -77,6 +77,26 @@ const BottomPlayer = () => {
   const [showQueue, setShowQueue] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [showSleepMenu, setShowSleepMenu] = useState(false);
+
+  // ⚡ Bolt: Maintain progress locally to avoid triggering global re-renders via PlayerContext
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (!audioRef?.current) return;
+    const audio = audioRef.current;
+
+    // ⚡ Bolt: Listen to timeupdate directly on the audio element instead of via context
+    const handleTimeUpdate = () => {
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [audioRef]);
   const [isIdle, setIsIdle] = useState(false);
   const location = useLocation();
 
