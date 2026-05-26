@@ -70,7 +70,7 @@ const Dashboard = ({ defaultView = 'home' }) => {
   };
 
   const { 
-    currentSong, isPlaying, progress, duration, volume,
+    currentSong, isPlaying, duration, volume,
     likedSongs, toggleLike, 
     playlists, createPlaylist, addSongToPlaylist,
     likedPlaylists, fetchLikedPlaylists, toggleLikePlaylist,
