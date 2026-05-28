@@ -1,0 +1,3 @@
+## 2024-05-28 - Avoid global re-renders on <audio> timeupdate
+**Learning:** Frequent `setProgress( (audio.currentTime / audio.duration) * 100 )` in a global `PlayerContext` forces the context to update repeatedly (often multiple times per second). Any component consuming `PlayerContext` (e.g., `SongCard`, `Dashboard`, `Sidebar`) will re-render just because `progress` changed, causing severe global performance degradation.
+**Action:** Extract `progress` state out of the global `PlayerContext`. Instead, expose `audioRef` (or a way to subscribe to timeupdate directly) to the few components that actually need it (e.g., `BottomPlayer`, `LyricsPanel`) so they can manage their own local progress state.
