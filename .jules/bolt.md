@@ -1,0 +1,3 @@
+## 2025-05-30 - Cache Artist Stats Aggregation
+**Learning:** The `/artist/<int:artist_id>` endpoint performs multiple complex analytical SQL queries (aggregations, recent streams, listener demographics) which are expensive. Since it provides an overall dashboard rather than real-time user-specific state, the result is highly cacheable. The existing in-memory dict in `engine/cache.py` is the preferred caching mechanism to optimize such backend analytics without adding Redis.
+**Action:** When working on backend analytical endpoints, always consider using `from engine import cache` to cache entire JSON payloads rather than fetching directly from the database repeatedly, prioritizing endpoints with complex aggregations or heavy query load.
