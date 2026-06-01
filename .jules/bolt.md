@@ -1,0 +1,3 @@
+## 2025-02-23 - Cached Complex Artist Analytics Queries
+**Learning:** The `get_artist_stats` endpoint executes 16 complex inline SQL queries per request to generate an artist dashboard, which represents a massive database load for heavily trafficked pages. Flask response objects are not inherently thread-safe for simple caching mechanisms, so serializing to a native Python dictionary beforehand is crucial.
+**Action:** When working on complex aggregated dashboards, default to adding a TTL-based cache on the raw dictionary payload using the internal `engine.cache` module to reduce query execution overhead without adding external dependencies like Redis.
