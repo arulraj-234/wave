@@ -1,0 +1,3 @@
+## 2025-02-23 - Avoid Context State for High-Frequency Audio Events
+**Learning:** Storing `progress` state directly in React Context (`PlayerContext.jsx`) for an audio player is a massive performance bottleneck. Because the `timeupdate` event fires multiple times per second, the Context provider forces a re-render of every subscribed component across the entire app (e.g. all `SongCard` components, Sidebars, Main Views).
+**Action:** Expose `audioRef` from Context instead of `progress` state. Let individual components that actually need to display progress (like `BottomPlayer.jsx`) manage their own local `progress` state by attaching a `timeupdate` event listener directly to `audioRef.current`.
