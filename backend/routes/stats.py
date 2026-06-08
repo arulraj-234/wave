@@ -121,9 +121,16 @@ def get_listener_stats(user_id):
     }), 200
 
 
+from engine import cache
+
 @stats_bp.route('/artist/<int:artist_id>', methods=['GET'])
 def get_artist_stats(artist_id):
     """Comprehensive artist analytics dashboard — maximum insights."""
+    cache_key = f"artist_stats_{artist_id}"
+    cached_payload = cache.get(cache_key)
+    if cached_payload is not None:
+        return jsonify(cached_payload), 200
+
     # Main stats (inline query — replaces artist_stats_view for TiDB compatibility)
     stats = fetch_one("""
         SELECT
@@ -353,7 +360,7 @@ def get_artist_stats(artist_id):
     total_streams = listen_time.get('total_streams', 0) if listen_time else 0
     listen_hours = round(total_listen_secs / 3600, 1) if total_listen_secs else 0
 
-    return jsonify({
+    payload = {
         "stats": {
             "artist_name": stats.get('artist_name'),
             "artist_image": stats.get('artist_image'),
@@ -390,7 +397,11 @@ def get_artist_stats(artist_id):
             "new_listeners": new_vs_returning.get('new_listeners', 0) if new_vs_returning else 0,
             "returning_listeners": new_vs_returning.get('returning_listeners', 0) if new_vs_returning else 0
         }
-    }), 200
+    }
+
+    cache.set(cache_key, payload, ttl_seconds=3600)
+
+    return jsonify(payload), 200
 
 
 @stats_bp.route('/trending', methods=['GET'])
