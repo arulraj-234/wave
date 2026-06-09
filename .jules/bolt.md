@@ -1,0 +1,3 @@
+## 2024-05-18 - React Context Performance Gotcha
+**Learning:** Storing frequently updating state like audio `progress` (which changes multiple times per second via `timeupdate` events) inside a global React Context (`PlayerContext.jsx`) causes full re-renders of any component consuming that context (e.g. `Dashboard`, `SongCard`), defeating any memoization attempts.
+**Action:** Expose the `audioRef` from the context instead and have consumer components (like `BottomPlayer` or a progress bar) attach their own local event listeners (`audioRef.current.addEventListener('timeupdate', ...)`) and manage their own local state. This confines re-renders only to the small components that actually need to visualize the progress.

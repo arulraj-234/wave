@@ -64,7 +64,7 @@ const formatTime = (seconds) => {
 
 const BottomPlayer = () => {
   const {
-    currentSong, isPlaying, progress, duration, volume,
+    currentSong, isPlaying, duration, volume, audioRef,
     likedSongs, toggleLike,
     togglePlay, seek, setVolume,
     playNext, playPrevious, resolveUrl,
@@ -73,6 +73,29 @@ const BottomPlayer = () => {
     isFullScreenPlayer, setIsFullScreenPlayer,
     isSidebarCollapsed
   } = useContext(PlayerContext);
+
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTimeUpdate = () => {
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [audioRef]);
+
+  useEffect(() => {
+    setProgress(0);
+  }, [currentSong]);
 
   const [showQueue, setShowQueue] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
