@@ -64,7 +64,7 @@ const formatTime = (seconds) => {
 
 const BottomPlayer = () => {
   const {
-    currentSong, isPlaying, progress, duration, volume,
+    currentSong, isPlaying, duration, volume, audioRef,
     likedSongs, toggleLike,
     togglePlay, seek, setVolume,
     playNext, playPrevious, resolveUrl,
@@ -77,6 +77,30 @@ const BottomPlayer = () => {
   const [showQueue, setShowQueue] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [showSleepMenu, setShowSleepMenu] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (!audioRef || !audioRef.current) return;
+
+    const handleTimeUpdate = () => {
+      const audio = audioRef.current;
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      } else {
+        setProgress(0);
+      }
+    };
+
+    // Initial setup if audio is already playing/loaded
+    handleTimeUpdate();
+
+    audioRef.current.addEventListener('timeupdate', handleTimeUpdate);
+    return () => {
+      if (audioRef && audioRef.current) {
+        audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
+      }
+    };
+  }, [audioRef]);
   const [isIdle, setIsIdle] = useState(false);
   const location = useLocation();
 
