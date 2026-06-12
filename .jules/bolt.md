@@ -1,0 +1,4 @@
+
+## 2024-06-12 - Caching Raw Dictionaries vs Flask Responses
+**Learning:** In Flask applications, caching the raw data dictionary is preferred over caching the `flask.Response` object returned by `jsonify()`. `Response` objects are not thread-safe, may be mutated by downstream middleware (e.g., CORS headers, compression), and can cause serialization issues or side effects when reused across different requests. Additionally, unpaginated large database queries like the 16+ separate queries in `get_artist_stats` can cause a major performance bottleneck, which in-memory caching directly resolves.
+**Action:** When adding caching to an API endpoint, assemble the raw dictionary payload, cache it with an appropriate TTL, and then pass either the newly constructed or the cached dictionary to `jsonify()` before returning it to the client.
