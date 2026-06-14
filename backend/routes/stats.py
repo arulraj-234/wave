@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from db import fetch_all, fetch_one, execute_query, get_connection
 from routes.songs import enrich_song_metadata
+from engine import cache
 
 stats_bp = Blueprint('stats', __name__)
 
@@ -396,21 +397,32 @@ def get_artist_stats(artist_id):
 @stats_bp.route('/trending', methods=['GET'])
 def get_trending():
     """Trending songs based on recent play activity"""
+    cache_key = 'trending_songs'
+    cached_response = cache.get(cache_key)
+    if cached_response:
+        return jsonify(cached_response), 200
+
     # Inline trending query (replaces trending_songs_view for TiDB compatibility)
+    # Optimized: INNER JOIN implicitly filters recent_plays > 0 and avoids scanning the entire streams table
     trending = fetch_all("""
         SELECT
             s.song_id, s.title, s.audio_url, s.cover_image_url, s.duration, s.genre,
             s.play_count AS total_plays, s.artist_id,
             COUNT(st.stream_id) AS recent_plays
         FROM songs s
-        LEFT JOIN streams st ON s.song_id = st.song_id
+        INNER JOIN streams st ON s.song_id = st.song_id
             AND st.streamed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
         GROUP BY s.song_id
-        HAVING recent_plays > 0
         ORDER BY recent_plays DESC
         LIMIT 20
     """)
-    return jsonify({"songs": enrich_song_metadata(trending)}), 200
+
+    response_data = {"songs": enrich_song_metadata(trending)}
+
+    # Cache the raw dictionary, not the Response object, for 15 minutes (900 seconds)
+    cache.set(cache_key, response_data, ttl_seconds=900)
+
+    return jsonify(response_data), 200
 
 
 @stats_bp.route('/platform', methods=['GET'])
