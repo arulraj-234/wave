@@ -1,0 +1,3 @@
+## 2024-05-18 - Avoid storing timeupdate progress in React Context
+**Learning:** The `PlayerContext` in this application stores playback `progress` and updates it via the `<audio>` element's `timeupdate` event. This causes the entire `PlayerProvider` and any component consuming `PlayerContext` (like `SongCard`, `BottomPlayer`, `Sidebar`, etc.) to re-render several times a second, causing a massive frontend performance bottleneck and rendering standard `React.memo` optimizations ineffective.
+**Action:** Do NOT store `progress` in the global context. Expose `audioRef` from the context instead and let components like `BottomPlayer` listen to `audioRef.current` directly to manage their own local state for progress rendering.
