@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from db import execute_query, fetch_all, fetch_one
+from routes.songs import enrich_song_metadata
 from middleware import token_required
 
 playlists_bp = Blueprint('playlists', __name__)
@@ -88,7 +89,7 @@ def get_playlist_details(playlist_id):
         ORDER BY ps.added_at ASC
     """
     songs = fetch_all(query, (playlist_id,))
-    playlist['songs'] = songs
+    playlist['songs'] = enrich_song_metadata(songs)
     return jsonify({"playlist": playlist}), 200
 
 # ── Liked Saavn Playlists ────────────────────────────────────
