@@ -1,0 +1,3 @@
+## 2024-05-24 - React Performance Anti-pattern in Context
+**Learning:** Storing rapidly changing state like `progress` (from `audio.timeupdate`) in a global `PlayerContext` forces the entire React component tree that consumes the context (including `Sidebar`, `SongCard`, `Dashboard`) to re-render several times a second. This causes significant UI lag, especially on heavy views.
+**Action:** Extract rapidly changing UI state out of global contexts. Instead, expose the underlying reference (`audioRef`) via the context and let localized components (like `BottomPlayer`) subscribe to events (`timeupdate`) independently to manage their own local state.
