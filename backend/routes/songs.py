@@ -35,7 +35,8 @@ def enrich_song_metadata(songs):
         return []
 
     # Batch fetch all artists for all songs in ONE query (fixes N+1)
-    song_ids = [s['song_id'] for s in songs if s.get('song_id')]
+    # Skip songs that already have artist metadata (e.g. from JioSaavn or cache)
+    song_ids = [s['song_id'] for s in songs if s.get('song_id') and not ('artist_name' in s and 'artists' in s)]
     if not song_ids:
         return songs
 
@@ -57,6 +58,8 @@ def enrich_song_metadata(songs):
 
     # Attach to each song
     for s in songs:
+        if 'artist_name' in s and 'artists' in s:
+            continue
         artists = artists_by_song.get(s.get('song_id'), [])
         s['artist_name'] = ", ".join([a['name'] for a in artists])
         s['artists'] = artists
