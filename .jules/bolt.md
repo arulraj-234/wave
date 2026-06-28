@@ -1,0 +1,3 @@
+## 2024-06-28 - IN Clause Optimization for Cached Data
+**Learning:** Found a major performance bottleneck where massive `IN` clauses were generated in `enrich_song_metadata` even for songs that already had their artist metadata populated. This is a common anti-pattern in metadata enrichment functions that process arrays containing both raw and pre-cached objects.
+**Action:** Always filter lists to find items that actually *need* enrichment (`songs_to_enrich`) before constructing batch database queries. This significantly reduces query size and overhead, particularly for endpoints that combine fresh database records with cached external API responses.
