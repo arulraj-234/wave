@@ -1,0 +1,3 @@
+## 2024-06-30 - Global Context Re-render Bottleneck
+**Learning:** Storing rapidly changing UI state (like `progress` from `audio.timeupdate` which updates multiple times per second) inside a global React Context (e.g., `PlayerContext`) bypasses memoization for all consumers, causing unnecessary massive re-renders across the entire component tree (Dashboard, Sidebar, etc.).
+**Action:** Extract rapidly changing state from global contexts. Instead, expose stable references (like `audioRef`) so specific components (like `BottomPlayer`) can manage the volatile state locally by listening directly to DOM events.
