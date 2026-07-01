@@ -64,7 +64,7 @@ const formatTime = (seconds) => {
 
 const BottomPlayer = () => {
   const {
-    currentSong, isPlaying, progress, duration, volume,
+    currentSong, isPlaying, audioRef, duration, volume,
     likedSongs, toggleLike,
     togglePlay, seek, setVolume,
     playNext, playPrevious, resolveUrl,
@@ -75,10 +75,33 @@ const BottomPlayer = () => {
   } = useContext(PlayerContext);
 
   const [showQueue, setShowQueue] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [showLyrics, setShowLyrics] = useState(false);
   const [showSleepMenu, setShowSleepMenu] = useState(false);
   const [isIdle, setIsIdle] = useState(false);
   const location = useLocation();
+
+  // Setup progress sync from audioRef
+  useEffect(() => {
+    if (!audioRef || !audioRef.current) return;
+
+    const audio = audioRef.current;
+    const handleTimeUpdate = () => {
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [audioRef]);
+
+  // Reset progress when song changes
+  useEffect(() => {
+    setProgress(0);
+  }, [currentSong]);
 
   const idleTimerRef = useRef(null);
   const touchStartY = useRef(0);
