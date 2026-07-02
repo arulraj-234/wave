@@ -1,4 +1,4 @@
-# 🌊 Wave — Music Streaming Platform
+# Wave — Music Streaming Platform
 
 A full-stack music streaming platform built with a **Python/Flask** REST API backend and a **React (Vite)** frontend, powered by **JioSaavn** for content discovery and streaming.
 
