@@ -34,8 +34,12 @@ def enrich_song_metadata(songs):
     if not songs:
         return []
 
+    # Check for and skip items that already contain the target metadata
+    # This minimizes the size of IN clauses during batch DB fetches.
+    songs_to_enrich = [s for s in songs if not (s.get('artist_name') and s.get('artists'))]
+
     # Batch fetch all artists for all songs in ONE query (fixes N+1)
-    song_ids = [s['song_id'] for s in songs if s.get('song_id')]
+    song_ids = [s['song_id'] for s in songs_to_enrich if s.get('song_id')]
     if not song_ids:
         return songs
 
@@ -56,7 +60,7 @@ def enrich_song_metadata(songs):
         artists_by_song[a['song_id']].append({'id': a['id'], 'name': a['name']})
 
     # Attach to each song
-    for s in songs:
+    for s in songs_to_enrich:
         artists = artists_by_song.get(s.get('song_id'), [])
         s['artist_name'] = ", ".join([a['name'] for a in artists])
         s['artists'] = artists
