@@ -57,3 +57,34 @@ def test_get_home_content_deduplication(client, mock_db):
     assert deduped[0]["id"] == "1"
     assert deduped[1]["id"] == "2"
     assert deduped[2]["id"] == "4"
+
+def test_enrich_song_metadata_skips_existing():
+    """Test that enrich_song_metadata skips fetching metadata for songs that already have 'artists' key."""
+    from routes.songs import enrich_song_metadata
+
+    songs = [
+        {'song_id': 1},
+        {'song_id': 2, 'artists': [{'id': 2, 'name': 'Existing Artist'}], 'artist_name': 'Existing Artist'}
+    ]
+
+    with patch('routes.songs.fetch_all') as mock_fetch_all:
+        mock_fetch_all.return_value = [
+            {'song_id': 1, 'id': 1, 'name': 'New Artist'}
+        ]
+
+        result = enrich_song_metadata(songs)
+
+        # Verify fetch_all was called correctly (only for song_id 1)
+        mock_fetch_all.assert_called_once()
+        args, _ = mock_fetch_all.call_args
+        query, params = args
+        assert "%s" in query
+        assert params == (1,)
+
+        # Verify metadata was applied to song 1
+        assert result[0]['artists'][0]['name'] == 'New Artist'
+        assert result[0]['artist_name'] == 'New Artist'
+
+        # Verify metadata for song 2 was untouched
+        assert result[1]['artists'][0]['name'] == 'Existing Artist'
+        assert result[1]['artist_name'] == 'Existing Artist'
