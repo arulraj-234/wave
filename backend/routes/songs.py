@@ -34,10 +34,13 @@ def enrich_song_metadata(songs):
     if not songs:
         return []
 
-    # Batch fetch all artists for all songs in ONE query (fixes N+1)
-    song_ids = [s['song_id'] for s in songs if s.get('song_id')]
-    if not song_ids:
+    # Filter out songs that already have explicitly attached 'artists' metadata
+    needs_enrichment = [s for s in songs if 'artists' not in s and s.get('song_id')]
+    if not needs_enrichment:
         return songs
+
+    # Batch fetch all artists for all songs in ONE query (fixes N+1)
+    song_ids = [s['song_id'] for s in needs_enrichment]
 
     placeholders = ','.join(['%s'] * len(song_ids))
     all_artists = fetch_all(f"""
@@ -57,6 +60,9 @@ def enrich_song_metadata(songs):
 
     # Attach to each song
     for s in songs:
+        if 'artists' in s:
+            continue
+
         artists = artists_by_song.get(s.get('song_id'), [])
         s['artist_name'] = ", ".join([a['name'] for a in artists])
         s['artists'] = artists
