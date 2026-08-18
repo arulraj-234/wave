@@ -35,28 +35,34 @@ def enrich_song_metadata(songs):
         return []
 
     # Batch fetch all artists for all songs in ONE query (fixes N+1)
-    song_ids = [s['song_id'] for s in songs if s.get('song_id')]
-    if not song_ids:
-        return songs
+    # OPTIMIZATION: Check for 'artists' key to skip already-enriched songs
+    # to minimize IN clause size and prevent redundant overwriting.
+    song_ids = [s['song_id'] for s in songs if s.get('song_id') and 'artists' not in s]
 
-    placeholders = ','.join(['%s'] * len(song_ids))
-    all_artists = fetch_all(f"""
-        SELECT sa.song_id, ap.artist_id as id, u.username as name
-        FROM song_artists sa
-        JOIN artist_profiles ap ON sa.artist_id = ap.artist_id
-        JOIN users u ON ap.user_id = u.user_id
-        WHERE sa.song_id IN ({placeholders})
-        ORDER BY sa.is_primary DESC
-    """, tuple(song_ids))
-
-    # Group artists by song_id
     from collections import defaultdict
     artists_by_song = defaultdict(list)
-    for a in all_artists:
-        artists_by_song[a['song_id']].append({'id': a['id'], 'name': a['name']})
+
+    if song_ids:
+        placeholders = ','.join(['%s'] * len(song_ids))
+        all_artists = fetch_all(f"""
+            SELECT sa.song_id, ap.artist_id as id, u.username as name
+            FROM song_artists sa
+            JOIN artist_profiles ap ON sa.artist_id = ap.artist_id
+            JOIN users u ON ap.user_id = u.user_id
+            WHERE sa.song_id IN ({placeholders})
+            ORDER BY sa.is_primary DESC
+        """, tuple(song_ids))
+
+        # Group artists by song_id
+        for a in all_artists:
+            artists_by_song[a['song_id']].append({'id': a['id'], 'name': a['name']})
 
     # Attach to each song
     for s in songs:
+        # OPTIMIZATION: Skip items that already contain target metadata
+        if 'artists' in s:
+            continue
+
         artists = artists_by_song.get(s.get('song_id'), [])
         s['artist_name'] = ", ".join([a['name'] for a in artists])
         s['artists'] = artists
