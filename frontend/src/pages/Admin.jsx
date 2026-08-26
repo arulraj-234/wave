@@ -517,25 +517,37 @@ const SongsTab = ({ token }) => {
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingSong, setEditingSong] = useState(null);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const limit = 50;
 
-  const fetchSongs = async () => {
+  const fetchSongs = async (reset = false) => {
     setLoading(true);
     try {
-      const res = await api.get('/api/songs');
-      setSongs(res.data.songs);
+      const currentOffset = reset ? 0 : offset;
+      const res = await api.get(`/api/songs?limit=${limit}&offset=${currentOffset}`);
+
+      if (reset) {
+        setSongs(res.data.songs);
+      } else {
+        setSongs(prev => [...prev, ...res.data.songs]);
+      }
+
+      setOffset(currentOffset + limit);
+      setHasMore(res.data.has_more);
     } catch (e) {
       console.error(e);
     }
     setLoading(false);
   };
 
-  useEffect(() => { fetchSongs(); }, []);
+  useEffect(() => { fetchSongs(true); }, []);
 
   const handleDelete = async (songId, title) => {
     if(!window.confirm(`Delete "${title}" permanently?`)) return;
     try {
       await api.delete(`/api/songs/${songId}`);
-      fetchSongs();
+      setSongs(prev => prev.filter(s => s.song_id !== songId));
     } catch (e) {
       alert("Failed to delete song");
     }
@@ -554,7 +566,9 @@ const SongsTab = ({ token }) => {
         headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
       });
       setEditingSong(null);
-      fetchSongs();
+      // Refresh current list without resetting pagination to avoid losing user position
+      const res = await api.get(`/api/songs?limit=${offset}&offset=0`);
+      setSongs(res.data.songs);
     } catch (err) {
       alert("Failed to update song");
     }
@@ -611,11 +625,23 @@ const SongsTab = ({ token }) => {
                     </td>
                   </tr>
                 ))}
-                {songs.length === 0 && (
+                {songs.length === 0 && !loading && (
                   <tr><td colSpan="5" className="text-center p-8 text-white/30">No songs found in the database.</td></tr>
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {hasMore && songs.length > 0 && (
+          <div className="p-4 border-t border-white/5 flex justify-center">
+            <button
+              onClick={() => fetchSongs()}
+              disabled={loading}
+              className="px-6 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Loading...' : 'Load More Songs'}
+            </button>
           </div>
         )}
       </div>
