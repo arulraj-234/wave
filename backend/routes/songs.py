@@ -21,13 +21,22 @@ songs_bp = Blueprint('songs', __name__)
 
 @songs_bp.route('', methods=['GET'])
 def get_songs():
+    limit = int(request.args.get('limit', 50))
+    offset = int(request.args.get('offset', 0))
+
     query = """
         SELECT song_id, title, audio_url, cover_image_url, duration, genre, play_count, artist_id
         FROM songs
         ORDER BY uploaded_at DESC
+        LIMIT %s OFFSET %s
     """
-    songs = fetch_all(query)
-    return jsonify({"songs": enrich_song_metadata(songs)}), 200
+    songs = fetch_all(query, (limit, offset))
+    return jsonify({
+        "songs": enrich_song_metadata(songs),
+        "limit": limit,
+        "offset": offset,
+        "has_more": len(songs) == limit
+    }), 200
 
 def enrich_song_metadata(songs):
     """Enrich songs with full artist names and metadata list for player."""
