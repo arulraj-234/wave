@@ -74,7 +74,8 @@ CREATE TABLE IF NOT EXISTS songs (
     FOREIGN KEY (album_id) REFERENCES albums(album_id) ON DELETE SET NULL,
     FOREIGN KEY (uploaded_by) REFERENCES users(user_id) ON DELETE SET NULL,
     INDEX idx_songs_title (title),
-    INDEX idx_songs_genre (genre)
+    INDEX idx_songs_genre (genre),
+    INDEX idx_songs_uploaded_at (uploaded_at)
 );
 
 CREATE TABLE IF NOT EXISTS playlists (
