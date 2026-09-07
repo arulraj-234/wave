@@ -21,12 +21,21 @@ songs_bp = Blueprint('songs', __name__)
 
 @songs_bp.route('', methods=['GET'])
 def get_songs():
+    # ⚡ Bolt Optimization: Add pagination to prevent massive IN clause bottleneck during metadata enrichment
+    try:
+        limit = max(1, min(int(request.args.get('limit', 50)), 1000)) # Safety min/max
+        offset = max(0, int(request.args.get('offset', 0)))
+    except ValueError:
+        limit = 50
+        offset = 0
+
     query = """
         SELECT song_id, title, audio_url, cover_image_url, duration, genre, play_count, artist_id
         FROM songs
         ORDER BY uploaded_at DESC
+        LIMIT %s OFFSET %s
     """
-    songs = fetch_all(query)
+    songs = fetch_all(query, (limit, offset))
     return jsonify({"songs": enrich_song_metadata(songs)}), 200
 
 def enrich_song_metadata(songs):

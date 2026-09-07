@@ -196,6 +196,7 @@ CREATE INDEX idx_streams_user ON streams(user_id, streamed_at);
 CREATE INDEX idx_streams_song ON streams(song_id, streamed_at);
 CREATE INDEX idx_songs_artist ON songs(artist_id);
 CREATE INDEX idx_songs_saavn_id ON songs(saavn_id);
+CREATE INDEX idx_songs_uploaded_at ON songs(uploaded_at);
 CREATE INDEX idx_follows_artist ON follows(followed_artist_id);
 CREATE INDEX idx_liked_songs_user ON user_liked_songs(user_id);
 CREATE INDEX idx_playlist_songs_playlist ON playlist_songs(playlist_id);

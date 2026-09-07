@@ -521,7 +521,7 @@ const SongsTab = ({ token }) => {
   const fetchSongs = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/api/songs');
+      const res = await api.get('/api/songs?limit=1000');
       setSongs(res.data.songs);
     } catch (e) {
       console.error(e);

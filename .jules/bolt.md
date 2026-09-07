@@ -4,3 +4,6 @@
 ## 2026-08-14 - Optimize enrich_song_metadata IN clause overhead
 **Learning:** When enriching metadata via a batched SQL query using an `IN` clause, large unpaginated responses or redundant processing of already-enriched objects can cause significant performance overhead. Repeated loops over dictionaries without checking for existing keys leads to unnecessary database queries and overwriting valid data.
 **Action:** Always verify if a dictionary already contains the target keys (e.g., using `if 'key' not in obj:`) before adding its identifier to the list for batch fetching, and use early `continue` statements in subsequent processing loops to skip redundant updates.
+## 2024-08-16 - Add Pagination to prevent IN clause explosion
+**Learning:** An unpaginated `SELECT * FROM songs` query in `backend/routes/songs.py` passed hundreds of IDs into a massive `IN` clause during `enrich_song_metadata`, causing severe database bottlenecks.
+**Action:** Always wrap large collection queries with `LIMIT` and `OFFSET` in backend endpoints, even if not strictly requested by the frontend yet, and update frontend dashboard bulk-fetches (like `Admin.jsx`) to explicitly pass a high limit to maintain behavior while preventing accidental unbounded queries.
