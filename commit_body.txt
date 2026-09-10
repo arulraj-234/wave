@@ -1,0 +1,4 @@
+💡 What: Implemented caching for the `get_artist_stats` endpoint using the internal `engine.cache` module with a 1-hour TTL.
+🎯 Why: The endpoint executed ~16 complex database queries (aggregations, JOINs) on every request, which caused significant performance bottlenecks under read-heavy loads. This data does not need real-time accuracy.
+📊 Impact: Drastically reduces database load and latency for artist dashboards. Subsequent hits within an hour serve instantaneously from memory.
+🔬 Measurement: Verify by loading an artist profile dashboard. The first load will compute stats, but subsequent reloads within 1 hour will bypass the database and return instantly. Tested with standalone mocked tests to ensure correctness and absence of Flask Response serialization errors.
