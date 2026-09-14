@@ -223,3 +223,5 @@ SELECT
     (SELECT u.username FROM users u
      JOIN streams st ON u.user_id = st.user_id
      GROUP BY u.user_id ORDER BY COUNT(*) DESC LIMIT 1) AS most_active_user;
+-- Added index to optimize ORDER BY uploaded_at DESC queries for recently uploaded songs, reducing sort operations.
+CREATE INDEX idx_songs_uploaded_at ON songs(uploaded_at);

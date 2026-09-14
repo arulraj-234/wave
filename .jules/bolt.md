@@ -7,3 +7,4 @@
 ## 2026-08-16 - Cache heavy DB endpoints instead of optimizing massive queries
 **Learning:** Some endpoints, like `/artist/<int:artist_id>`, aggregate data from over 15 complex SQL queries. Attempting to optimize these queries individually or convert them to views is often less impactful and higher risk than simply caching the entire serialized payload.
 **Action:** Identify endpoints that perform heavy reads where real-time accuracy is not critical, and wrap the final `jsonify` payload in an in-memory cache (like `engine.cache`) with an appropriate TTL before serving.
+## 2026-09-14 - Indexing frequently sorted columns\n**Learning:** In read-heavy applications, queries sorting by timestamp (like `ORDER BY uploaded_at DESC`) can become significant bottlenecks as the table grows.\n**Action:** Proactively add indexes to columns commonly used in `ORDER BY` clauses to avoid expensive file-sorts during queries.
