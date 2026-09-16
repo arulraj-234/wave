@@ -409,6 +409,14 @@ def get_artist_stats(artist_id):
 @stats_bp.route('/trending', methods=['GET'])
 def get_trending():
     """Trending songs based on recent play activity"""
+
+    # ⚡ Bolt Optimization: Cache this heavy aggregation query
+    # Impact: Avoids scanning streams and songs tables on every dashboard load
+    cache_key = "trending_songs"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return jsonify(cached_data), 200
+
     # Inline trending query (replaces trending_songs_view for TiDB compatibility)
     trending = fetch_all("""
         SELECT
@@ -423,12 +431,23 @@ def get_trending():
         ORDER BY recent_plays DESC
         LIMIT 20
     """)
-    return jsonify({"songs": enrich_song_metadata(trending)}), 200
+
+    response_data = {"songs": enrich_song_metadata(trending)}
+    cache.set(cache_key, response_data, ttl_seconds=3600)
+    return jsonify(response_data), 200
 
 
 @stats_bp.route('/platform', methods=['GET'])
 def get_platform_stats():
     """Admin-level platform overview"""
+
+    # ⚡ Bolt Optimization: Cache admin platform stats
+    # Impact: Drastically reduces load when querying across multiple heavy views and tables
+    cache_key = "platform_stats"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return jsonify(cached_data), 200
+
     stats = fetch_one("SELECT * FROM platform_stats_view")
 
     # Daily streams for last 30 days
@@ -462,7 +481,7 @@ def get_platform_stats():
         if row.get('stream_date'):
             row['stream_date'] = str(row['stream_date'])
 
-    return jsonify({
+    response_data = {
         "stats": {
             "total_users": stats.get('total_users', 0) if stats else 0,
             "total_artists": stats.get('total_artists', 0) if stats else 0,
@@ -481,7 +500,9 @@ def get_platform_stats():
         "daily_streams": daily_streams,
         "top_artists": top_artists,
         "role_distribution": role_distribution
-    }), 200
+    }
+    cache.set(cache_key, response_data, ttl_seconds=3600)
+    return jsonify(response_data), 200
 
 
 # ============================================
