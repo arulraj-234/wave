@@ -429,6 +429,14 @@ def get_trending():
 @stats_bp.route('/platform', methods=['GET'])
 def get_platform_stats():
     """Admin-level platform overview"""
+
+    # ⚡ Bolt Optimization: Cache this heavy read endpoint for admin dashboard
+    # Impact: Reduces load on DB from aggregating streams/users across entire platform
+    cache_key = "platform_stats"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return jsonify(cached_data), 200
+
     stats = fetch_one("SELECT * FROM platform_stats_view")
 
     # Daily streams for last 30 days
@@ -462,7 +470,7 @@ def get_platform_stats():
         if row.get('stream_date'):
             row['stream_date'] = str(row['stream_date'])
 
-    return jsonify({
+    response_data = {
         "stats": {
             "total_users": stats.get('total_users', 0) if stats else 0,
             "total_artists": stats.get('total_artists', 0) if stats else 0,
@@ -481,7 +489,10 @@ def get_platform_stats():
         "daily_streams": daily_streams,
         "top_artists": top_artists,
         "role_distribution": role_distribution
-    }), 200
+    }
+
+    cache.set(cache_key, response_data, ttl_seconds=300)
+    return jsonify(response_data), 200
 
 
 # ============================================
