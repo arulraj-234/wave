@@ -7,3 +7,6 @@
 ## 2026-08-16 - Cache heavy DB endpoints instead of optimizing massive queries
 **Learning:** Some endpoints, like `/artist/<int:artist_id>`, aggregate data from over 15 complex SQL queries. Attempting to optimize these queries individually or convert them to views is often less impactful and higher risk than simply caching the entire serialized payload.
 **Action:** Identify endpoints that perform heavy reads where real-time accuracy is not critical, and wrap the final `jsonify` payload in an in-memory cache (like `engine.cache`) with an appropriate TTL before serving.
+## 2026-08-16 - Trending streams dashboard endpoint bottleneck
+**Learning:** Endpoints that compute aggregations over large time windows (like counting streams over the last 7 days) execute complex table scans or large index sweeps on every single dashboard load, acting as a massive bottleneck when user traffic spikes.
+**Action:** Always wrap analytical or dashboard "trending" endpoints in a TTL cache since slight staleness (e.g. 30 minutes) is entirely acceptable for aggregated charts.
