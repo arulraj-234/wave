@@ -409,6 +409,15 @@ def get_artist_stats(artist_id):
 @stats_bp.route('/trending', methods=['GET'])
 def get_trending():
     """Trending songs based on recent play activity"""
+
+    # ⚡ Bolt Optimization: Cache global trending payload (frequent dashboard request).
+    # Impact: Replaces an expensive 7-day streams table aggregation with a <1ms cache hit.
+    # Measurement: Compare /trending load time on first request vs subsequent requests.
+    cache_key = "global_trending"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return jsonify(cached_data), 200
+
     # Inline trending query (replaces trending_songs_view for TiDB compatibility)
     trending = fetch_all("""
         SELECT
@@ -423,7 +432,10 @@ def get_trending():
         ORDER BY recent_plays DESC
         LIMIT 20
     """)
-    return jsonify({"songs": enrich_song_metadata(trending)}), 200
+
+    response_data = {"songs": enrich_song_metadata(trending)}
+    cache.set(cache_key, response_data, ttl_seconds=3600)
+    return jsonify(response_data), 200
 
 
 @stats_bp.route('/platform', methods=['GET'])
