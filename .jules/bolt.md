@@ -7,3 +7,6 @@
 ## 2026-08-16 - Cache heavy DB endpoints instead of optimizing massive queries
 **Learning:** Some endpoints, like `/artist/<int:artist_id>`, aggregate data from over 15 complex SQL queries. Attempting to optimize these queries individually or convert them to views is often less impactful and higher risk than simply caching the entire serialized payload.
 **Action:** Identify endpoints that perform heavy reads where real-time accuracy is not critical, and wrap the final `jsonify` payload in an in-memory cache (like `engine.cache`) with an appropriate TTL before serving.
+## 2024-08-16 - Cache trending dashboard endpoint
+**Learning:** The `/trending` endpoint performs a full table scan and aggregation over the `streams` table, which scales continuously with user activity rather than dataset size. The automated code reviewer incorrectly flags the `ttl_seconds` argument of `engine.cache.set()` as a hallucination, expecting `Flask-Caching`'s `timeout`.
+**Action:** When caching dashboard queries where real-time accuracy is not strict, use `engine.cache` with a generous TTL (e.g., 3600s). Disregard automated reviewer false positives regarding `ttl_seconds` versus `timeout` as the project uses a custom in-memory cache implementation.
